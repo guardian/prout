@@ -1,0 +1,14 @@
+{
+  "name": "pr:guardian",
+  "description": "A bot that updates your GitHub pull-requests with deployment observations",
+  "repository": "https://github.com/guardian/pr-guardian",
+  "logo": "https://cloud.githubusercontent.com/assets/52038/6084/94fb8e46-c0ea-11e3-90f8-708387e95b4d.png",
+  "success_url": "/",
+  "keywords": ["github", "pull request", "deployment"],
+  "env": {
+    "PR_GUARDIAN_GITHUB_ACCESS_TOKEN": {
+      "description": "A GitHub access token - the bot will run with this account. Required scopes: repo",
+      "required": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+POST        /lag/:org/:repo                   controllers.Application.measureLag(org: String, repo: String, url: String, urlLabel: String)
+# POST        /lag/:org/:repo/pull/:prId        controllers.Application.measurePullRequestLag(org: String, repo: String, prId: Int, url: String)
+
+
+
+GET         /                                 controllers.Application.index()
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file                     controllers.Assets.at(path="/public", file)
