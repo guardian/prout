@@ -17,18 +17,37 @@
 package controllers
 
 import lib._
+import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.netaporter.uri.Uri._
+import com.netaporter.uri.Uri
+
+import scala.concurrent.Future
+
 object Application extends Controller {
 
-  def measureLag(orgName: String, repoName: String, siteUrl: String, siteLabel: String) = Action.async { implicit req =>
-    val site = Site(siteUrl, siteLabel)
+  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(parse.json) { request =>
+    val site = Site.from(Uri.parse(siteUrl), siteLabel)
+    for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
+      scan(site, Bot.conn().getRepository(repoFullName))
+    }
+    NoContent
+  }
 
+  def measureLag(orgName: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
+    val site = Site.from(Uri.parse(siteUrl), siteLabel)
     val githubRepo = Bot.conn().getOrganization(orgName).getRepository(repoName)
 
+    scan(site, githubRepo)
+
+    NoContent
+  }
+
+  def scan(site: Site, githubRepo: GHRepository) = Future {
     Logger.info(s"Asked to audit ${githubRepo.getFullName}")
 
     for {
@@ -40,12 +59,11 @@ object Application extends Controller {
       Logger.info(s"got status...")
 
       status.goCrazy()
-
-      Ok
     }
   }
 
   def index = Action { implicit req =>
     Ok(views.html.userPages.index())
   }
+
 }

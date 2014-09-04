@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "bootstrap" % "3.2.0",
   "com.madgag" % "github-api" % "1.59.0.1",
   "com.github.nscala-time" %% "nscala-time" % "1.4.0",
+  "com.netaporter" %% "scala-uri" % "0.4.2",
   "com.squareup.okhttp" % "okhttp" % "2.0.0",
   "com.squareup.okhttp" % "okhttp-urlconnection" % "2.0.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
