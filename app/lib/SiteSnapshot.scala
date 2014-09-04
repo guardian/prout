@@ -34,7 +34,7 @@ object SiteSnapshot {
 
     val url = site.url
     val siteCommitIdF =
-      WS.url(url).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
+      WS.url(url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
         case ci => Logger.info(s"Site '${site.label}' commit id: ${ci.map(_.map(_.name()))}")
       }
 
