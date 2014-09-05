@@ -42,7 +42,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
   }
 
   def handlePR(pr : GHPullRequest) {
-    Logger.info(s"handling ${pr.getNumber}")
+    Logger.trace(s"handling ${pr.getNumber}")
     val issueHack = repoSnapshot.repo.getIssue(pr.getNumber)
     val labelledState = issueHack.labelledState(_ => true)
     val existingState = PullRequestDeploymentStatus.fromLabels(labelledState.applicableLabels, siteSnapshot.site).getOrElse(Pending)
@@ -70,6 +70,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
 
 
     }
+    Logger.debug(s"finished ${pr.getNumber}")
   }
 
   def isVisibleOnSite(pr: GHPullRequest): Boolean = {

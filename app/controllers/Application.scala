@@ -16,41 +16,45 @@
 
 package controllers
 
+import com.netaporter.uri.Uri
 import lib._
 import org.kohsuke.github.GHRepository
 import play.api.Logger
+import play.api.cache.Cache
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
-import com.netaporter.uri.Uri._
-import com.netaporter.uri.Uri
-
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 object Application extends Controller {
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(parse.json) { request =>
+  import play.api.Play.current
+
+  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(parse.json(maxLength = 20 * 1024)) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-      scan(site, Bot.conn().getRepository(repoFullName))
+
+      Cache.getOrElse(repoFullName +"/"+ site) {
+        new Dogpile(scan(site, Bot.conn().getRepository(repoFullName)))
+      }.doAtLeastOneMore()
     }
     NoContent
   }
 
   def measureLag(orgName: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    val githubRepo = Bot.conn().getOrganization(orgName).getRepository(repoName)
-
-    scan(site, githubRepo)
+    Cache.getOrElse(orgName + "/" +repoName +"/" + site) {
+      new Dogpile(scan(site, Bot.conn().getOrganization(orgName).getRepository(repoName)))
+    }.doAtLeastOneMore()
 
     NoContent
   }
 
-  def scan(site: Site, githubRepo: GHRepository) = Future {
+  def scan(site: Site, githubRepo: GHRepository) = {
     Logger.info(s"Asked to audit ${githubRepo.getFullName}")
 
-    for {
+    val jobFuture = for {
       siteSnapshot <- SiteSnapshot(site)
       repoSnapshot <- RepoSnapshot(githubRepo)
     } yield {
@@ -59,7 +63,9 @@ object Application extends Controller {
       Logger.info(s"got status...")
 
       status.goCrazy()
+      Logger.info(s"finished I think.")
     }
+    Await.ready(jobFuture, Duration.Inf)
   }
 
   def index = Action { implicit req =>

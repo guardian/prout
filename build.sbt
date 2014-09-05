@@ -7,8 +7,10 @@ scalaVersion := "2.11.2"
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
+  cache,
   filters,
   ws,
+  "com.typesafe.akka" %% "akka-agent" % "2.3.2",
   "org.webjars" % "bootstrap" % "3.2.0",
   "com.madgag" % "github-api" % "1.59.0.1",
   "com.github.nscala-time" %% "nscala-time" % "1.4.0",
