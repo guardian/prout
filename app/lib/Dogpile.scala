@@ -3,7 +3,6 @@ package lib
 import akka.agent.Agent
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class Dogpile(thing: => Unit) {
   val agent = Agent(0)
