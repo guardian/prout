@@ -1,3 +1,4 @@
-@(site: lib.Site, timeSinceMerge: org.joda.time.Duration)
+@(c: lib.PullRequestSiteCheck)
+@import lib.Implicits._
 
-This pull request is overdue on [@site.label](@site.url) - it was merged @timeSinceMerge.getStandardMinutes minutes ago.
+This pull request is overdue on [@c.site.label](@c.site.url) - it was merged @c.timeSinceMerge.getStandardMinutes minutes ago by @c.pr.getMergedBy.atLogin

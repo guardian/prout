@@ -1,3 +1,4 @@
-@(site: lib.Site, timeSinceMerge: org.joda.time.Duration)
+@(c: lib.PullRequestSiteCheck)
+@import lib.Implicits._
 
-Seen on [@site.label](@site.url) (merged @timeSinceMerge.getStandardMinutes minutes ago)! Please check your changes...
+Seen on [@c.site.label](@c.site.url) (merged @c.timeSinceMerge.getStandardMinutes minutes ago by @c.pr.getMergedBy.atLogin)! Please check your changes.
