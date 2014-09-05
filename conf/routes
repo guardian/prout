@@ -3,7 +3,7 @@
 # ~~~~
 
 # A GET request because that's what RiffRaff supports...
-GET         /api/update/:org/:repo        controllers.Application.measureLag(org, repo, url, urlLabel: Option[String])
+GET         /api/update/:org/:repo        controllers.Application.updateRepo(org, repo, url, urlLabel: Option[String])
 POST        /api/hooks/github             controllers.Application.githubHook(url, urlLabel: Option[String])
 
 GET         /                             controllers.Application.index()

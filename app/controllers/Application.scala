@@ -42,7 +42,7 @@ object Application extends Controller {
     NoContent
   }
 
-  def measureLag(orgName: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
+  def updateRepo(orgName: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     Cache.getOrElse(orgName + "/" +repoName +"/" + site) {
       new Dogpile(scan(site, Bot.conn().getOrganization(orgName).getRepository(repoName)))
