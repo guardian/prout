@@ -10,6 +10,7 @@ import org.kohsuke.github.GHPullRequest
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import play.twirl.api.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 
 sealed trait PullRequestDeploymentStatus {
@@ -46,38 +47,37 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
   }
 
   def handlePR(pr : GHPullRequest) {
-
     Logger.trace(s"handling ${pr.getNumber}")
     val issueHack = repoSnapshot.repo.getIssue(pr.getNumber)
     val labelledState = issueHack.labelledState(_ => true)
     val existingState = PullRequestDeploymentStatus.fromLabels(labelledState.applicableLabels, siteSnapshot.site).getOrElse(Pending)
 
-    if (existingState != Seen) {
+    def messageOptFor(prsc: PullRequestSiteCheck) = {
+      val boo: PartialFunction[PullRequestDeploymentStatus, Html] = {
+        case Seen =>
+          views.html.ghIssues.seen(prsc)
+        case Overdue =>
+          views.html.ghIssues.overdue(prsc)
+      }
 
+      boo.lift(prsc.currentState).map(_.body.replace("\n", ""))
+    }
+
+    if (existingState != Seen) {
       val prsc = PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
+      Logger.debug(pr.getNumber+" "+messageOptFor(prsc).toString)
 
       // update labels before comments - looks better on pull request page
       labelledState.updateLabels(Set(prsc.label))
 
       if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
-        Logger.info("Totally worthy of comment!")
-
-        system.scheduler.scheduleOnce(smallDelayToForceCommentToAppearAfterLabelChanges) {
-          prsc.currentState match {
-            case Pending => Logger.info("Still waiting for this one")
-            case Seen =>
-              // Logger.info("This pull request has been seen on-site!")
-              pr.comment(views.html.ghIssues.seen(prsc).body)
-            case Overdue =>
-              Logger.info("Overdue!")
-              pr.comment(views.html.ghIssues.overdue(prsc).body)
+        for (message <- messageOptFor(prsc)) {
+          system.scheduler.scheduleOnce(smallDelayToForceCommentToAppearAfterLabelChanges) {
+            pr.comment(message)
           }
         }
       }
-
-
     }
-    Logger.debug(s"finished ${pr.getNumber}")
   }
 
   def isVisibleOnSite(pr: GHPullRequest): Boolean = {
