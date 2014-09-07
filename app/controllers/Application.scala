@@ -31,7 +31,7 @@ object Application extends Controller {
 
   import play.api.Play.current
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(parse.json(maxLength = 20 * 1024)) { request =>
+  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(parse.json(maxLength = 128 * 1024)) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
 
