@@ -24,9 +24,9 @@ import play.api.Logger
 import play.api.cache.Cache
 import play.api.mvc._
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 
 object Application extends Controller {
 
@@ -35,21 +35,22 @@ object Application extends Controller {
   def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookJson("monkey")) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-
-      Cache.getOrElse(repoFullName +"/"+ site) {
-        new Dogpile(scan(site, Bot.conn().getRepository(repoFullName)))
-      }.doAtLeastOneMore()
+      updateFor(site, RepoFullName(repoFullName))
     }
     NoContent
   }
 
-  def updateRepo(orgName: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
+  def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    Cache.getOrElse(orgName + "/" +repoName +"/" + site) {
-      new Dogpile(scan(site, Bot.conn().getOrganization(orgName).getRepository(repoName)))
-    }.doAtLeastOneMore()
-
+    val repoFullName = RepoFullName(repoOwner, repoName)
+    updateFor(site, repoFullName)
     NoContent
+  }
+
+  def updateFor(site: Site, repoFullName: RepoFullName) {
+    Cache.getOrElse(repoFullName + " " + site) {
+      new Dogpile(scan(site, Bot.conn().getRepository(repoFullName.text)))
+    }.doAtLeastOneMore()
   }
 
   def scan(site: Site, githubRepo: GHRepository) = {
