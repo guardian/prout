@@ -32,7 +32,7 @@ object Application extends Controller {
 
   import play.api.Play.current
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.tolerantSignedGithubJson("monkey")) { request =>
+  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookJson("monkey")) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
 

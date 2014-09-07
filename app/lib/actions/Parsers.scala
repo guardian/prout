@@ -19,10 +19,22 @@ object Parsers {
     Logger.debug("HMAC Signatures matched!")
   }
 
-  def tolerantSignedGithubJson(sharedSecret: String, maxLength: Int = 128 * 1024): BodyParser[JsValue] =
-    tolerantBodyParser[JsValue]("json", maxLength, "Invalid Json") { (request, bytes) =>
+  def githubHookJson(sharedSecret: String): BodyParser[JsValue] = tolerantXHubSigned(sharedSecret, "json", 128 * 1024, "Invalid Json") {
+    (requestHeader, bytes) => Json.parse(bytes)
+  }
+
+  type FullBodyParser[+A] = (RequestHeader, Array[Byte]) => Either[Result, A]
+
+  /*
+  The 'X-Hub-Signature' header is defined by the PubSubHubbub Protocol:
+
+  https://pubsubhubbub.googlecode.com/git/pubsubhubbub-core-0.4.html#authednotify ("8. Authenticated Content Distribution")
+
+   */
+  def tolerantXHubSigned[A](sharedSecret: String, name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =
+    tolerantBodyParser[A]("json", maxLength, "Invalid Json") { (request, bytes) =>
       assertSecureEquals(request.headers("X-Hub-Signature").replaceFirst("sha1=", ""), sign(bytes, sharedSecret.getBytes))
-      Json.parse(bytes)
+      parser(request, bytes)
     }
 
   def tolerantBodyParser[A](name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =
