@@ -48,7 +48,9 @@ object Application extends Controller {
   }
 
   def updateFor(site: Site, repoFullName: RepoFullName) {
-    Cache.getOrElse(repoFullName + " " + site) {
+    val key = repoFullName + " " + site
+    Logger.debug(s"update requested for $key")
+    Cache.getOrElse(key) {
       new Dogpile(scan(site, Bot.conn().getRepository(repoFullName.text)))
     }.doAtLeastOneMore()
   }
@@ -60,9 +62,8 @@ object Application extends Controller {
       siteSnapshot <- SiteSnapshot(site)
       repoSnapshot <- RepoSnapshot(githubRepo)
     } yield {
-      Logger.info(s"about to get status...")
       val status = DeploymentProgressSnapshot(repoSnapshot, siteSnapshot)
-      Logger.info(s"got status...")
+      Logger.trace(s"got status... "+ status)
 
       status.goCrazy()
       Logger.info(s"finished I think.")
