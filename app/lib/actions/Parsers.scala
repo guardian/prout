@@ -21,7 +21,7 @@ object Parsers {
 
   def tolerantSignedGithubJson(sharedSecret: String, maxLength: Int = 128 * 1024): BodyParser[JsValue] =
     tolerantBodyParser[JsValue]("json", maxLength, "Invalid Json") { (request, bytes) =>
-      assertSecureEquals(request.headers("X-Hub-Signature"), sign(bytes, sharedSecret.getBytes))
+      assertSecureEquals(request.headers("X-Hub-Signature").replaceFirst("sha1=", ""), sign(bytes, sharedSecret.getBytes))
       Json.parse(bytes)
     }
 
