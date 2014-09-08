@@ -36,7 +36,9 @@ case object Overdue extends NotSeenOnSite
 case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: SiteSnapshot) {
   private implicit val system = Akka.system
 
-  private val smallDelayToForceCommentToAppearAfterLabelChanges = concurrent.duration.Duration(1, TimeUnit.SECONDS)
+  private def doAfterSmallDelay(f: => Unit): Unit = {
+    system.scheduler.scheduleOnce(concurrent.duration.Duration(1, TimeUnit.SECONDS))(f)
+  }
 
   val OverdueThreshold = 15.minutes
 
@@ -72,7 +74,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
 
       if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
         for (message <- messageOptFor(prsc)) {
-          system.scheduler.scheduleOnce(smallDelayToForceCommentToAppearAfterLabelChanges) {
+          doAfterSmallDelay {
             pr.comment(message)
           }
         }
