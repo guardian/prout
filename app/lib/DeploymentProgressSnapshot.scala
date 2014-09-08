@@ -14,7 +14,7 @@ import play.twirl.api.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 
 sealed trait PullRequestDeploymentStatus {
-  def labelFor(site: Site) = getClass.getSimpleName.dropRight(1) + " on " + site.label
+  def labelFor(site: Site) = getClass.getSimpleName.dropRight(1) + "-on-" + site.label
 }
 
 object PullRequestDeploymentStatus {
