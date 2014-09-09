@@ -19,14 +19,7 @@ package controllers
 import com.netaporter.uri.Uri
 import lib._
 import lib.actions.Parsers
-import org.kohsuke.github.GHRepository
-import play.api.Logger
-import play.api.cache.Cache
 import play.api.mvc._
-
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
 
 object Application extends Controller {
 
@@ -40,8 +33,7 @@ object Application extends Controller {
 
   def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    val repoFullName = RepoFullName(repoOwner, repoName)
-    Scanner.updateFor(site, repoFullName)
+    Scanner.updateFor(site, RepoFullName(repoOwner, repoName))
     NoContent
   }
 
