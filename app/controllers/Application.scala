@@ -30,12 +30,10 @@ import scala.concurrent.duration.Duration
 
 object Application extends Controller {
 
-  import play.api.Play.current
-
   def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookJson("monkey")) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-      updateFor(site, RepoFullName(repoFullName))
+      Scanner.updateFor(site, RepoFullName(repoFullName))
     }
     NoContent
   }
@@ -43,32 +41,8 @@ object Application extends Controller {
   def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
     val repoFullName = RepoFullName(repoOwner, repoName)
-    updateFor(site, repoFullName)
+    Scanner.updateFor(site, repoFullName)
     NoContent
-  }
-
-  def updateFor(site: Site, repoFullName: RepoFullName) {
-    val key = repoFullName + " " + site
-    Logger.debug(s"update requested for $key")
-    Cache.getOrElse(key) {
-      new Dogpile(scan(site, Bot.conn().getRepository(repoFullName.text)))
-    }.doAtLeastOneMore()
-  }
-
-  def scan(site: Site, githubRepo: GHRepository) = {
-    Logger.info(s"Asked to audit ${githubRepo.getFullName}")
-
-    val jobFuture = for {
-      siteSnapshot <- SiteSnapshot(site)
-      repoSnapshot <- RepoSnapshot(githubRepo)
-    } yield {
-      val status = DeploymentProgressSnapshot(repoSnapshot, siteSnapshot)
-      Logger.trace(s"got status... "+ status)
-
-      status.goCrazy()
-      Logger.info(s"finished I think.")
-    }
-    Await.ready(jobFuture, Duration.Inf)
   }
 
   def index = Action { implicit req =>

@@ -11,7 +11,9 @@ import play.api.Logger
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import play.twirl.api.Html
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 sealed trait PullRequestDeploymentStatus {
   def labelFor(site: Site) = getClass.getSimpleName.dropRight(1) + "-on-" + site.label
@@ -44,11 +46,9 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
 
   val WorthyOfCommentWindow = 6.hours
 
-  def goCrazy()= {
-    repoSnapshot.mergedPullRequests.par.foreach(handlePR)
-  }
+  def goCrazy(): Future[Seq[PullRequestSiteCheck]] = Future.traverse(repoSnapshot.mergedPullRequests)(handlePR)
 
-  def handlePR(pr : GHPullRequest) {
+  def handlePR(pr : GHPullRequest): Future[PullRequestSiteCheck] = Future {
     Logger.trace(s"handling ${pr.getNumber}")
     val issueHack = repoSnapshot.repo.getIssue(pr.getNumber)
     val labelledState = issueHack.labelledState(_ => true)
@@ -65,8 +65,9 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
       boo.lift(prsc.currentState).map(_.body.replace("\n", ""))
     }
 
+    val prsc = PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
+
     if (existingState != Seen) {
-      val prsc = PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
       Logger.debug(pr.getNumber+" "+messageOptFor(prsc).toString)
 
       // update labels before comments - looks better on pull request page
@@ -80,6 +81,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
         }
       }
     }
+    prsc
   }
 
   def isVisibleOnSite(pr: GHPullRequest): Boolean = {
