@@ -24,7 +24,7 @@ case class PullRequestSiteCheck(pr: GHPullRequest, siteSnapshot: SiteSnapshot, g
 
     val isVisible = w.isMergedInto(prCommit,siteCommit)
 
-    Logger.info(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()} isVisible=$isVisible")
+    Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()} isVisible=$isVisible")
 
     isVisible
   }
