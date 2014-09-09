@@ -52,7 +52,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
     Logger.trace(s"handling ${pr.getNumber}")
     val issueHack = repoSnapshot.repo.getIssue(pr.getNumber)
     val labelledState = issueHack.labelledState(_ => true)
-    val existingState = PullRequestDeploymentStatus.fromLabels(labelledState.applicableLabels, siteSnapshot.site).getOrElse(Pending)
+    val existingStateOpt = PullRequestDeploymentStatus.fromLabels(labelledState.applicableLabels, siteSnapshot.site)
 
     def messageOptFor(prsc: PullRequestSiteCheck) = {
       val boo: PartialFunction[PullRequestDeploymentStatus, Html] = {
@@ -67,20 +67,24 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
 
     val prsc = PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
 
-    if (existingState != Seen) {
-      Logger.debug(pr.getNumber+" "+messageOptFor(prsc).toString)
+    existingStateOpt match {
+      case Some(Seen) => Logger.trace(s"Ignoring previously Seen PR ${pr.getNumber} currently : $prsc")
+      case Some(prsc.currentState) => Logger.trace(s"Ignoring unchanged PR ${pr.getNumber} currently : $prsc")
+      case _ =>
+        Logger.debug(pr.getNumber+" "+messageOptFor(prsc).toString)
 
-      // update labels before comments - looks better on pull request page
-      labelledState.updateLabels(Set(prsc.label))
+        // update labels before comments - looks better on pull request page
+        labelledState.updateLabels(Set(prsc.label))
 
-      if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
-        for (message <- messageOptFor(prsc)) {
-          doAfterSmallDelay {
-            pr.comment(message)
+        if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
+          for (message <- messageOptFor(prsc)) {
+            doAfterSmallDelay {
+              pr.comment(message)
+            }
           }
         }
-      }
     }
+
     prsc
   }
 
