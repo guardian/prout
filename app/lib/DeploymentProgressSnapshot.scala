@@ -79,7 +79,8 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
         if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
           for (message <- messageOptFor(prsc)) {
             doAfterSmallDelay {
-              pr.comment(message)
+              Logger.info("Normally I would be saying " + pr.getNumber+" : "+message)
+              // pr.comment(message)
             }
           }
         }
