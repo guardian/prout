@@ -4,7 +4,7 @@ import lib.Implicits._
 import org.kohsuke.github.GHIssue
 import play.api.Logger
 
-object LabelledState{
+object LabelledState {
   implicit class RichGHIssue(issue: GHIssue) {
     def labelledState(applicableFilter: String => Boolean) = new LabelledState(issue, issue.labelNames.toSet)
   }

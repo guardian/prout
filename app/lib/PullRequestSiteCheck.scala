@@ -3,13 +3,14 @@ package lib
 
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
+import lib.gitgithub.StateSnapshot
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.joda.time.DateTime
 import org.kohsuke.github.GHPullRequest
 import play.api.Logger
 
-case class PullRequestSiteCheck(pr: GHPullRequest, siteSnapshot: SiteSnapshot, gitRepo: Repository) {
+case class PullRequestSiteCheck(pr: GHPullRequest, siteSnapshot: SiteSnapshot, gitRepo: Repository) extends StateSnapshot[PullRequestDeploymentStatus] {
 
   val site = siteSnapshot.site
 
@@ -29,7 +30,7 @@ case class PullRequestSiteCheck(pr: GHPullRequest, siteSnapshot: SiteSnapshot, g
     isVisible
   }
 
-  val currentState = if (isVisibleOnSite) Seen else if (timeSinceMerge > OverdueThreshold) Overdue else Pending
+  val currentStatus: PullRequestDeploymentStatus  = if (isVisibleOnSite) Seen else if (timeSinceMerge > OverdueThreshold) Overdue else Pending
 
-  val label = currentState.labelFor(siteSnapshot.site)
+  override val newPersistableState: PullRequestDeploymentStatus = currentStatus
 }

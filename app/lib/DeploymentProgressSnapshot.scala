@@ -1,92 +1,61 @@
 package lib
 
-import java.util.concurrent.TimeUnit
-
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
-import lib.LabelledState._
+import lib.gitgithub.{LabelMapping, IssueUpdater}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.kohsuke.github.GHPullRequest
 import play.api.Logger
-import play.api.libs.concurrent.Akka
-import play.api.Play.current
 import play.twirl.api.Html
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-sealed trait PullRequestDeploymentStatus {
-  def labelFor(site: Site) = getClass.getSimpleName.dropRight(1) + "-on-" + site.label
-}
-
-object PullRequestDeploymentStatus {
-  val all = Set[PullRequestDeploymentStatus](Seen, Pending, Overdue)
-
-  def fromLabels(labels: Set[String], site: Site): Option[PullRequestDeploymentStatus] =
-    PullRequestDeploymentStatus.all.find(s => labels(s.labelFor(site)))
-}
-
-sealed trait NotSeenOnSite extends PullRequestDeploymentStatus
-
-case object Seen extends PullRequestDeploymentStatus
-
-case object Pending extends NotSeenOnSite
-
-case object Overdue extends NotSeenOnSite
-
 
 case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: SiteSnapshot) {
-  private implicit val system = Akka.system
-
-  private def doAfterSmallDelay(f: => Unit): Unit = {
-    system.scheduler.scheduleOnce(concurrent.duration.Duration(1, TimeUnit.SECONDS))(f)
-  }
 
   val OverdueThreshold = 15.minutes
 
   val WorthyOfCommentWindow = 6.hours
 
-  def goCrazy(): Future[Seq[PullRequestSiteCheck]] = Future.traverse(repoSnapshot.mergedPullRequests)(handlePR)
+  def goCrazy(): Future[Seq[PullRequestSiteCheck]] = Future.traverse(repoSnapshot.mergedPullRequests)(handlePR).map(_.flatten.toSeq)
 
-  def handlePR(pr : GHPullRequest): Future[PullRequestSiteCheck] = Future {
-    Logger.trace(s"handling ${pr.getNumber}")
-    val issueHack = repoSnapshot.repo.getIssue(pr.getNumber)
-    val labelledState = issueHack.labelledState(_ => true)
-    val existingStateOpt = PullRequestDeploymentStatus.fromLabels(labelledState.applicableLabels, siteSnapshot.site)
+  def handlePR(pr : GHPullRequest): Future[Option[PullRequestSiteCheck]] = Future { swinton.process(pr) }
 
-    def messageOptFor(prsc: PullRequestSiteCheck) = {
-      val boo: PartialFunction[PullRequestDeploymentStatus, Html] = {
-        case Seen =>
-          views.html.ghIssues.seen(prsc)
-        case Overdue =>
-          views.html.ghIssues.overdue(prsc)
-      }
-
-      boo.lift(prsc.currentState).map(_.body.replace("\n", ""))
+  def messageOptFor(prsc: PullRequestSiteCheck) = {
+    val boo: PartialFunction[PullRequestDeploymentStatus, Html] = {
+      case Seen =>
+        views.html.ghIssues.seen(prsc)
+      case Overdue =>
+        views.html.ghIssues.overdue(prsc)
     }
 
-    val prsc = PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
+    boo.lift(prsc.newPersistableState).map(_.body.replace("\n", ""))
+  }
 
-    existingStateOpt match {
-      case Some(Seen) => Logger.trace(s"Ignoring previously Seen PR ${pr.getNumber} currently : $prsc")
-      case Some(prsc.currentState) => Logger.trace(s"Ignoring unchanged PR ${pr.getNumber} currently : $prsc")
-      case _ =>
-        Logger.debug(pr.getNumber+" "+messageOptFor(prsc).toString)
+  val swinton = new IssueUpdater[GHPullRequest, PullRequestDeploymentStatus, PullRequestSiteCheck] {
+    val labelToStateMapping = new LabelMapping[PullRequestDeploymentStatus] {
+      def labelsFor(s: PullRequestDeploymentStatus): Set[String] = Set(s.labelFor(siteSnapshot.site))
 
-        // update labels before comments - looks better on pull request page
-        labelledState.updateLabels(Set(prsc.label))
+      def stateFrom(labels: Set[String]): PullRequestDeploymentStatus =
+        PullRequestDeploymentStatus.fromLabels(labels, siteSnapshot.site).getOrElse(Pending)
+    }
 
-        if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
-          for (message <- messageOptFor(prsc)) {
-            doAfterSmallDelay {
-              Logger.info("Normally I would be saying " + pr.getNumber+" : "+message)
-              // pr.comment(message)
-            }
-          }
+    def ignoreItemsWithExistingState(existingState: PullRequestDeploymentStatus) = existingState == Seen
+
+    def snapshoter(oldState: PullRequestDeploymentStatus, pr: GHPullRequest) =
+      PullRequestSiteCheck(pr, siteSnapshot, repoSnapshot.gitRepo)
+
+    def actionTaker(prsc: PullRequestSiteCheck) = {
+      Logger.debug(prsc.pr.getNumber+" "+messageOptFor(prsc).toString)
+      if (prsc.timeSinceMerge < WorthyOfCommentWindow) {
+        for (message <- messageOptFor(prsc)) {
+          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)
+          // prsc.pr.comment(message)
         }
+      }
     }
-
-    prsc
   }
 
   def isVisibleOnSite(pr: GHPullRequest): Boolean = {
@@ -100,3 +69,5 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
     isVisible
   }
 }
+
+

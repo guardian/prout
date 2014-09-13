@@ -1,14 +1,13 @@
 package lib
 
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.MINUTES
 
-import org.kohsuke.github.{GHPullRequest, GHRepository}
+import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.cache.Cache
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{Future, Await}
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
@@ -35,7 +34,7 @@ object Scanner {
       status = DeploymentProgressSnapshot(repoSnapshot, siteSnapshot)
       prStatuses <- status.goCrazy()
     } yield {
-      val prByStatus = prStatuses.groupBy(_.currentState)
+      val prByStatus = prStatuses.groupBy(_.currentStatus)
 
       Logger.info(s"${githubRepo.getFullName} : All: ${summary(prStatuses)}")
       Logger.info(s"${githubRepo.getFullName} : overdue=${prByStatus.get(Overdue).map(summary)} pending=${prByStatus.get(Pending).map(summary)}")
