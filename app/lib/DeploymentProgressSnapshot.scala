@@ -35,6 +35,8 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
   }
 
   val issueUpdater = new IssueUpdater[GHPullRequest, PullRequestDeploymentStatus, PullRequestSiteCheck] {
+    val repo = repoSnapshot.repo
+
     val labelToStateMapping = new LabelMapping[PullRequestDeploymentStatus] {
       def labelsFor(s: PullRequestDeploymentStatus): Set[String] = Set(s.labelFor(siteSnapshot.site))
 
