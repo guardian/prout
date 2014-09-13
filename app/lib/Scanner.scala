@@ -43,5 +43,5 @@ object Scanner {
     Await.ready(jobFuture, Duration(2, MINUTES))
   }
 
-  def summary(prs: Seq[PullRequestSiteCheck]): String = prs.size + " " + prs.map(_.pr.getNumber).sorted.map("#"+_).mkString("(", ", ", ")")
+  def summary(prs: Seq[PullRequestSiteCheck]): String = prs.size + " " + prs.map(_.pr.getNumber).sorted.reverse.map("#"+_).mkString("(", ", ", ")")
 }
