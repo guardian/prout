@@ -3,7 +3,7 @@ package lib
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.MINUTES
 
-import org.kohsuke.github.GHRepository
+import org.kohsuke.github.{GHPullRequest, GHRepository}
 import play.api.Logger
 import play.api.cache.Cache
 
@@ -36,9 +36,12 @@ object Scanner {
       prStatuses <- status.goCrazy()
     } yield {
       val prByStatus = prStatuses.groupBy(_.currentState)
-      Logger.info(s"${githubRepo.getFullName} : ${prByStatus.mapValues(_.size)}")
-      Logger.info(s"${githubRepo.getFullName} : overdue=${prByStatus.get(Overdue)} pending=${prByStatus.get(Pending)}")
+
+      Logger.info(s"${githubRepo.getFullName} : All: ${summary(prStatuses)}")
+      Logger.info(s"${githubRepo.getFullName} : overdue=${prByStatus.get(Overdue).map(summary)} pending=${prByStatus.get(Pending).map(summary)}")
     }
     Await.ready(jobFuture, Duration(2, MINUTES))
   }
+
+  def summary(prs: Seq[PullRequestSiteCheck]): String = prs.size + " " + prs.map(_.pr.getNumber).sorted.map("#"+_).mkString("(", ", ", ")")
 }
