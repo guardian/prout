@@ -34,9 +34,11 @@ object RepoSnapshot {
   def apply(githubRepo: GHRepository): Future[RepoSnapshot] = {
     val conn = Bot.conn()
 
-    val closedPullRequestsF = Future {
-      githubRepo.listPullRequests(GHIssueState.CLOSED).asList().take(50).toList
-    } andThen { case cprs => Logger.info(s"Closed Pull Requests fetched: ${cprs.map(_.size)}") }
+    def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getMasterBranch
+
+    val mergedPullRequestsF = Future {
+      githubRepo.listPullRequests(GHIssueState.CLOSED).filter(isMergedToMaster).take(25).toList
+    } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
 
     val gitRepoF = Future {
       RepoUtil.getGitRepo(
@@ -46,20 +48,18 @@ object RepoSnapshot {
     } andThen { case r => Logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
 
     for {
-      closedPullRequests <- closedPullRequestsF
+      mergedPullRequests <- mergedPullRequestsF
       gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, closedPullRequests)
+    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests)
   }
 }
 
 case class RepoSnapshot(
   repo: GHRepository,
   gitRepo: Repository,
-  closedPullRequests: Seq[GHPullRequest]) {
+  mergedPullRequests: Seq[GHPullRequest]) {
 
   implicit val revWalk = new RevWalk(gitRepo)
-
-  lazy val mergedPullRequests = closedPullRequests.filter(pr => pr.isMerged && pr.getBase.getRef == repo.getMasterBranch)
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
 }
