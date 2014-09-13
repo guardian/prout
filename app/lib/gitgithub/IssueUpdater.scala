@@ -23,6 +23,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
       val currentSnapshot = snapshoter(existingPersistedState, issue)
       val newPersistableState = currentSnapshot.newPersistableState
       if (newPersistableState != existingPersistedState) {
+        Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")
         val newLabels: Set[String] = labelToStateMapping.labelsFor(newPersistableState)
         assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
         issue.setLabels(newLabels.toSeq: _*)

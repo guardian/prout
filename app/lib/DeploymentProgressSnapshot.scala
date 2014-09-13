@@ -21,7 +21,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
 
   def goCrazy(): Future[Seq[PullRequestSiteCheck]] = Future.traverse(repoSnapshot.mergedPullRequests)(handlePR).map(_.flatten.toSeq)
 
-  def handlePR(pr : GHPullRequest): Future[Option[PullRequestSiteCheck]] = Future { swinton.process(pr) }
+  def handlePR(pr : GHPullRequest): Future[Option[PullRequestSiteCheck]] = Future { issueUpdater.process(pr) }
 
   def messageOptFor(prsc: PullRequestSiteCheck) = {
     val boo: PartialFunction[PullRequestDeploymentStatus, Html] = {
@@ -34,7 +34,7 @@ case class DeploymentProgressSnapshot(repoSnapshot: RepoSnapshot, siteSnapshot: 
     boo.lift(prsc.newPersistableState).map(_.body.replace("\n", ""))
   }
 
-  val swinton = new IssueUpdater[GHPullRequest, PullRequestDeploymentStatus, PullRequestSiteCheck] {
+  val issueUpdater = new IssueUpdater[GHPullRequest, PullRequestDeploymentStatus, PullRequestSiteCheck] {
     val labelToStateMapping = new LabelMapping[PullRequestDeploymentStatus] {
       def labelsFor(s: PullRequestDeploymentStatus): Set[String] = Set(s.labelFor(siteSnapshot.site))
 
