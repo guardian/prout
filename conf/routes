@@ -3,10 +3,11 @@
 # ~~~~
 
 # A GET request because that's what RiffRaff supports...
-GET         /api/update/:org/:repo        controllers.Application.updateRepo(org, repo, url, urlLabel: Option[String])
-POST        /api/hooks/github             controllers.Application.githubHook(url, urlLabel: Option[String])
+GET         /api/update/:org/:repo                      controllers.Application.updateRepo(org, repo, checkpoint)
+POST        /api/update/:org/:repo/hooks/aws-sns        controllers.Application.snsHook(org, repo, checkpoint)
+POST        /api/hooks/github                           controllers.Application.githubHook(checkpoint)
 
-GET         /                             controllers.Application.index()
+GET         /                                           controllers.Application.index()
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file                 controllers.Assets.at(path="/public", file)
+GET         /assets/*file                               controllers.Assets.at(path="/public", file)

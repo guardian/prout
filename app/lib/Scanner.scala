@@ -2,12 +2,13 @@ package lib
 
 import java.util.concurrent.TimeUnit.MINUTES
 
+import org.eclipse.jgit.lib.ObjectId
 import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.cache.Cache
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
@@ -15,22 +16,22 @@ object Scanner {
 
   import play.api.Play.current
 
-  def updateFor(site: Site, repoFullName: RepoFullName) {
-    val key = repoFullName + " " + site
+  def updateFor(repoFullName: RepoFullName, checkpoint: String) {
+    val key = repoFullName + " " + checkpoint
     Logger.debug(s"update requested for $key")
     Cache.getOrElse(key) {
-      new Dogpile(scan(site, Bot.conn().getRepository(repoFullName.text)))
+      new Dogpile(scan(Bot.conn().getRepository(repoFullName.text), checkpoint))
     }.doAtLeastOneMore()
   }
 
-  private def scan(site: Site, githubRepo: GHRepository) = {
+  private def scan(githubRepo: GHRepository, checkpoint: String, commitIdentifier: RepoSnapshot => Future[ObjectId]) = {
     Logger.info(s"Asked to audit ${githubRepo.getFullName}")
 
     val siteSnapshotF = SiteSnapshot(site)
     val repoSnapshotF = RepoSnapshot(githubRepo)
     val jobFuture = for {
-      siteSnapshot <- siteSnapshotF
       repoSnapshot <- repoSnapshotF
+      siteSnapshot <- siteSnapshotF
       status = DeploymentProgressSnapshot(repoSnapshot, siteSnapshot)
       prStatuses <- status.goCrazy()
     } yield {

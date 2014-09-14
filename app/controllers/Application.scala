@@ -23,19 +23,25 @@ import play.api.mvc._
 
 object Application extends Controller {
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookJson("monkey")) { request =>
-    val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-      Scanner.updateFor(site, RepoFullName(repoFullName))
+  def updateRepo(repoOwner: String, repoName: String, checkpoint: String) = Action { implicit req =>
+    Scanner.updateFor(checkpoint, RepoFullName(repoOwner, repoName))
+    NoContent
+  }
+
+  def snsHook(repoOwner: String, repoName: String, checkpoint: String) = Action(parse.json) { request =>
+    for (message <- (request.body \ "Message").validate[String]) {
+      Scanner.updateFor(checkpoint, RepoFullName(repoOwner, repoName))
     }
     NoContent
   }
 
-  def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
-    val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    Scanner.updateFor(site, RepoFullName(repoOwner, repoName))
+  def githubHook(checkpoint: String) = Action(Parsers.githubHookJson("monkey")) { request =>
+    for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
+      Scanner.updateFor(checkpoint, RepoFullName(repoFullName))
+    }
     NoContent
   }
+
 
   def index = Action { implicit req =>
     Ok(views.html.userPages.index())
