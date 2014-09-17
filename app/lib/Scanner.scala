@@ -16,31 +16,32 @@ object Scanner {
 
   import play.api.Play.current
 
-  def updateFor(repoFullName: RepoFullName, checkpoint: String) {
+  def updateFor(repoFullName: RepoFullName, checkpoint: String, commitIdentifier: RepoSnapshot => Future[SiteSnapshot]) {
     val key = repoFullName + " " + checkpoint
     Logger.debug(s"update requested for $key")
     Cache.getOrElse(key) {
-      new Dogpile(scan(Bot.conn().getRepository(repoFullName.text), checkpoint))
+      new Dogpile {
+        val githubRepo = Bot.conn().getRepository(repoFullName.text)
+        Logger.info(s"Asked to audit ${githubRepo.getFullName}")
+
+        val repoSnapshotF = RepoSnapshot(githubRepo)
+        val jobFuture = for {
+          repoSnapshot <- repoSnapshotF
+          siteSnapshot <- commitIdentifier(repoSnapshot)
+          prStatuses <- DeploymentProgressSnapshot(repoSnapshot, siteSnapshot).goCrazy()
+        } yield {
+          val prByStatus = prStatuses.groupBy(_.currentStatus)
+
+          Logger.info(s"${githubRepo.getFullName} : All: ${summary(prStatuses)}")
+          Logger.info(s"${githubRepo.getFullName} : overdue=${prByStatus.get(Overdue).map(summary)} pending=${prByStatus.get(Pending).map(summary)}")
+        }
+        Await.ready(jobFuture, Duration(2, MINUTES))
+      }
     }.doAtLeastOneMore()
   }
 
-  private def scan(githubRepo: GHRepository, checkpoint: String, commitIdentifier: RepoSnapshot => Future[ObjectId]) = {
-    Logger.info(s"Asked to audit ${githubRepo.getFullName}")
+  private def scan(githubRepo: GHRepository, checkpoint: String, commitIdentifier: RepoSnapshot => Future[SiteSnapshot]) = {
 
-    val siteSnapshotF = SiteSnapshot(site)
-    val repoSnapshotF = RepoSnapshot(githubRepo)
-    val jobFuture = for {
-      repoSnapshot <- repoSnapshotF
-      siteSnapshot <- siteSnapshotF
-      status = DeploymentProgressSnapshot(repoSnapshot, siteSnapshot)
-      prStatuses <- status.goCrazy()
-    } yield {
-      val prByStatus = prStatuses.groupBy(_.currentStatus)
-
-      Logger.info(s"${githubRepo.getFullName} : All: ${summary(prStatuses)}")
-      Logger.info(s"${githubRepo.getFullName} : overdue=${prByStatus.get(Overdue).map(summary)} pending=${prByStatus.get(Pending).map(summary)}")
-    }
-    Await.ready(jobFuture, Duration(2, MINUTES))
   }
 
   def summary(prs: Seq[PullRequestSiteCheck]): String = prs.size + " " + prs.map(_.pr.getNumber).sorted.reverse.map("#"+_).mkString("(", ", ", ")")
