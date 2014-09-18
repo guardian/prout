@@ -17,6 +17,7 @@
 package lib
 
 import com.madgag.git._
+import lib.TextCommitIdExtractor.extractCommit
 import org.eclipse.jgit.lib.ObjectId
 import org.joda.time.{DateTime, ReadableInstant}
 import play.api.Logger
@@ -27,14 +28,12 @@ import scala.concurrent._
 
 object SiteSnapshot {
 
-  val hexRegex = """\b\p{XDigit}{40}\b""".r
 
   def apply(site: Site): Future[SiteSnapshot] = {
     import play.api.Play.current
 
-    val url = site.url
     val siteCommitIdF =
-      WS.url(url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
+      WS.url(site.url.toString).get().map(resp => extractCommit(resp.body)()).andThen {
         case ci => Logger.info(s"Site '${site.label}' commit id: ${ci.map(_.map(_.name()))}")
       }
 

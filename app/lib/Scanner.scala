@@ -16,7 +16,7 @@ object Scanner {
 
   import play.api.Play.current
 
-  def updateFor(repoFullName: RepoFullName, checkpoint: String, commitIdentifier: RepoSnapshot => Future[SiteSnapshot]) {
+  def updateFor(checkpoint: String, repoFullName: RepoFullName, commitIdentifier: RepoSnapshot => Future[SiteSnapshot]) {
     val key = repoFullName + " " + checkpoint
     Logger.debug(s"update requested for $key")
     Cache.getOrElse(key) {

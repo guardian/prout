@@ -16,10 +16,18 @@
 
 package controllers
 
-import com.netaporter.uri.Uri
+import com.netaporter.uri._
+import lib.TextCommitIdExtractor._
 import lib._
 import lib.actions.Parsers
+import org.eclipse.jgit.lib.Repository
+import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
+import play.api.Logger
+import play.api.libs.ws.WS
 import play.api.mvc._
+
+import scala.concurrent.Future
 
 object Application extends Controller {
 
@@ -29,17 +37,38 @@ object Application extends Controller {
   }
 
   def snsHook(repoOwner: String, repoName: String, checkpoint: String) = Action(parse.json) { request =>
-    for (message <- (request.body \ "Message").validate[String]) {
-      Scanner.updateFor(checkpoint, RepoFullName(repoOwner, repoName))
+    for {
+      message <- (request.body \ "Message").validate[String]
+      timestamp <- (request.body \ "Timestamp").validate[String].map(ISODateTimeFormat.basicDateTime.parseDateTime)
+    } {
+      def siteSnapshotForRepo(repoSnapshot: RepoSnapshot) = Future {
+        val commitId = TextCommitIdExtractor.extractCommit(message)(repoSnapshot.gitRepo)
+        SiteSnapshot(Site(Uri.parse("http://example.com"), checkpoint), commitId, timestamp)
+      }
+      Scanner.updateFor(checkpoint, RepoFullName(repoOwner, repoName), siteSnapshotForRepo)
     }
     NoContent
   }
 
   def githubHook(checkpoint: String) = Action(Parsers.githubHookJson("monkey")) { request =>
     for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-      Scanner.updateFor(checkpoint, RepoFullName(repoFullName))
+      Scanner.updateFor(checkpoint, RepoFullName(repoFullName), siteSnapshot())
     }
     NoContent
+  }
+
+  def siteSnapshot(site: Site)(repoSnapshot: RepoSnapshot) = Future {
+    import play.api.Play.current
+    implicit val gitRepo = repoSnapshot.gitRepo
+
+    val siteCommitIdF =
+      WS.url(site.url.toString).get().map(resp => extractCommit(resp.body)).andThen {
+        case ci => Logger.info(s"Site '${site.label}' commit id: ${ci.map(_.map(_.name()))}")
+      }
+
+    for {
+      siteCommitId <- siteCommitIdF
+    } yield SiteSnapshot(site, siteCommitId, DateTime.now)
   }
 
 

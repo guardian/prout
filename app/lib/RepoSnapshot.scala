@@ -22,12 +22,15 @@ import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.kohsuke.github._
 import play.api.Logger
+import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.convert.wrapAsScala._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.util.matching.Regex
 import scalax.file.ImplicitConversions._
+import scalax.io.Resource
 
 object RepoSnapshot {
 
@@ -62,4 +65,10 @@ case class RepoSnapshot(
   implicit val revWalk = new RevWalk(gitRepo)
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
+
+  lazy val config: JsValue = {
+    val latestConfigFileGitId = gitRepo.resolve(s"${repo.getMasterBranch}^{tree}:.prout.json")
+
+    Json.parse(Resource.fromInputStream(latestConfigFileGitId.open.openStream()).byteArray)
+  }
 }
