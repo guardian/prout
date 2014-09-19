@@ -18,7 +18,8 @@ package controllers
 
 import com.netaporter.uri.Uri
 import lib._
-import lib.actions.Parsers
+import lib.actions.{Functions, Parsers}
+import org.kohsuke.github.GitHub
 import play.api.mvc._
 
 object Application extends Controller {
@@ -31,10 +32,16 @@ object Application extends Controller {
     NoContent
   }
 
-  def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = Action { implicit req =>
-    val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    Scanner.updateFor(site, RepoFullName(repoOwner, repoName))
-    NoContent
+  def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = {
+    val repoFullName = RepoFullName(repoOwner, repoName)
+    Functions.basicAuth {
+      (u, p) => Some(GitHub.connectUsingOAuth(u)).filter(_.getRepository(repoFullName.text).hasPushAccess)
+    } { implicit req =>
+      val site = Site.from(Uri.parse(siteUrl), siteLabel)
+
+      Scanner.updateFor(site, repoFullName)
+      NoContent
+    }
   }
 
   def index = Action { implicit req =>
