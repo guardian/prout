@@ -21,14 +21,8 @@ between merge and deploy can be enough time for a developer like me to get distr
 ("Look, shiny thing!" or, more realistically, "What's the next bit of work?") and
 forget about promptly reviewing their changes on Production.
 
-Prout . It can also help out in
-
-Devs are very good at communicating in pull requests,
-
-Prout needs:
-
-Prout doesn't need:
-
+Prout simply notifies developers in their pull request that the code has been _seen_
+in Production (a slightly stronger statement than simply saying it's been deployed).
 
 
 Configuration
