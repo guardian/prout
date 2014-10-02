@@ -16,9 +16,14 @@
 
 package lib
 
+import com.madgag.git._
+import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.{PathFilterGroup, AndTreeFilter}
 import org.kohsuke.github._
 import play.api.Logger
-import collection.convert.wrapAsScala._
+import collection.convert.wrapAll._
 import scala.util.{Success, Try}
 import com.github.nscala_time.time.Imports._
 import scala.concurrent._
@@ -38,6 +43,18 @@ object Implicits {
     lazy val assignee = Option(issue.getAssignee)
 
     lazy val labelNames = issue.getLabels.map(_.getName)
+  }
+
+  implicit class RichCommitPointer(commitPointer: GHCommitPointer) {
+    def asRevCommit(implicit revWalk: RevWalk): RevCommit = commitPointer.getSha.asObjectId.asRevCommit
+  }
+
+  implicit class RichPullRequest(pullRequest: GHPullRequest) {
+    /**
+     * @return interestingPaths which were affected by the pull request
+     */
+    def affects(interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] =
+      GitChanges.affectedFolders(pullRequest.getBase.asRevCommit, pullRequest.getHead.asRevCommit, interestingPaths)
   }
 
   implicit class RichOrg(org: GHOrganization) {

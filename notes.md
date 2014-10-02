@@ -55,3 +55,20 @@ branch: {
  name: "master",
  commit: "22222222c92a13e630967faee737c818eafa"
 }
+
+
+
+What happens we use .prout.json in subdirectories?
+
+We have to identify all prout configs. When we do a scan, we need to
+hit all checkpoint urls.
+
+If a pull request was merged that affected files under the .prout.json
+directory,
+
+If a PR is merged, what checkpoints does it NEED to be visible on?
+The PR will have affected files under certain directories -
+only checkpoints from .prout.json files under those directories
+need be considered.
+Just the ones under the folder that the checkpoint is defined in?
+

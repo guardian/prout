@@ -3,6 +3,7 @@ package lib
 
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
+import lib.Implicits._
 import lib.gitgithub.StateSnapshot
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -20,10 +21,10 @@ case class PullRequestSiteCheck(pr: GHPullRequest, siteSnapshot: SiteSnapshot, g
 
   val isVisibleOnSite: Boolean = {
     implicit val w: RevWalk = new RevWalk(gitRepo)
-    val prCommit: RevCommit = pr.getHead.getSha.asObjectId.asRevCommit
+    val prCommit: RevCommit = pr.getHead.asRevCommit
     val siteCommit: RevCommit = siteSnapshot.commitId.get.asRevCommit
 
-    val isVisible = w.isMergedInto(prCommit,siteCommit)
+    val isVisible = w.isMergedInto(prCommit, siteCommit)
 
     Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()} isVisible=$isVisible")
 

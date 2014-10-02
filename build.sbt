@@ -6,6 +6,8 @@ scalaVersion := "2.11.2"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
+resolvers += Resolver.sonatypeRepo("releases")
+
 libraryDependencies ++= Seq(
   cache,
   filters,
@@ -18,9 +20,10 @@ libraryDependencies ++= Seq(
   "com.squareup.okhttp" % "okhttp" % "2.0.0",
   "com.squareup.okhttp" % "okhttp-urlconnection" % "2.0.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
-  "org.eclipse.jgit" % "org.eclipse.jgit" % "3.4.1.201406201815-r",
-  "com.madgag.scala-git" %% "scala-git" % "2.4",
-  "com.madgag.scala-git" %% "scala-git-test" % "2.4" % "test"
+  "org.eclipse.jgit" % "org.eclipse.jgit" % "3.5.0.201409260305-r",
+  "com.madgag.scala-git" %% "scala-git" % "2.5",
+  "com.madgag.scala-git" %% "scala-git-test" % "2.5" % "test",
+  "org.scalatestplus" %% "play" % "1.1.0" % "test"
 )     
 
 sources in (Compile,doc) := Seq.empty
