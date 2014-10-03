@@ -18,7 +18,8 @@ package controllers
 
 import com.netaporter.uri.Uri
 import lib._
-import lib.actions.{Functions, Parsers}
+import lib.actions.BasicAuth._
+import lib.actions.Parsers
 import org.kohsuke.github.GitHub
 import play.api.mvc._
 
@@ -34,8 +35,8 @@ object Application extends Controller {
 
   def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = {
     val repoFullName = RepoFullName(repoOwner, repoName)
-    Functions.basicAuth {
-      (u, p) => Some(GitHub.connectUsingOAuth(u)).filter(_.getRepository(repoFullName.text).hasPushAccess)
+    basicAuth {
+      creds => Some(GitHub.connectUsingOAuth(creds.username)).filter(_.getRepository(repoFullName.text).hasPushAccess)
     } { implicit req =>
       val site = Site.from(Uri.parse(siteUrl), siteLabel)
 
