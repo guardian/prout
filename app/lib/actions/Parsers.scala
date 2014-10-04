@@ -3,6 +3,7 @@ package lib.actions
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+import lib.{Scanner, RepoFullName}
 import play.api.Logger
 import play.api.libs.iteratee.{Iteratee, Traversable}
 import play.api.libs.json.{JsValue, Json}
@@ -12,6 +13,10 @@ import play.api.mvc.{BodyParser, RequestHeader, Result, Results}
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+object RepoSecretKey {
+  def sharedSecretForRepo(repo: RepoFullName) = Crypto.sign("GitHub-Repo:"+repo.text)
+}
+
 object Parsers {
 
   def assertSecureEquals(s1: String, s2: String) = {
@@ -19,7 +24,11 @@ object Parsers {
     Logger.debug("HMAC Signatures matched!")
   }
 
-  def githubHookJson(sharedSecret: String): BodyParser[JsValue] = tolerantXHubSigned(sharedSecret, "json", 128 * 1024, "Invalid Json") {
+  def githubHookRepository: BodyParser[RepoFullName] = tolerantXHubSigned[RepoFullName](RepoSecretKey.sharedSecretForRepo, "json", 128 * 1024, "Invalid Json") {
+    (requestHeader, bytes) => (Json.parse(bytes) \ "repository" \ "full_name").validate[String].map(RepoFullName(_)).get
+  }
+
+  def githubHookJson(sharedSecret: String) = tolerantXHubSigned[JsValue](_ => sharedSecret, "json", 128 * 1024, "Invalid Json") {
     (requestHeader, bytes) => Json.parse(bytes)
   }
 
@@ -31,10 +40,12 @@ object Parsers {
   https://pubsubhubbub.googlecode.com/git/pubsubhubbub-core-0.4.html#authednotify ("8. Authenticated Content Distribution")
 
    */
-  def tolerantXHubSigned[A](sharedSecret: String, name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =
+  def tolerantXHubSigned[A](sharedSecret: A => String, name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =
     tolerantBodyParser[A]("json", maxLength, "Invalid Json") { (request, bytes) =>
-      assertSecureEquals(request.headers("X-Hub-Signature").replaceFirst("sha1=", ""), sign(bytes, sharedSecret.getBytes))
-      parser(request, bytes)
+      val xHubSignature = request.headers("X-Hub-Signature").replaceFirst("sha1=", "")
+      val res: A = parser(request, bytes)
+      assertSecureEquals(xHubSignature, sign(bytes, sharedSecret(res).getBytes))
+      res
     }
 
   def tolerantBodyParser[A](name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =

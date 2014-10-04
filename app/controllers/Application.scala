@@ -25,11 +25,9 @@ import play.api.mvc._
 
 object Application extends Controller {
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookJson("monkey")) { request =>
+  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookRepository) { request =>
     val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    for (repoFullName <- (request.body \ "repository" \ "full_name").validate[String]) {
-      Scanner.updateFor(site, RepoFullName(repoFullName))
-    }
+    Scanner.updateFor(site, request.body)
     NoContent
   }
 
