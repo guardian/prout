@@ -53,8 +53,10 @@ object Implicits {
     /**
      * @return interestingPaths which were affected by the pull request
      */
-    def affects(interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] =
+    def affects(interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = {
+      implicit val reader = revWalk.getObjectReader
       GitChanges.affectedFolders(pullRequest.getBase.asRevCommit, pullRequest.getHead.asRevCommit, interestingPaths)
+    }
   }
 
   implicit class RichOrg(org: GHOrganization) {
