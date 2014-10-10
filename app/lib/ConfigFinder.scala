@@ -16,10 +16,13 @@ object ConfigFinder {
    */
   def configTreeWalk(c: RevCommit)(implicit reader: ObjectReader): TreeWalk = walk(c.getTree)(configFilter)
 
+  def configIdMapFrom(c: RevCommit)(implicit reader: ObjectReader) = configTreeWalk(c).map { tw =>
+    val configPath = tw.slashPrefixedPath
+    configPath.reverse.dropWhile(_ != '/').reverse -> tw.getObjectId(0)
+  }.toMap
+
   def config(c: RevCommit)(implicit reader: ObjectReader): Map[String, Set[Checkpoint]] = {
-    val checkpointsByNameByFolder: Map[String, Set[Checkpoint]] = (for (tw <- configTreeWalk(c)) yield {
-      tw.getPathString -> Config.readConfigFrom(tw.getObjectId(0))
-    }).toMap
+    val checkpointsByNameByFolder: Map[String, Set[Checkpoint]] = configIdMapFrom(c).mapValues(Config.readConfigFrom)
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
       (folder, checkpointNames) <- checkpointsByNameByFolder.mapValues(_.map(_.name)).toSeq

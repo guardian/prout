@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
   "com.squareup.okhttp" % "okhttp-urlconnection" % "2.0.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.eclipse.jgit" % "org.eclipse.jgit" % "3.5.0.201409260305-r",
-  "com.madgag.scala-git" %% "scala-git" % "2.6",
+  "com.madgag.scala-git" %% "scala-git" % "2.7",
   "com.madgag.scala-git" %% "scala-git-test" % "2.5" % "test",
   "org.scalatestplus" %% "play" % "1.1.0" % "test"
 )     
