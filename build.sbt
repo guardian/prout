@@ -2,7 +2,7 @@ name := "pr-guardian"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.3"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
