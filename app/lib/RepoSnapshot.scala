@@ -62,4 +62,6 @@ case class RepoSnapshot(
   implicit val revWalk = new RevWalk(gitRepo)
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
+
+  lazy val config = ConfigFinder.config(masterCommit)
 }
