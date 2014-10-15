@@ -55,4 +55,16 @@ object Config {
   }
 
   case class Checkpoint(name: String, details: CheckpointDetails)
+
+  case class RepoConfig(checkpointsByFolder: Map[String, Set[Checkpoint]]) {
+
+    val foldersByCheckpointName: Map[String, Seq[String]] = (for {
+      (folder, checkpointNames) <- checkpointsByFolder.mapValues(_.map(_.name)).toSeq
+      checkpointName <- checkpointNames
+    } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
+
+    val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
+
+    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: $checkpointsNamedInMultipleFolders")
+  }
 }

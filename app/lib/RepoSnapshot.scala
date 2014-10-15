@@ -59,7 +59,7 @@ case class RepoSnapshot(
   gitRepo: Repository,
   mergedPullRequests: Seq[GHPullRequest]) {
 
-  implicit val revWalk = new RevWalk(gitRepo)
+  private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
 

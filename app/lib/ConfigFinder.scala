@@ -1,7 +1,7 @@
 package lib
 
 import com.madgag.git._
-import lib.Config.Checkpoint
+import lib.Config.{RepoConfig, Checkpoint}
 import org.eclipse.jgit.lib.ObjectReader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
@@ -21,18 +21,9 @@ object ConfigFinder {
     configPath.reverse.dropWhile(_ != '/').reverse -> tw.getObjectId(0)
   }.toMap
 
-  def config(c: RevCommit)(implicit reader: ObjectReader): Map[String, Set[Checkpoint]] = {
+  def config(c: RevCommit)(implicit reader: ObjectReader): RepoConfig = {
     val checkpointsByNameByFolder: Map[String, Set[Checkpoint]] = configIdMapFrom(c).mapValues(Config.readConfigFrom)
 
-    val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- checkpointsByNameByFolder.mapValues(_.map(_.name)).toSeq
-      checkpointName <- checkpointNames
-    } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
-
-    val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
-
-    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: $checkpointsNamedInMultipleFolders")
-
-    checkpointsByNameByFolder
+    RepoConfig(checkpointsByNameByFolder)
   }
 }
