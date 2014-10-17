@@ -17,6 +17,7 @@
 package lib
 
 import com.madgag.git._
+import lib.Config.Checkpoint
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
@@ -28,6 +29,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scalax.file.ImplicitConversions._
+import Implicits._
 
 object RepoSnapshot {
 
@@ -64,4 +66,25 @@ case class RepoSnapshot(
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
 
   lazy val config = ConfigFinder.config(masterCommit)
+
+  val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = (for {
+    pr <- mergedPullRequests
+  } yield {
+    pr -> config.checkpointsByFolder.filterKeys(pr.affects(config.folders)).values.reduce(_ ++ _)
+  }).toMap
+
+  val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
+
+  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map(c => c -> CheckpointSnapshot(c)).toMap
+
+  def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
+    Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
+
+  def checkpointSummaryForPR(pr: GHPullRequest): Future[PullRequestCheckpointsSummary] = for {
+    cs <- Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
+  } yield PullRequestCheckpointsSummary(pr, cs, gitRepo)
+
+  def createCheckpointSummariesAndUpdatePRs: Future[Seq[PullRequestCheckpointsSummary]] =
+    Future.traverse(mergedPullRequests)(checkpointSummaryForPR(_).map { cs => cs.handlePR ; cs })
+
 }

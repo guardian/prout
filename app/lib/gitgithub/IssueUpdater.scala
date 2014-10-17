@@ -13,7 +13,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
 
   def ignoreItemsWithExistingState(existingState: PersistableState): Boolean
 
-  def snapshoter(oldState: PersistableState, issue: IssueType): Snapshot
+  def snapshot(oldState: PersistableState, issue: IssueType): Snapshot
 
   def actionTaker(snapshot: Snapshot)
 
@@ -27,7 +27,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
     val oldLabels = issue.labelledState(_ => true).applicableLabels
     val existingPersistedState: PersistableState = labelToStateMapping.stateFrom(oldLabels)
     if (!ignoreItemsWithExistingState(existingPersistedState)) {
-      val currentSnapshot = snapshoter(existingPersistedState, issueLike)
+      val currentSnapshot = snapshot(existingPersistedState, issueLike)
       val newPersistableState = currentSnapshot.newPersistableState
       if (newPersistableState != existingPersistedState) {
         Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")

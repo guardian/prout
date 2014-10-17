@@ -57,6 +57,7 @@ object Config {
   case class Checkpoint(name: String, details: CheckpointDetails)
 
   case class RepoConfig(checkpointsByFolder: Map[String, Set[Checkpoint]]) {
+    val folders: Set[String] = checkpointsByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
       (folder, checkpointNames) <- checkpointsByFolder.mapValues(_.map(_.name)).toSeq

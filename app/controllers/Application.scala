@@ -25,20 +25,18 @@ import play.api.mvc._
 
 object Application extends Controller {
 
-  def githubHook(siteUrl: String, siteLabel: Option[String]) = Action(Parsers.githubHookRepository) { request =>
-    val site = Site.from(Uri.parse(siteUrl), siteLabel)
-    Scanner.updateFor(site, request.body)
+  def githubHook() = Action(Parsers.githubHookRepository) { request =>
+    val repoFullName: RepoFullName = request.body
+    Scanner.updateFor(repoFullName)
     NoContent
   }
 
-  def updateRepo(repoOwner: String, repoName: String, siteUrl: String, siteLabel: Option[String]) = {
+  def updateRepo(repoOwner: String, repoName: String) = {
     val repoFullName = RepoFullName(repoOwner, repoName)
     basicAuth {
       creds => Some(GitHub.connectUsingOAuth(creds.username)).filter(_.getRepository(repoFullName.text).hasPushAccess)
     } { implicit req =>
-      val site = Site.from(Uri.parse(siteUrl), siteLabel)
-
-      Scanner.updateFor(site, repoFullName)
+      Scanner.updateFor(repoFullName)
       NoContent
     }
   }

@@ -17,6 +17,7 @@
 package lib
 
 import com.madgag.git._
+import lib.Config.Checkpoint
 import org.eclipse.jgit.lib.ObjectId
 import org.joda.time.{DateTime, ReadableInstant}
 import play.api.Logger
@@ -25,23 +26,21 @@ import play.api.libs.ws.WS
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 
-object SiteSnapshot {
+object CheckpointSnapshot {
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
-  def apply(site: Site): Future[SiteSnapshot] = {
+  def apply(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
     import play.api.Play.current
 
-    val url = site.url
+    val url = checkpoint.url
     val siteCommitIdF =
       WS.url(url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
-        case ci => Logger.info(s"Site '${site.label}' commit id: ${ci.map(_.map(_.name()))}")
+        case ci => Logger.info(s"Site '${checkpoint.name}' commit id: ${ci.map(_.map(_.name()))}")
       }
 
-    for {
-      siteCommitId <- siteCommitIdF
-    } yield SiteSnapshot(site, siteCommitId, DateTime.now)
+    for (siteCommitId <- siteCommitIdF) yield CheckpointSnapshot(checkpoint, siteCommitId, DateTime.now)
   }
 }
 
-case class SiteSnapshot(site: Site, commitId: Option[ObjectId], time: ReadableInstant)
+case class CheckpointSnapshot(checkpoint: Checkpoint, commitId: Option[ObjectId], time: ReadableInstant)
