@@ -10,6 +10,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import scala.util.Success
 
 object Scanner {
 
@@ -29,7 +30,7 @@ object Scanner {
     val repoSnapshotF = RepoSnapshot(githubRepo)
     val jobFuture = for {
       repoSnapshot <- repoSnapshotF
-      foo <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.checkpointSummaryForPR(_).map(_.handlePR))
+      foo <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.checkpointSummaryForPR(_).andThen { case Success(prcs) => prcs.handlePR })
     } yield {
       // val prByStatus = prStatuses.groupBy(_.currentStatus)
     }

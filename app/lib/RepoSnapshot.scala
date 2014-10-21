@@ -82,7 +82,7 @@ case class RepoSnapshot(
 
   def checkpointSummaryForPR(pr: GHPullRequest): Future[PullRequestCheckpointsSummary] = for {
     cs <- Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
-  } yield PullRequestCheckpointsSummary(pr, cs, gitRepo)
+  } yield PullRequestCheckpointsSummary(pr, cs, this)
 
   def createCheckpointSummariesAndUpdatePRs: Future[Seq[PullRequestCheckpointsSummary]] =
     Future.traverse(mergedPullRequests)(checkpointSummaryForPR(_).map { cs => cs.handlePR ; cs })

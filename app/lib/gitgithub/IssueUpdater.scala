@@ -5,6 +5,12 @@ import org.kohsuke.github.{GHPullRequest, GHRepository, GHIssue}
 import play.api.Logger
 import lib.LabelledState._
 
+/**
+ *
+ * @tparam IssueType Pull Request or Issue
+ * @tparam PersistableState State that can be converted to and from GitHub issue labels, ie a set of Strings
+ * @tparam Snapshot A present-state snapshot that can yield a PersistableState
+ */
 trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnapshot[PersistableState]] {
 
   val repo: GHRepository

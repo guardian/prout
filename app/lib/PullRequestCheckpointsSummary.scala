@@ -15,14 +15,15 @@ import play.twirl.api.Html
 
 import scala.concurrent.Future
 
-case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[CheckpointSnapshot], gitRepo: Repository) extends StateSnapshot[Map[String, PullRequestCheckpointStatus]] {
+case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[CheckpointSnapshot], repoSnapshot: RepoSnapshot) extends StateSnapshot[Map[String, PullRequestCheckpointStatus]] {
+  self =>
 
   val checkpointStatuses: Map[String, PullRequestCheckpointStatus] = snapshots.map {
     cs =>
       val timeBetweenMergeAndSnapshot = (new DateTime(pr.getMergedAt) to cs.time).duration
 
       val isVisibleOnSite: Boolean = {
-        implicit val w: RevWalk = new RevWalk(gitRepo)
+        implicit val w: RevWalk = new RevWalk(repoSnapshot.gitRepo)
         val prCommit: RevCommit = pr.getHead.asRevCommit
         val siteCommit: RevCommit = cs.commitId.get.asRevCommit
 
@@ -44,21 +45,23 @@ case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[Check
 
   val WorthyOfCommentWindow = 12.hours
 
-  def handlePR: Future[] = Future { issueUpdater.process(pr) }
-
-  def messageOptFor() = {
-    val boo: PartialFunction[PullRequestCheckpointStatus, Html] = {
-      case Seen =>
-        views.html.ghIssues.seen(prsc)
-      case Overdue =>
-        views.html.ghIssues.overdue(prsc)
-    }
-
-    boo.lift(newPersistableState).map(_.body.replace("\n", ""))
+  def handlePR() {
+    issueUpdater.process(pr)
   }
+//
+//  def messageOptFor() = {
+//    val boo: PartialFunction[PullRequestCheckpointStatus, Html] = {
+//      case Seen =>
+//        views.html.ghIssues.seen(prsc)
+//      case Overdue =>
+//        views.html.ghIssues.overdue(prsc)
+//    }
+//
+//    boo.lift(newPersistableState).map(_.body.replace("\n", ""))
+//  }
 
-  val issueUpdater = new IssueUpdater[GHPullRequest, PullRequestCheckpointsSummary, Map[String, PullRequestCheckpointStatus]] {
-    val repo = gitRepo
+  val issueUpdater = new IssueUpdater[GHPullRequest, Map[String, PullRequestCheckpointStatus], PullRequestCheckpointsSummary] {
+    val repo = repoSnapshot.repo
 
     val labelToStateMapping = new LabelMapping[Map[String, PullRequestCheckpointStatus]] {
       def labelsFor(s: Map[String, PullRequestCheckpointStatus]): Set[String] = s.map {
@@ -69,11 +72,13 @@ case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[Check
         snapshots.map(cs => cs.checkpoint.name -> PullRequestCheckpointStatus.fromLabels(labels, cs.checkpoint).getOrElse(Pending)).toMap
     }
 
-    def ignoreItemsWithExistingState(existingState: PullRequestCheckpointStatus) = existingState == Seen
+    def ignoreItemsWithExistingState(existingState: Map[String, PullRequestCheckpointStatus]): Boolean =
+      existingState.values.forall(_ == Seen)
 
-    override def snapshoter(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest) = this
 
-    override def actionTaker(prcs: Map[String, PullRequestCheckpointStatus]) = {
+    def snapshot(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest): PullRequestCheckpointsSummary = self
+
+    override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       if ((new DateTime(pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
 
 
@@ -84,4 +89,5 @@ case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[Check
       }
     }
   }
+
 }
