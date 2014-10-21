@@ -41,6 +41,8 @@ object Config {
     val parsedMapResult: JsResult[Map[String, CheckpointDetails]] =
       Json.fromJson[Map[String, CheckpointDetails]](Json.parse(configFileObjectId.open.getCachedBytes(4096)))
 
+    println(parsedMapResult)
+
     parsedMapResult.map[Set[Checkpoint]] { m =>
       m.map {
         case (name, details) => Checkpoint(name, details)

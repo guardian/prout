@@ -3,7 +3,7 @@ package lib.gitgithub
 import lib.Delayer
 import org.kohsuke.github.{GHPullRequest, GHRepository, GHIssue}
 import play.api.Logger
-import lib.LabelledState._
+import lib.Implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
@@ -27,7 +27,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
   def actionTaker(snapshot: Snapshot)
 
   def process(issueLike: IssueType): Future[Option[Snapshot]] = {
-    Logger.trace(s"handling ${issueLike.getNumber}")
+    Logger.info(s"handling ${issueLike.getNumber}")
     val issue: GHIssue = issueLike match {
       case pr: GHPullRequest => repo.getIssue(issueLike.getNumber)
       case _ => issueLike
@@ -38,6 +38,8 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
     if (!ignoreItemsWithExistingState(existingPersistedState)) {
       for (currentSnapshot <- snapshot(existingPersistedState, issueLike)) yield {
         val newPersistableState = currentSnapshot.newPersistableState
+        Logger.info(s"handling ${issueLike.getNumber} : $currentSnapshot state: existing=$existingPersistedState new=$newPersistableState")
+
         if (newPersistableState != existingPersistedState) {
           Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")
           val newLabels: Set[String] = labelToStateMapping.labelsFor(newPersistableState)

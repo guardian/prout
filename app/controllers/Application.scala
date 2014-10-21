@@ -17,13 +17,18 @@
 package controllers
 
 import com.netaporter.uri.Uri
+import lib.Config.Checkpoint
 import lib._
 import lib.actions.BasicAuth._
 import lib.actions.Parsers
 import org.kohsuke.github.GitHub
 import play.api.mvc._
 
+import scala.concurrent.Future
+
 object Application extends Controller {
+
+  implicit val checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot] = CheckpointSnapshot(_)
 
   def githubHook() = Action(Parsers.githubHookRepository) { request =>
     val repoFullName: RepoFullName = request.body

@@ -1,10 +1,8 @@
 package lib
 
 import com.squareup.okhttp
-import com.squareup.okhttp.{OkHttpClient, OkUrlFactory}
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import org.kohsuke.github.GitHub
-import org.kohsuke.github.extras.OkHttpConnector
+import com.squareup.okhttp.OkHttpClient
+import lib.gitgithub.GitHubCredentials
 import play.api.Logger
 
 import scalax.file.ImplicitConversions._
@@ -16,9 +14,9 @@ object Bot {
 
   val parentWorkDir = Path.fromString("/tmp") / "bot" / "working-dir"
 
-  val accessToken: String = config.getString("github.access.token")
-
   parentWorkDir.mkdirs()
+
+  val accessToken: String = config.getString("github.access.token")
 
   lazy val okHttpClient = {
     val client = new OkHttpClient
@@ -32,13 +30,7 @@ object Bot {
     client
   }
 
-  def conn() = {
-    val gh = GitHub.connectUsingOAuth(accessToken)
-    gh.setConnector(new OkHttpConnector(new OkUrlFactory(okHttpClient)))
-    gh
-  }
+  lazy val githubCredentials = new GitHubCredentials(accessToken, okHttpClient)
 
-  val gitCredentials = new UsernamePasswordCredentialsProvider(accessToken, "")
-
-  val user = conn().getMyself
+  val user = githubCredentials.conn().getMyself
 }

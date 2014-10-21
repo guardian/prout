@@ -38,8 +38,10 @@ object RepoSnapshot {
 
   val WorthyOfCommentWindow = 12.hours
 
-  def apply(githubRepo: GHRepository): Future[RepoSnapshot] = {
-    val conn = Bot.conn()
+  def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]): Future[RepoSnapshot] = {
+    val conn = Bot.githubCredentials.conn()
+
+    val repoFullName = RepoFullName(githubRepo.getFullName)
 
     def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getMasterBranch
 
@@ -49,22 +51,23 @@ object RepoSnapshot {
 
     val gitRepoF = Future {
       RepoUtil.getGitRepo(
-        Bot.parentWorkDir,
+        Bot.parentWorkDir / repoFullName.owner / repoFullName.name,
         githubRepo.gitHttpTransportUrl,
-        Some(Bot.gitCredentials))
+        Some(Bot.githubCredentials.git))
     } andThen { case r => Logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
 
     for {
       mergedPullRequests <- mergedPullRequestsF
       gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests)
+    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, checkpointSnapshoter)
   }
 }
 
 case class RepoSnapshot(
   repo: GHRepository,
   gitRepo: Repository,
-  mergedPullRequests: Seq[GHPullRequest]) {
+  mergedPullRequests: Seq[GHPullRequest],
+  checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]) {
   self =>
 
   private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
@@ -73,15 +76,15 @@ case class RepoSnapshot(
 
   lazy val config = ConfigFinder.config(masterCommit)
 
-  val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = (for {
+  lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = (for {
     pr <- mergedPullRequests
   } yield {
-    pr -> config.checkpointsByFolder.filterKeys(pr.affects(config.folders)).values.reduce(_ ++ _)
+    pr -> config.checkpointsByFolder.filterKeys(pr.affects(config.folders)).values.flatten.toSet
   }).toMap
 
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
 
-  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map(c => c -> CheckpointSnapshot(c)).toMap
+  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map(c => c -> checkpointSnapshoter(c)).toMap
 
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
@@ -94,11 +97,13 @@ case class RepoSnapshot(
         case (checkpointName, cs) => cs.labelFor(checkpointName)
       }.toSet
 
-      def stateFrom(labels: Set[String]): PRCheckpointState =
-        PRCheckpointState(activeConfig.map(checkpoint => checkpoint.name -> PullRequestCheckpointStatus.fromLabels(labels, checkpoint).getOrElse(Pending)).toMap)
+      def stateFrom(labels: Set[String]): PRCheckpointState = PRCheckpointState(activeConfig.flatMap { checkpoint =>
+        PullRequestCheckpointStatus.fromLabels(labels, checkpoint).map(checkpoint.name -> _)
+      }.toMap)
     }
 
-    def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean = existingState.all(Seen)
+    def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean =
+      existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
 
 
     def snapshot(oldState: PRCheckpointState, pr: GHPullRequest) =
@@ -107,6 +112,9 @@ case class RepoSnapshot(
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
         println(snapshot.changedSnapshotsByState)
+        for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
+          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.name).mkString(", "))
+        }
 
         //        for (message <- messageOptFor(prsc)) {
         //          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)

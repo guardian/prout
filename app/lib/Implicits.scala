@@ -43,6 +43,8 @@ object Implicits {
     lazy val assignee = Option(issue.getAssignee)
 
     lazy val labelNames = issue.getLabels.map(_.getName)
+
+    def labelledState(applicableFilter: String => Boolean) = new LabelledState(issue, issue.labelNames.toSet)
   }
 
   implicit class RichCommitPointer(commitPointer: GHCommitPointer) {

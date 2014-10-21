@@ -39,8 +39,12 @@ object CheckpointSnapshot {
         case ci => Logger.info(s"Site '${checkpoint.name}' commit id: ${ci.map(_.map(_.name()))}")
       }
 
-    for (siteCommitId <- siteCommitIdF) yield CheckpointSnapshot(checkpoint, siteCommitId, DateTime.now)
+    for (siteCommitId <- siteCommitIdF) yield CheckpointSnapshot(checkpoint, siteCommitId)
   }
 }
 
-case class CheckpointSnapshot(checkpoint: Checkpoint, commitId: Option[ObjectId], time: ReadableInstant)
+case class CheckpointSnapshot(
+  checkpoint: Checkpoint,
+  commitId: Option[ObjectId],
+  time: ReadableInstant = DateTime.now
+)
