@@ -1,4 +1,4 @@
-name := "pr-guardian"
+name := "prout"
 
 version := "1.0-SNAPSHOT"
 

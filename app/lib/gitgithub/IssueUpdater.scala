@@ -4,6 +4,9 @@ import lib.Delayer
 import org.kohsuke.github.{GHPullRequest, GHRepository, GHIssue}
 import play.api.Logger
 import lib.LabelledState._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 /**
  *
@@ -19,11 +22,11 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
 
   def ignoreItemsWithExistingState(existingState: PersistableState): Boolean
 
-  def snapshot(oldState: PersistableState, issue: IssueType): Snapshot
+  def snapshot(oldState: PersistableState, issue: IssueType): Future[Snapshot]
 
   def actionTaker(snapshot: Snapshot)
 
-  def process(issueLike: IssueType): Option[Snapshot] = {
+  def process(issueLike: IssueType): Future[Option[Snapshot]] = {
     Logger.trace(s"handling ${issueLike.getNumber}")
     val issue: GHIssue = issueLike match {
       case pr: GHPullRequest => repo.getIssue(issueLike.getNumber)
@@ -33,18 +36,19 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
     val oldLabels = issue.labelledState(_ => true).applicableLabels
     val existingPersistedState: PersistableState = labelToStateMapping.stateFrom(oldLabels)
     if (!ignoreItemsWithExistingState(existingPersistedState)) {
-      val currentSnapshot = snapshot(existingPersistedState, issueLike)
-      val newPersistableState = currentSnapshot.newPersistableState
-      if (newPersistableState != existingPersistedState) {
-        Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")
-        val newLabels: Set[String] = labelToStateMapping.labelsFor(newPersistableState)
-        assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
-        issue.setLabels(newLabels.toSeq: _*)
-        Delayer.doAfterSmallDelay {
-          actionTaker(currentSnapshot)
+      for (currentSnapshot <- snapshot(existingPersistedState, issueLike)) yield {
+        val newPersistableState = currentSnapshot.newPersistableState
+        if (newPersistableState != existingPersistedState) {
+          Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")
+          val newLabels: Set[String] = labelToStateMapping.labelsFor(newPersistableState)
+          assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
+          issue.setLabels(newLabels.toSeq: _*)
+          Delayer.doAfterSmallDelay {
+            actionTaker(currentSnapshot)
+          }
         }
+        Some(currentSnapshot)
       }
-      Some(currentSnapshot)
-    } else None
+    } else Future.successful(None)
   }
 }

@@ -76,7 +76,7 @@ case class PullRequestCheckpointsSummary(pr: GHPullRequest, snapshots: Set[Check
       existingState.values.forall(_ == Seen)
 
 
-    def snapshot(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest): PullRequestCheckpointsSummary = self
+    def snapshot(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest) = Future.successful(self)
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       if ((new DateTime(pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
