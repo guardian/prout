@@ -30,7 +30,7 @@ object Scanner {
     val repoSnapshotF = RepoSnapshot(githubRepo)
     val jobFuture = for {
       repoSnapshot <- repoSnapshotF
-      foo <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.checkpointSummaryForPR(_).andThen { case Success(prcs) => prcs.handlePR })
+      foo <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.issueUpdater.process)
     } yield {
       // val prByStatus = prStatuses.groupBy(_.currentStatus)
     }

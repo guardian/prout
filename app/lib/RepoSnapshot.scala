@@ -16,11 +16,14 @@
 
 package lib
 
+import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import lib.Config.Checkpoint
+import lib.Implicits._
+import lib.gitgithub.{IssueUpdater, LabelMapping}
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.revwalk.RevCommit
+import org.joda.time.DateTime
 import org.kohsuke.github._
 import play.api.Logger
 
@@ -29,9 +32,11 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scalax.file.ImplicitConversions._
-import Implicits._
+import RepoSnapshot._
 
 object RepoSnapshot {
+
+  val WorthyOfCommentWindow = 12.hours
 
   def apply(githubRepo: GHRepository): Future[RepoSnapshot] = {
     val conn = Bot.conn()
@@ -60,6 +65,7 @@ case class RepoSnapshot(
   repo: GHRepository,
   gitRepo: Repository,
   mergedPullRequests: Seq[GHPullRequest]) {
+  self =>
 
   private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
 
@@ -80,8 +86,36 @@ case class RepoSnapshot(
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
 
-  def checkpointSummaryForPR(pr: GHPullRequest): Future[PullRequestCheckpointsSummary] = for {
-    cs <- Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
-  } yield PullRequestCheckpointsSummary(pr, cs, this)
+  val issueUpdater = new IssueUpdater[GHPullRequest, Map[String, PullRequestCheckpointStatus], PullRequestCheckpointsSummary] {
+    val repo = self.repo
+
+    val labelToStateMapping = new LabelMapping[Map[String, PullRequestCheckpointStatus]] {
+      def labelsFor(s: Map[String, PullRequestCheckpointStatus]): Set[String] = s.map {
+        case (checkpointName, cs) => cs.labelFor(checkpointName)
+      }.toSet
+
+      def stateFrom(labels: Set[String]): Map[String, PullRequestCheckpointStatus] =
+        activeConfig.map(checkpoint => checkpoint.name -> PullRequestCheckpointStatus.fromLabels(labels, checkpoint).getOrElse(Pending)).toMap
+    }
+
+    def ignoreItemsWithExistingState(existingState: Map[String, PullRequestCheckpointStatus]): Boolean =
+      existingState.values.forall(_ == Seen)
+
+
+    def snapshot(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest) = for {
+      cs <- checkpointSnapshotsFor(pr)
+    } yield PullRequestCheckpointsSummary(pr, cs, gitRepo)
+
+    override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
+      if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
+
+
+        //        for (message <- messageOptFor(prsc)) {
+        //          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)
+        //          // prsc.pr.comment(message)
+        //        }
+      }
+    }
+  }
 
 }
