@@ -86,29 +86,27 @@ case class RepoSnapshot(
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
 
-  val issueUpdater = new IssueUpdater[GHPullRequest, Map[String, PullRequestCheckpointStatus], PullRequestCheckpointsSummary] {
+  val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] {
     val repo = self.repo
 
-    val labelToStateMapping = new LabelMapping[Map[String, PullRequestCheckpointStatus]] {
-      def labelsFor(s: Map[String, PullRequestCheckpointStatus]): Set[String] = s.map {
+    val labelToStateMapping = new LabelMapping[PRCheckpointState] {
+      def labelsFor(s: PRCheckpointState): Set[String] = s.statusByCheckpoint.map {
         case (checkpointName, cs) => cs.labelFor(checkpointName)
       }.toSet
 
-      def stateFrom(labels: Set[String]): Map[String, PullRequestCheckpointStatus] =
-        activeConfig.map(checkpoint => checkpoint.name -> PullRequestCheckpointStatus.fromLabels(labels, checkpoint).getOrElse(Pending)).toMap
+      def stateFrom(labels: Set[String]): PRCheckpointState =
+        PRCheckpointState(activeConfig.map(checkpoint => checkpoint.name -> PullRequestCheckpointStatus.fromLabels(labels, checkpoint).getOrElse(Pending)).toMap)
     }
 
-    def ignoreItemsWithExistingState(existingState: Map[String, PullRequestCheckpointStatus]): Boolean =
-      existingState.values.forall(_ == Seen)
+    def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean = existingState.all(Seen)
 
 
-    def snapshot(oldState: Map[String, PullRequestCheckpointStatus], pr: GHPullRequest) = for {
-      cs <- checkpointSnapshotsFor(pr)
-    } yield PullRequestCheckpointsSummary(pr, cs, gitRepo)
+    def snapshot(oldState: PRCheckpointState, pr: GHPullRequest) =
+      for (cs <- checkpointSnapshotsFor(pr)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
-
+        println(snapshot.changedSnapshotsByState)
 
         //        for (message <- messageOptFor(prsc)) {
         //          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)

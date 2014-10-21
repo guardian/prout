@@ -6,11 +6,9 @@ import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.cache.Cache
 
-import scala.collection.immutable.Seq
-import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
-import scala.util.Success
+import scala.concurrent.{Await, Future}
 
 object Scanner {
 
