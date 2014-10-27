@@ -6,7 +6,7 @@ import lib.gitgithub.GitHubCredentials
 import lib.{Config, Bot, CheckpointSnapshot, Droid}
 import org.eclipse.jgit.lib.{Repository, ObjectId}
 import org.eclipse.jgit.transport.RemoteRefUpdate
-import org.kohsuke.github.{GHRepository, GitHub}
+import org.kohsuke.github.{GHIssue, GHRepository, GitHub}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, Inspectors}
 import org.scalatestplus.play._
@@ -31,6 +31,7 @@ class BooSpec extends PlaySpec with Inspectors with ScalaFutures with Eventually
 
   "Update repo" must {
     "not spam not spam not spam" in {
+
       running(FakeApplication()) {
 
         implicit val githubRepo = createTestRepo("/feature-branches.top-level-config.git.zip")
@@ -41,20 +42,30 @@ class BooSpec extends PlaySpec with Inspectors with ScalaFutures with Eventually
 
         val droid = new Droid()
 
-        whenReady(droid.scan(githubRepo)(checkpointWith(ObjectId.zeroId()))) { s =>
-          eventually {
-            val issue = githubRepo.getIssue(pr.getNumber)
-            issue.getCommentsCount must be(0)
-            issue.labelNames.toSet must be(Set("Pending-on-PROD"))
+        def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
+
+        def scan[T](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot],
+                    shouldAddComment: Boolean)(issueFun: GHIssue => T) {
+          val commentCountBeforeScan = getIssue().getCommentsCount
+          whenReady(droid.scan(githubRepo)(checkpointSnapshoter)) { s =>
+            eventually {
+              val issueAfterScan = getIssue()
+              issueAfterScan.getCommentsCount must be(commentCountBeforeScan+(if (shouldAddComment) 1 else 0))
+              issueFun(issueAfterScan)
+            }
           }
         }
 
-        whenReady(droid.scan(githubRepo)(checkpointWith("master"))) { s =>
-          eventually {
-            val issue = githubRepo.getIssue(pr.getNumber)
-            issue.getCommentsCount must be(1)
-            issue.labelNames.toSet must be(Set("Seen-on-PROD"))
-          }
+        scan(checkpointWith(ObjectId.zeroId), shouldAddComment = false) {
+          _.labelNames must contain only("Pending-on-PROD")
+        }
+
+        scan(checkpointWith("master"), shouldAddComment = true) {
+          _.labelNames must contain only("Seen-on-PROD")
+        }
+
+        scan(checkpointWith("master"), shouldAddComment = false) {
+          _.labelNames must contain only("Seen-on-PROD")
         }
       }
     }
