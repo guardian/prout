@@ -115,6 +115,9 @@ case class RepoSnapshot(
         for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
           snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.name).mkString(", "))
         }
+        for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Overdue)) {
+          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.name).mkString(", "))
+        }
 
         //        for (message <- messageOptFor(prsc)) {
         //          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)

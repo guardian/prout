@@ -11,7 +11,6 @@ object Delayer {
   private implicit val system = Akka.system
 
   def doAfterSmallDelay(f: => Unit): Unit = {
-    // akka.pattern.after(concurrent.duration.Duration(1, TimeUnit.SECONDS), system.scheduler)
     system.scheduler.scheduleOnce(concurrent.duration.Duration(1, TimeUnit.SECONDS))(f)
   }
 
