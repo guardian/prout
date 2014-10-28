@@ -44,6 +44,38 @@ class BooSpec extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
+  def scanUntil[T](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot],
+              shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit githubRepo: GHRepository, pr: GHPullRequest) {
+    def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
+
+    val commentCountBeforeScan = getIssue().getCommentsCount
+    eventually {
+      whenReady(droid.scan(githubRepo)(checkpointSnapshoter)) { s =>
+        val issueAfterScan = getIssue()
+        issueAfterScan.getCommentsCount must be(commentCountBeforeScan + (if (shouldAddComment) 1 else 0))
+        issueFun(issueAfterScan)
+      }
+    }
+  }
+
+  def scanShouldNotChangeAnything[T,S](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot])(implicit githubRepo: GHRepository, pr: GHPullRequest) {
+    scanShouldNotChange(checkpointSnapshoter) { issue => (issue.labelNames, issue.getCommentsCount) }
+  }
+
+  def scanShouldNotChange[T,S](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot])(issueState: GHIssue => S)(implicit githubRepo: GHRepository, pr: GHPullRequest) {
+    def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
+
+    val issueBeforeScan = getIssue()
+    val beforeState = issueState(issueBeforeScan)
+
+    for (check <- 1 to 3) {
+      whenReady(droid.scan(githubRepo)(checkpointSnapshoter)) { s =>
+        issueState(getIssue()) must equal(beforeState)
+      }
+    }
+  }
+
+
   "Update repo" must {
     "not spam not spam not spam" in {
 
@@ -61,9 +93,7 @@ class BooSpec extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
           _.labelNames must contain only("Seen-on-PROD")
         }
 
-        scan(checkpointWith("master"), shouldAddComment = false) {
-          _.labelNames must contain only("Seen-on-PROD")
-        }
+        scanShouldNotChangeAnything(checkpointWith("master"))
     }
 
     "report an overdue merge" in {
@@ -75,9 +105,11 @@ class BooSpec extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
         pr.merge("I hope the deploy system isn't broke")
 
         // TODO : we actually have to wait 2 seconds before doing the scan!
-        scan(checkpointWith(ObjectId.zeroId), shouldAddComment = true) {
+        scanUntil(checkpointWith(ObjectId.zeroId), shouldAddComment = true) {
           _.labelNames must contain only("Overdue-on-PROD")
         }
+
+        scanShouldNotChangeAnything(checkpointWith(ObjectId.zeroId))
     }
   }
 
