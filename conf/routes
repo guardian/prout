@@ -2,9 +2,11 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
+GET         /                             controllers.Application.index()
+
 # A GET request because that's what RiffRaff supports...
-GET         /api/update/:org/:repo        controllers.Application.updateRepo(org, repo)
-POST        /api/hooks/github             controllers.Application.githubHook()
+GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
+POST        /api/hooks/github             controllers.Api.githubHook()
 
 GET         /                             controllers.Application.index()
 
