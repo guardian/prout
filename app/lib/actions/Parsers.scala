@@ -14,7 +14,11 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 object RepoSecretKey {
-  def sharedSecretForRepo(repo: RepoFullName) = Crypto.sign("GitHub-Repo:"+repo.text)
+  def sharedSecretForRepo(repo: RepoFullName) = {
+    val signature = Crypto.sign("GitHub-Repo:"+repo.text)
+    Logger.debug(s"Repo $repo signature $signature")
+    signature
+  }
 }
 
 object Parsers {
