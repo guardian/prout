@@ -3,7 +3,7 @@ Prout
 
 _"Has your pull request been deployed yet?"_
 
-Tells you when your pull-requests are live - tells you when they're not, and should be.
+Tells you when your pull-requests are live. Tells you when they're not, and should be.
 
 Prout comes from the philosophy that:
 
