@@ -1,0 +1,3 @@
+{
+	"PROD": { "url": "https://prout-bot.herokuapp.com/", "overdue": "10M" }
+}
