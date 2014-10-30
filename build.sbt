@@ -6,6 +6,21 @@ scalaVersion := "2.11.2"
 
 herokuAppName in Compile := "prout-bot"
 
+buildInfoSettings
+
+sourceGenerators in Compile <+= buildInfo
+
+buildInfoKeys := Seq[BuildInfoKey](
+  name,
+  BuildInfoKey.constant("gitCommitId", Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse(try {
+    "git rev-parse HEAD".!!.trim
+  } catch {
+    case e: Exception => "unknown"
+  }))
+)
+
+buildInfoPackage := "app"
+
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
