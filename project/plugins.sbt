@@ -11,3 +11,5 @@ addSbtPlugin("com.heroku" % "sbt-heroku" % "0.1.5")
 
 // Use the Play sbt plugin for Play projects
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.3.6")
+
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.3.2")
