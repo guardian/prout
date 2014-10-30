@@ -2,6 +2,7 @@ package lib
 
 import java.util.concurrent.TimeUnit.MINUTES
 
+import controllers.RepoWhitelistService
 import lib.Config.Checkpoint
 import org.kohsuke.github.GHRepository
 import play.api.Logger
@@ -20,13 +21,18 @@ object Scanner {
   def updateFor(repoFullName: RepoFullName)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]) {
     val key = repoFullName
     Logger.debug(s"update requested for $key")
-    Cache.getOrElse(key.text) {
-      new Dogpile({
-        val githubRepo = Bot.githubCredentials.conn().getRepository(repoFullName.text)
+    for (knownRepos <- RepoWhitelistService.allKnownRepos.future()) {
+      if (knownRepos(key)) {
+        Logger.debug(s"Repo $key is known, we should be able to update it!")
+        Cache.getOrElse(key.text) {
+          new Dogpile({
+            val githubRepo = Bot.githubCredentials.conn().getRepository(repoFullName.text)
 
-        Await.ready(droid.scan(githubRepo), Duration(2, MINUTES))
-      })
-    }.doAtLeastOneMore()
+            Await.ready(droid.scan(githubRepo), Duration(2, MINUTES))
+          })
+        }.doAtLeastOneMore()
+      }
+    }
   }
 
 

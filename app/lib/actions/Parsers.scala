@@ -29,8 +29,11 @@ object Parsers {
   }
 
   def githubHookRepository: BodyParser[RepoFullName] = tolerantXHubSigned[RepoFullName](RepoSecretKey.sharedSecretForRepo, "json", 128 * 1024, "Invalid Json") {
-    (requestHeader, bytes) => (Json.parse(bytes) \ "repository" \ "full_name").validate[String].map(RepoFullName(_)).get
+    (requestHeader, bytes) => parseGitHubHookJson(Json.parse(bytes))
   }
+
+  def parseGitHubHookJson(jsValue: JsValue): RepoFullName =
+    (jsValue \ "repository" \ "full_name").validate[String].map(RepoFullName(_)).get
 
   def githubHookJson(sharedSecret: String) = tolerantXHubSigned[JsValue](_ => sharedSecret, "json", 128 * 1024, "Invalid Json") {
     (requestHeader, bytes) => Json.parse(bytes)

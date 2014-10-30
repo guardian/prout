@@ -18,30 +18,29 @@ package controllers
 
 import lib.Config.Checkpoint
 import lib._
-import lib.actions.BasicAuth._
 import lib.actions.Parsers
-import org.kohsuke.github.GitHub
 import play.api.mvc._
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Api extends Controller {
 
   implicit val checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot] = CheckpointSnapshot(_)
 
-  def githubHook() = Action(Parsers.githubHookRepository) { request =>
-    val repoFullName: RepoFullName = request.body
-    Scanner.updateFor(repoFullName)
+  def githubHook() = Action(parse.json) { request =>
+    val repoFullName = Parsers.parseGitHubHookJson(request.body)
+    Future {
+      Scanner.updateFor(repoFullName)
+    }
     NoContent
   }
 
-  def updateRepo(repoOwner: String, repoName: String) = {
+  def updateRepo(repoOwner: String, repoName: String) = Action {
     val repoFullName = RepoFullName(repoOwner, repoName)
-    basicAuth {
-      creds => Some(GitHub.connectUsingOAuth(creds.username)).filter(_.getRepository(repoFullName.text).hasPullAccess)
-    } { implicit req =>
+    Future {
       Scanner.updateFor(repoFullName)
-      NoContent
     }
+    NoContent
   }
 }

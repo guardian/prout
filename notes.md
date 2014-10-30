@@ -17,6 +17,9 @@ Threats:
 * Spam labels
 * DOS, expending GitHub quota, hitting random websites for their commit ids
 
+Can we cache the list of repos that Prout can access? Then can *not* perform
+work if asked to examine a repo we know we can't see.
+
 So, we should authenticate.
 
 If an instance of pr-guardian is for a single org, is it reasonable to use shared credentials amongst all repos?
