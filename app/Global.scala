@@ -21,6 +21,8 @@ import play.filters.csrf._
 
 object Global extends WithFilters(CSRFFilter()) with GlobalSettings {
 
+  Logger.info("java.version="+System.getProperty("java.version"))
+
   override def onStart(app: Application) {
     RepoWhitelistService.start()
   }
