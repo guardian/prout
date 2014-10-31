@@ -57,7 +57,7 @@ object Config {
   }
 
   case class Checkpoint(name: String, details: CheckpointDetails) {
-    lazy val nameMarkdown = s"[$name](${details.url}})"
+    lazy val nameMarkdown = s"[$name](${details.url})"
   }
 
   case class RepoConfig(checkpointsByFolder: Map[String, Set[Checkpoint]]) {
