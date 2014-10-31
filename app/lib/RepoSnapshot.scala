@@ -24,6 +24,7 @@ import lib.gitgithub.{IssueUpdater, LabelMapping}
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 import org.joda.time.DateTime
+import org.joda.time.format.PeriodFormat
 import org.kohsuke.github._
 import play.api.Logger
 
@@ -105,18 +106,24 @@ case class RepoSnapshot(
     def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean =
       existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
 
-
     def snapshot(oldState: PRCheckpointState, pr: GHPullRequest) =
       for (cs <- checkpointSnapshotsFor(pr)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
         println(snapshot.changedSnapshotsByState)
+
+        val pf=PeriodFormat.getDefault()
+
+        val mergedBy = snapshot.pr.getMergedBy.atLogin
+        val timeSinceMerge = (new DateTime(snapshot.pr.getMergedAt) to DateTime.now).toPeriod.withMillis(0).toString(pf)
+        val mergedText = s"(merged by $mergedBy $timeSinceMerge ago)"
+
         for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
-          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", "))
+          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText)
         }
         for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Overdue)) {
-          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", "))
+          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText)
         }
 
         //        for (message <- messageOptFor(prsc)) {
@@ -126,5 +133,6 @@ case class RepoSnapshot(
       }
     }
   }
+
 
 }
