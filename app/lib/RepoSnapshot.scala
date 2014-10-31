@@ -113,10 +113,10 @@ case class RepoSnapshot(
       if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
         println(snapshot.changedSnapshotsByState)
         for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
-          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.name).mkString(", "))
+          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", "))
         }
         for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Overdue)) {
-          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.name).mkString(", "))
+          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", "))
         }
 
         //        for (message <- messageOptFor(prsc)) {

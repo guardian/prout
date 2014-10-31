@@ -56,7 +56,9 @@ object Config {
     implicit def checkpointToDetails(c: Checkpoint) = c.details
   }
 
-  case class Checkpoint(name: String, details: CheckpointDetails)
+  case class Checkpoint(name: String, details: CheckpointDetails) {
+    lazy val nameMarkdown = s"[$name](${details.url}})"
+  }
 
   case class RepoConfig(checkpointsByFolder: Map[String, Set[Checkpoint]]) {
     val folders: Set[String] = checkpointsByFolder.keySet
