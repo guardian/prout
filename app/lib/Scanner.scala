@@ -21,9 +21,9 @@ object Scanner {
   def updateFor(repoFullName: RepoFullName)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]) {
     val key = repoFullName
     Logger.debug(s"update requested for $key")
-    for (knownRepos <- RepoWhitelistService.allKnownRepos.future()) {
-      if (knownRepos(key)) {
-        Logger.debug(s"Repo $key is known, we should be able to update it!")
+    for (isKnownRepo <- RepoWhitelistService.isKnown(key)) {
+      Logger.debug(s"Repo $key known: $isKnownRepo")
+      if (isKnownRepo) {
         Cache.getOrElse(key.text) {
           new Dogpile({
             val githubRepo = Bot.githubCredentials.conn().getRepository(repoFullName.text)

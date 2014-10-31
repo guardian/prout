@@ -6,12 +6,15 @@ import play.api.Logger
 import play.api.libs.concurrent.Akka
 
 import scala.collection.convert.wrapAll._
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.Play.current
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object RepoWhitelistService {
   lazy val allKnownRepos = Agent[Set[RepoFullName]](Set.empty)
+
+  def isKnown(repo: RepoFullName): Future[Boolean] = allKnownRepos.future().map(_(repo))
 
   val permissionsThatCanPush = Set("admin", "push")
 
