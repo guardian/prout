@@ -3,7 +3,12 @@ package lib
 import lib.Config.Checkpoint
 
 sealed trait PullRequestCheckpointStatus {
-  def labelFor(checkpointName: String) = getClass.getSimpleName.dropRight(1) + "-on-" + checkpointName
+
+  val name = getClass.getSimpleName.dropRight(1)
+
+  def labelFor(checkpointName: String) = {
+    name + "-on-" + checkpointName
+  }
 }
 
 object PullRequestCheckpointStatus {

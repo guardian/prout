@@ -93,6 +93,8 @@ case class RepoSnapshot(
   val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] {
     val repo = self.repo
 
+    val pf=PeriodFormat.getDefault()
+
     val labelToStateMapping = new LabelMapping[PRCheckpointState] {
       def labelsFor(s: PRCheckpointState): Set[String] = s.statusByCheckpoint.map {
         case (checkpointName, cs) => cs.labelFor(checkpointName)
@@ -113,23 +115,18 @@ case class RepoSnapshot(
       if ((new DateTime(snapshot.pr.getMergedAt) to DateTime.now).duration < WorthyOfCommentWindow) {
         println(snapshot.changedSnapshotsByState)
 
-        val pf=PeriodFormat.getDefault()
-
         val mergedBy = snapshot.pr.getMergedBy.atLogin
         val timeSinceMerge = (new DateTime(snapshot.pr.getMergedAt) to DateTime.now).toPeriod.withMillis(0).toString(pf)
         val mergedText = s"(merged by $mergedBy $timeSinceMerge ago)"
 
-        for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
-          snapshot.pr.comment("Seen on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText)
-        }
-        for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Overdue)) {
-          snapshot.pr.comment("Overdue on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText)
+        def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
+          for (changedSnapshots <- snapshot.changedSnapshotsByState.get(status)) {
+            snapshot.pr.comment(status.name  + " on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText+". "+advice)
+          }
         }
 
-        //        for (message <- messageOptFor(prsc)) {
-        //          Logger.info("Normally I would be saying " + prsc.pr.getNumber+" : "+message)
-        //          // prsc.pr.comment(message)
-        //        }
+        commentOn(Seen, "Please check your changes!")
+        commentOn(Overdue, "What's gone wrong?")
       }
     }
   }
