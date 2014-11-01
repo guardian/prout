@@ -6,7 +6,7 @@ scalaVersion := "2.11.2"
 
 herokuAppName in Compile := "prout-bot"
 
-herokuJdkVersion in Compile := "1.8"
+herokuJdkVersion in Compile := "1.7"
 
 buildInfoSettings
 
