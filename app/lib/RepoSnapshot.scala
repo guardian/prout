@@ -80,7 +80,7 @@ case class RepoSnapshot(
   lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = (for {
     pr <- mergedPullRequests
   } yield {
-    pr -> config.checkpointsByFolder.filterKeys(pr.affects(config.folders)).values.flatten.toSet
+    pr -> config.validConfigByFolder.filterKeys(pr.affects(config.foldersWithValidConfig)).values.map(_.checkpointSet).flatten.toSet
   }).toMap
 
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)

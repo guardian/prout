@@ -3,11 +3,18 @@ package lib
 import com.madgag.git._
 import com.netaporter.uri.Uri
 import com.github.nscala_time.time.Implicits._
+import lib.Config.{Checkpoint, CheckpointDetails}
 import org.eclipse.jgit.lib.{ObjectReader, ObjectId}
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import play.api.libs.json.Json
+
+case class ConfigFile(checkpoints: Map[String, CheckpointDetails]) {
+  lazy val checkpointSet = checkpoints.map {
+    case (name, details) => Checkpoint(name, details)
+  }.toSet
+}
 
 object Config {
 
@@ -29,25 +36,13 @@ object Config {
 
   implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.parse(input))
 
-  implicit val readsCheckpointDetails: Reads[CheckpointDetails] = Json.reads[CheckpointDetails]
+  implicit val readsCheckpointDetails = Json.reads[CheckpointDetails]
 
-//  implicit val readsCheckpoints: Reads[Set[Checkpoint]] = Json.reads[Map[String,CheckpointDetails]].map { m =>
-//    m.map {
-//      case (name, details) => Checkpoint(name, details)
-//    }.toSet
-//  }
+  implicit val readsConfig = Json.reads[ConfigFile]
 
-  def readConfigFrom(configFileObjectId: ObjectId)(implicit objectReader : ObjectReader): Set[Checkpoint] = {
-    val parsedMapResult: JsResult[Map[String, CheckpointDetails]] =
-      Json.fromJson[Map[String, CheckpointDetails]](Json.parse(configFileObjectId.open.getCachedBytes(4096)))
-
-    println(parsedMapResult)
-
-    parsedMapResult.map[Set[Checkpoint]] { m =>
-      m.map {
-        case (name, details) => Checkpoint(name, details)
-      }.toSet
-    }.get
+  def readConfigFrom(configFileObjectId: ObjectId)(implicit objectReader : ObjectReader) = {
+    val fileJson = Json.parse(configFileObjectId.open.getCachedBytes(4096))
+    Json.fromJson[ConfigFile](fileJson)
   }
 
   case class CheckpointDetails(url: Uri, overdue: Period)
@@ -60,11 +55,15 @@ object Config {
     lazy val nameMarkdown = s"[$name](${details.url})"
   }
 
-  case class RepoConfig(checkpointsByFolder: Map[String, Set[Checkpoint]]) {
-    val folders: Set[String] = checkpointsByFolder.keySet
+  case class RepoConfig(checkpointsByFolder: Map[String, JsResult[ConfigFile]]) {
+    val validConfigByFolder: Map[String, ConfigFile] = checkpointsByFolder.collect {
+      case (folder, JsSuccess(config, _)) => folder -> config
+    }
+    
+    val foldersWithValidConfig: Set[String] = validConfigByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- checkpointsByFolder.mapValues(_.map(_.name)).toSeq
+      (folder, checkpointNames) <- validConfigByFolder.mapValues(_.checkpointSet.map(_.name)).toSeq
       checkpointName <- checkpointNames
     } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
 
