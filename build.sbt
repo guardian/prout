@@ -8,8 +8,6 @@ herokuAppName in Compile := "prout-bot"
 
 herokuJdkVersion in Compile := "1.8"
 
-herokuJdkUrl in Compile := "http://lang-jvm.s3.amazonaws.com/jdk/openjdk1.8.0_20.tar.gz"
-
 buildInfoSettings
 
 sourceGenerators in Compile <+= buildInfo
