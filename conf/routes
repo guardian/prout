@@ -1,5 +1,6 @@
 ### Callback endpoints
 
+POST        /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
 # GET because that's what RiffRaff supports...
 GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
 POST        /api/hooks/github             controllers.Api.githubHook()
