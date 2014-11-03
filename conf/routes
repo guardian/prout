@@ -1,14 +1,7 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# ~~~~
-
-GET         /                             controllers.Application.index()
-
-# A GET request because that's what RiffRaff supports...
-GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
+# Callback endpoints
+GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo) # GET because that's what RiffRaff supports...
 POST        /api/hooks/github             controllers.Api.githubHook()
 
+# Non-API endpoints - resources for humans to view
 GET         /                             controllers.Application.index()
-
-# Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                 controllers.Assets.at(path="/public", file)
