@@ -28,7 +28,7 @@ in Production (a slightly stronger statement than simply saying it's been deploy
 
 Follow the 4-step program:
 
-1. Give @prout-bot write-access to your repo (so it can set labels on your pull request)
+1. Give [prout-bot](https://github.com/prout-bot) write-access to your repo (so it can set labels on your pull request)
 2. Add one or more .prout.json config files to your project
 3. Add callbacks to prout - ie a GitHub webhook and ideally also a post-deploy hook
 4. Expose the commit id of your build on your deployed site
