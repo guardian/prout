@@ -35,15 +35,23 @@ Follow the 4-step program:
 
 ### Add config file
 
-Add a `.prout.json` file to any folder in your repo:
+Add a `.prout.json` file to any folder you want monitored in your repo:
 
 ```
 {
   "checkpoints": {
-    "PROD": { "url": "https://example.com/", "overdue": "10M" }
+    "DEV": { "url": "http://dev.mysite.com/", "overdue": "10M" },
+    "PROD": { "url": "http://mysite.com/", "overdue": "1H" }
   }
 }
 ```
+
+When a pull-request changes a file anywhere under that folder, Prout will scan the
+checkpoints defined in your config file, and update the pull-request with labels
+and a comment as appropriate. The url you specify in the checkpoint will be fetched,
+and the contents of the response will be read- so long as you embed the commit id
+that response, Prout will be able to work out whether or not the PR has been deployed
+yet or not.
 
 ### Add callbacks
 
