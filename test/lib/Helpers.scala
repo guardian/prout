@@ -8,6 +8,7 @@ import lib.gitgithub.GitHubCredentials
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.ObjectId.zeroId
 import org.eclipse.jgit.transport.RemoteRefUpdate
+import org.kohsuke.github.GHIssueState.OPEN
 import org.kohsuke.github._
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, Inspectors}
@@ -76,8 +77,11 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
   def mergePullRequestIn(fileName: String, merging: String) = {
     val githubRepo = createTestRepo(fileName)
 
-    eventually(githubRepo.getBranches must contain key merging)
-
+    eventually {
+      githubRepo.getBranches must contain key merging
+      githubRepo.getPullRequests(OPEN) mustBe empty
+    }
+    
     val pr = githubRepo.createPullRequest(s"title", merging, "master", "desc")
 
     eventually(githubRepo.getIssue(pr.getNumber).getLabels mustBe empty)
