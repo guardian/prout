@@ -1,7 +1,11 @@
-# Callback endpoints
-GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo) # GET because that's what RiffRaff supports...
+### Callback endpoints
+
+# GET because that's what RiffRaff supports...
+GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
 POST        /api/hooks/github             controllers.Api.githubHook()
 
-# Non-API endpoints - resources for humans to view
+
+
+### Non-API endpoints - resources for humans to view
 GET         /                             controllers.Application.index()
 GET         /assets/*file                 controllers.Assets.at(path="/public", file)
