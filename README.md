@@ -50,8 +50,7 @@ When a pull-request changes a file anywhere under that folder, Prout will scan t
 checkpoints defined in your config file, and update the pull-request with labels
 and a comment as appropriate. The url you specify in the checkpoint will be fetched,
 and the contents of the response will be read- so long as you embed the commit id
-that response, Prout will be able to work out whether or not the PR has been deployed
-yet or not.
+that response, Prout will be able to work out whether or not the PR has been deployed.
 
 ### Add callbacks
 
