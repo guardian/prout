@@ -74,6 +74,12 @@ Add a post-deploy hook hitting: https://prout-bot.herokuapp.com/api/update/[owne
 
 ### Expose the commit id
 
+You must embed the commit id in your site - we do this on:
+
+https://membership.theguardian.com/
+
+...for instance.
+
 I use the `sbt-buildinfo` plugin to store the Git commit id in my stored artifact, and then expose
 that value on the production site.
 
