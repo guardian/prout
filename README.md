@@ -67,10 +67,10 @@ with these settings:
 
 The hook should be set to activate on `Pull Request` events.
 
-##### RiffRaff
+##### Post-deploy hooks
 
-Add a post-deploy hook hitting: https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
-(your repo lives on https://github.com/[owner]/[repo]).
+RiffRaff, Heroku etc, can all trigger an update by hitting https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
+(your repo lives on https://github.com/[owner]/[repo]) post-deploy.
 
 ### Expose the commit id
 
