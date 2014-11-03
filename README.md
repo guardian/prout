@@ -58,17 +58,17 @@ yet or not.
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
 so Prout can immediately check your site. Full list of supported callbacks: https://github.com/guardian/prout/blob/master/conf/routes
 
-###### GitHub
+##### GitHub
 
 Add a [GitHub webhook](https://developer.github.com/webhooks/creating/#setting-up-a-webhook)
 with these settings:
 
 * Payload URL : https://prout-bot.herokuapp.com/api/hooks/github
-* Content type : application/json
+* Content type : `application/json`
 
 The hook should be set to activate on `Pull Request` events.
 
-###### RiffRaff
+##### RiffRaff
 
 Add a post-deploy hook hitting: https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
 (your repo lives on https://github.com/[owner]/[repo]).
