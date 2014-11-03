@@ -81,10 +81,10 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
       githubRepo.getBranches must contain key merging
       githubRepo.getPullRequests(OPEN) mustBe empty
     }
-    
+
     val pr = githubRepo.createPullRequest(s"title", merging, "master", "desc")
 
-    eventually(githubRepo.getIssue(pr.getNumber).getLabels mustBe empty)
+    eventually(githubRepo.getPullRequest(pr.getNumber).getHead.getRef must be(merging))
 
     pr.merge("Go for it")
 
