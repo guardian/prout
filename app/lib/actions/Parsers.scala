@@ -3,7 +3,7 @@ package lib.actions
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import lib.{Scanner, RepoFullName}
+import lib.RepoFullName
 import play.api.Logger
 import play.api.libs.iteratee.{Iteratee, Traversable}
 import play.api.libs.json.{JsValue, Json}
@@ -58,7 +58,8 @@ object Parsers {
   def tolerantBodyParser[A](name: String, maxLength: Int, errorMessage: String)(parser: (RequestHeader, Array[Byte]) => A): BodyParser[A] =
     BodyParser(name + ", maxLength=" + maxLength) { request =>
       import play.api.libs.iteratee.Execution.Implicits.trampoline
-      import scala.util.control.Exception._
+
+import scala.util.control.Exception._
 
       val bodyParser: Iteratee[Array[Byte], Either[Result, Either[Future[Result], A]]] =
         Traversable.takeUpTo[Array[Byte]](maxLength).transform(
