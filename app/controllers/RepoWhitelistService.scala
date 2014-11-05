@@ -33,7 +33,9 @@ object RepoWhitelistService {
     val allRepos = organisationRepos ++ userRepos
     val publicRepos = allRepos.filterNot(_.isPrivate)
 
-    RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
+    val wl = RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
+    Logger.info(s"wl=$wl")
+    wl
   }
 
   def start() {
