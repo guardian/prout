@@ -55,7 +55,9 @@ object Api extends Controller {
 
   def updateFor(repoFullName: RepoFullName, whiteList: RepoWhitelist): Future[Result] = {
     val scanGuardF = Future { // wrapped in a future to avoid timing attacks
-      require(whiteList.allKnownRepos(repoFullName), s"${repoFullName.text} not on known-repo whitelist")
+      val knownRepo = whiteList.allKnownRepos(repoFullName)
+      Logger.debug(s"$repoFullName known=$knownRepo")
+      require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
 
       Cache.getOrElse(repoFullName.text) {
         new Dogpile(droid.scan(Bot.githubCredentials.conn().getRepository(repoFullName.text)))
