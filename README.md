@@ -81,7 +81,18 @@ https://membership.theguardian.com/
 ...for instance.
 
 I use the `sbt-buildinfo` plugin to store the Git commit id in my stored artifact, and then expose
-that value on the production site.
+that value on the production site. The ugly-looking SBT config is:
+
+```
+buildInfoKeys := Seq[BuildInfoKey](
+      name,
+      BuildInfoKey.constant("gitCommitId", Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse(try {
+        "git rev-parse HEAD".!!.trim
+      } catch {
+          case e: Exception => "unknown"
+      }))
+    )
+```
 
 # Run your own instance of Prout
 
