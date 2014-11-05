@@ -2,6 +2,7 @@ package controllers
 
 import akka.agent.Agent
 import lib.{Bot, RepoFullName}
+import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 
@@ -11,30 +12,34 @@ import scala.concurrent.duration._
 import play.api.Play.current
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object RepoWhitelistService {
-  lazy val allKnownRepos = Agent[Set[RepoFullName]](Set.empty)
+case class RepoWhitelist(allKnownRepos: Set[RepoFullName], publicRepos: Set[RepoFullName])
 
-  def isKnown(repo: RepoFullName): Future[Boolean] = allKnownRepos.future().map(_(repo))
+object RepoWhitelistService {
+  lazy val repoWhitelist = Agent[RepoWhitelist](RepoWhitelist(Set.empty, Set.empty))
+
+  def whitelist(): Future[RepoWhitelist] = repoWhitelist.future()
 
   val permissionsThatCanPush = Set("admin", "push")
 
   private def getAllKnownRepos = {
     val gitHub = Bot.githubCredentials.conn()
-    val organisationRepos: Set[RepoFullName] = (for {
+    val organisationRepos: Set[GHRepository] = (for {
       teamSet <- gitHub.getMyTeams.values
       team <- teamSet if permissionsThatCanPush(team.getPermission)
-      repos <- team.getRepositories.values
-    } yield RepoFullName(repos.getFullName)).toSet
+      repo <- team.getRepositories.values.toSet[GHRepository]
+    } yield repo).toSet
 
-    val userRepos = gitHub.getMyself.listRepositories().iterator().map(r => RepoFullName(r.getFullName)).toSet
-    Logger.info(s"organisationRepos=$organisationRepos userRepos=$userRepos")
-    organisationRepos ++ userRepos
+    val userRepos = gitHub.getMyself.listRepositories().asList().toSet
+    val allRepos = organisationRepos ++ userRepos
+    val publicRepos = allRepos.filterNot(_.isPrivate)
+
+    RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
   }
 
   def start() {
     Logger.info("Starting background repo fetch")
     Akka.system.scheduler.schedule(1.second, 60.seconds) {
-      allKnownRepos.send(_ => getAllKnownRepos)
+      repoWhitelist.send(_ => getAllKnownRepos)
     }
   }
 
