@@ -26,7 +26,7 @@ object RepoWhitelistService {
     val organisationRepos: Set[GHRepository] = (for {
       teamSet <- gitHub.getMyTeams.values
       team <- teamSet if permissionsThatCanPush(team.getPermission)
-      repo <- team.getRepositories.values.toSet[GHRepository]
+      repo <- team.listRepositories()
     } yield repo).toSet
 
     val userRepos = gitHub.getMyself.listRepositories().asList().toSet

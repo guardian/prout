@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   ws,
   "com.typesafe.akka" %% "akka-agent" % "2.3.2",
   "org.webjars" % "bootstrap" % "3.2.0",
-  "org.kohsuke" % "github-api" % "1.59",
+  "com.madgag" % "github-api" % "1.59.99.1",
   "com.github.nscala-time" %% "nscala-time" % "1.4.0",
   "com.netaporter" %% "scala-uri" % "0.4.2",
   "com.squareup.okhttp" % "okhttp" % "2.0.0",
