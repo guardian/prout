@@ -86,7 +86,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     eventually(githubRepo.getPullRequest(pr.getNumber).getHead.getRef must be(merging))
 
-    pr.merge("Go for it")
+    eventually(pr.merge("Go for it"))
 
     RepoPR(githubRepo, pr)
   }
