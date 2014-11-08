@@ -16,26 +16,18 @@
 
 package controllers
 
-import java.util.concurrent.TimeUnit._
-
-import lib.Config.Checkpoint
 import lib._
 import lib.actions.Parsers
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.json.{JsNumber, JsArray}
+import play.api.libs.json.{JsArray, JsNumber}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 object Api extends Controller {
-
-  val droid: Droid = new Droid
-
-  implicit val checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot] = CheckpointSnapshot(_)
 
   def githubHook() = Action.async(parse.json) { request =>
     updateFor(Parsers.parseGitHubHookJson(request.body))
@@ -45,7 +37,7 @@ object Api extends Controller {
     updateFor(RepoFullName(repoOwner, repoName))
   }
 
-  def updateFor(repoFullName: RepoFullName)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]): Future[Result] = {
+  def updateFor(repoFullName: RepoFullName): Future[Result] = {
     Logger.debug(s"update requested for $repoFullName")
     for {
       whiteList <- RepoWhitelistService.whitelist()
@@ -60,8 +52,8 @@ object Api extends Controller {
       require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
 
       Cache.getOrElse(repoFullName.text) {
-        new Dogpile(droid.scan(Bot.githubCredentials.conn().getRepository(repoFullName.text)))
-      }.doAtLeastOneMore()
+        new ScanScheduler(repoFullName)
+      }.scan()
     }
     val mightBePrivate = !whiteList.publicRepos(repoFullName)
     if (mightBePrivate) {

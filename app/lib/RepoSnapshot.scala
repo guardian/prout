@@ -37,7 +37,7 @@ import RepoSnapshot._
 
 object RepoSnapshot {
 
-  val WorthyOfCommentWindow = 12.hours
+  val WorthyOfCommentWindow: Duration = 12.hours
 
   def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]): Future[RepoSnapshot] = {
     val conn = Bot.githubCredentials.conn()
