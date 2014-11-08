@@ -16,20 +16,24 @@
 
 package controllers
 
-import java.util.concurrent.TimeUnit._
-
 import lib.Config.Checkpoint
 import lib._
 import lib.actions.Parsers
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.json.{JsNumber, JsArray}
+import play.api.libs.concurrent.Akka
+import play.api.libs.json.{JsArray, JsNumber}
 import play.api.mvc._
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import com.github.nscala_time.time.Imports._
+import lib.Implicits._
+
+import scala.concurrent.Future
+import scala.util.Success
 
 object Api extends Controller {
 
@@ -59,9 +63,7 @@ object Api extends Controller {
       Logger.debug(s"$repoFullName known=$knownRepo")
       require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
 
-      Cache.getOrElse(repoFullName.text) {
-        new Dogpile(droid.scan(Bot.githubCredentials.conn().getRepository(repoFullName.text)))
-      }.doAtLeastOneMore()
+      scan(repoFullName)
     }
     val mightBePrivate = !whiteList.publicRepos(repoFullName)
     if (mightBePrivate) {
@@ -74,5 +76,25 @@ object Api extends Controller {
         scan <- scanGuard
       } yield Ok(JsArray(scan.map(summary => JsNumber(summary.pr.getNumber))))
     }
+  }
+
+  def scan(repoFullName: RepoFullName): Future[Seq[PullRequestCheckpointsSummary]] = {
+    val eventualSummaries: Future[immutable.Seq[PullRequestCheckpointsSummary]] = Cache.getOrElse(repoFullName.text) {
+      new Dogpile(droid.scan(Bot.githubCredentials.conn().getRepository(repoFullName.text)))
+    }.doAtLeastOneMore().andThen {
+      case Success(summaries) =>
+        val overdueTimes = summaries.collect {
+          case summary => summary.soonestPendingCheckpointOverdueTime
+        }.flatten
+
+        if (overdueTimes.nonEmpty) {
+          Akka.system.scheduler.scheduleOnce((DateTime.now to overdueTimes.min).duration) {
+            scan(repoFullName)
+          }
+        }
+    }
+
+
+    eventualSummaries
   }
 }

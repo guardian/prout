@@ -16,21 +16,23 @@
 
 package lib
 
-import com.madgag.git._
-import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
-import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.{PathFilterGroup, AndTreeFilter}
-import org.kohsuke.github._
-import play.api.Logger
-import collection.convert.wrapAll._
-import scala.util.{Success, Try}
+import java.util.concurrent.TimeUnit
+
 import com.github.nscala_time.time.Imports._
+import com.madgag.git._
+import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
+import org.kohsuke.github._
+
+import scala.collection.convert.wrapAll._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-import ExecutionContext.Implicits.global
-import org.kohsuke.github.GHOrganization.Permission
+import scala.concurrent.duration.FiniteDuration
+import scala.util.{Success, Try}
 
 object Implicits {
+
+  implicit def duration2SDuration(dur: org.joda.time.Duration) = FiniteDuration(dur.getMillis, TimeUnit.MILLISECONDS)
+
   implicit class RichFuture[S](f: Future[S]) {
     lazy val trying = {
       val p = Promise[Try[S]]()
