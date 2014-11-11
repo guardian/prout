@@ -30,16 +30,12 @@ object CheckpointSnapshot {
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
-  def apply(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
+  def apply(checkpoint: Checkpoint): Future[Option[ObjectId]] = {
     import play.api.Play.current
 
-    val url = checkpoint.url
-    val siteCommitIdF =
-      WS.url(url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
-        case ci => Logger.info(s"Site '${checkpoint.name}' commit id: ${ci.map(_.map(_.name()))}")
-      }
-
-    for (siteCommitId <- siteCommitIdF) yield CheckpointSnapshot(checkpoint, siteCommitId)
+    WS.url(checkpoint.url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
+      case ci => Logger.info(s"Site '${checkpoint.name}' commit id: ${ci.map(_.map(_.name()))}")
+    }
   }
 }
 

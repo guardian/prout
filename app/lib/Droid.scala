@@ -1,6 +1,5 @@
 package lib
 
-import lib.Config.Checkpoint
 import org.kohsuke.github.GHRepository
 import play.api.Logger
 
@@ -12,7 +11,7 @@ class Droid {
 
   def scan(
     githubRepo: GHRepository
-  )(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]): Future[Seq[PullRequestCheckpointsSummary]] = {
+  )(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[Seq[PullRequestCheckpointsSummary]] = {
     Logger.info(s"Asked to audit ${githubRepo.getFullName}")
 
     val repoSnapshotF = RepoSnapshot(githubRepo)

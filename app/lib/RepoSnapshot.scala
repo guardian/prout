@@ -20,6 +20,7 @@ import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import lib.Config.Checkpoint
 import lib.Implicits._
+import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
@@ -33,13 +34,12 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scalax.file.ImplicitConversions._
-import RepoSnapshot._
 
 object RepoSnapshot {
 
   val WorthyOfCommentWindow: Duration = 12.hours
 
-  def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]): Future[RepoSnapshot] = {
+  def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[RepoSnapshot] = {
     val conn = Bot.githubCredentials.conn()
 
     val repoFullName = RepoFullName(githubRepo.getFullName)
@@ -68,7 +68,7 @@ case class RepoSnapshot(
   repo: GHRepository,
   gitRepo: Repository,
   mergedPullRequests: Seq[GHPullRequest],
-  checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot]) {
+  checkpointSnapshoter: CheckpointSnapshoter) {
   self =>
 
   private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
@@ -85,7 +85,9 @@ case class RepoSnapshot(
 
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
 
-  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map(c => c -> checkpointSnapshoter(c)).toMap
+  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
+    c => c -> checkpointSnapshoter(c).map(commitId => CheckpointSnapshot(c, commitId))
+  }.toMap
 
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))

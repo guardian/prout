@@ -2,9 +2,9 @@ package lib
 
 import akka.agent.Agent
 import com.github.nscala_time.time.Imports._
-import lib.Config.Checkpoint
 import lib.Implicits._
 import org.joda.time.{DateTime, Instant}
+import org.kohsuke.github.GitHub
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 
@@ -12,16 +12,16 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ScanScheduler(repoFullName: RepoFullName) {
+class ScanScheduler(repoFullName: RepoFullName,
+                    checkpointSnapshoter: CheckpointSnapshoter,
+                    conn: => GitHub) {
 
   val droid = new Droid
-
-  implicit val checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot] = CheckpointSnapshot(_)
 
   val earliestFollowUpScanTime = Agent(Instant.now)
 
   private val dogpile = new Dogpile({
-    val summariesF = droid.scan(Bot.githubCredentials.conn().getRepository(repoFullName.text))
+    val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
     for (summaries <- summariesF) {
       val overdueTimes = summaries.collect {
         case summary => summary.soonestPendingCheckpointOverdueTime

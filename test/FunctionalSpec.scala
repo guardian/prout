@@ -9,28 +9,40 @@ class FunctionalSpec extends Helpers {
     "not spam not spam not spam" in {
       implicit val repoPR = mergePullRequestIn("/feature-branches.top-level-config.git.zip", "feature-1")
 
-      scan(checkpointWith(zeroId), shouldAddComment = false) {
+      repoPR setCheckpointTo zeroId
+
+      scan(shouldAddComment = false) {
         _.labelNames must contain only ("Pending-on-PROD")
       }
 
-      scan(checkpointWith("master"), shouldAddComment = true) {
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
         _.labelNames must contain only ("Seen-on-PROD")
       }
 
-      scanShouldNotChangeAnything(checkpointWith("master"))
+      scanShouldNotChangeAnything()
     }
 
-    "report an overdue merge" in {
+    "report an overdue merge without being called" in {
       implicit val repoPR = mergePullRequestIn("/impatient-top-level-config.git.zip", "feature-1")
 
-      scanUntil(checkpointWith(zeroId), shouldAddComment = true) {
-        _.labelNames must contain only("Overdue-on-PROD")
+      repoPR setCheckpointTo zeroId
+
+      scan(shouldAddComment = false) {
+        _.labelNames must contain only ("Pending-on-PROD")
       }
 
-      scanShouldNotChangeAnything(checkpointWith(zeroId))
+      waitUntil(shouldAddComment = true) {
+        _.labelNames must contain only ("Overdue-on-PROD")
+      }
 
-      scan(checkpointWith("master"), shouldAddComment = true) {
-        _.labelNames must contain only("Seen-on-PROD")
+      scanShouldNotChangeAnything()
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
+        _.labelNames must contain only ("Seen-on-PROD")
       }
     }
   }

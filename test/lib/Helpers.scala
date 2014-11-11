@@ -2,11 +2,9 @@ package lib
 
 import com.madgag.git._
 import com.squareup.okhttp.OkHttpClient
-import lib.Config.Checkpoint
 import lib.Implicits._
 import lib.gitgithub.GitHubCredentials
 import org.eclipse.jgit.lib.ObjectId
-import org.eclipse.jgit.lib.ObjectId.zeroId
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.kohsuke.github.GHIssueState.OPEN
 import org.kohsuke.github._
@@ -28,17 +26,30 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
   override def beforeAll {
     conn().getMyself.getAllRepositories.values.filter(_.getName.startsWith(testRepoNamePrefix)).foreach(_.delete())
   }
+  
+  case class RepoPR(pr: GHPullRequest) {
+    val githubRepo = pr.getRepository
 
-  case class RepoPR(githubRepo: GHRepository, pr: GHPullRequest) {
     def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
+
+    var checkpointCommit: Option[ObjectId] = None
+
+    def setCheckpointTo(commitId: ObjectId) {
+      checkpointCommit = Some(commitId)
+    }
+
+    def setCheckpointTo(branchName: String) {
+      setCheckpointTo(githubRepo.getBranches()(branchName).getSHA1.asObjectId)
+    }
+
+    val checkpointSnapshoter: CheckpointSnapshoter = _ => Future.successful(checkpointCommit)
+
+    val scheduler = new ScanScheduler(RepoFullName(githubRepo), checkpointSnapshoter, conn())
   }
 
-  val droid = new Droid()
-
-  def scan[T](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot],
-              shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {
+  def scan[T](shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {
     val commentCountBeforeScan = repoPR.getIssue().getCommentsCount
-    whenReady(droid.scan(repoPR.githubRepo)(checkpointSnapshoter)) { s =>
+    whenReady(repoPR.scheduler.scan()) { s =>
       eventually {
         val issueAfterScan = repoPR.getIssue()
         issueAfterScan.getCommentsCount must be(commentCountBeforeScan+(if (shouldAddComment) 1 else 0))
@@ -47,11 +58,10 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
-  def scanUntil[T](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot],
-              shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {
+  def scanUntil[T](shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {
     val commentCountBeforeScan = repoPR.getIssue().getCommentsCount
     eventually {
-      whenReady(droid.scan(repoPR.githubRepo)(checkpointSnapshoter)) { s =>
+      whenReady(repoPR.scheduler.scan()) { s =>
         val issueAfterScan = repoPR.getIssue()
         issueAfterScan.getCommentsCount must be(commentCountBeforeScan + (if (shouldAddComment) 1 else 0))
         issueFun(issueAfterScan)
@@ -59,16 +69,25 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
-  def scanShouldNotChangeAnything[T,S](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot])(implicit meat: RepoPR) {
-    scanShouldNotChange(checkpointSnapshoter) { issue => (issue.labelNames, issue.getCommentsCount) }
+  def waitUntil[T](shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {
+    val commentCountBeforeScan = repoPR.getIssue().getCommentsCount
+    eventually {
+      val currentIssue = repoPR.getIssue()
+      currentIssue.getCommentsCount must be(commentCountBeforeScan + (if (shouldAddComment) 1 else 0))
+      issueFun(currentIssue)
+    }
   }
 
-  def scanShouldNotChange[T,S](checkpointSnapshoter: Checkpoint => Future[CheckpointSnapshot])(issueState: GHIssue => S)(implicit repoPR: RepoPR) {
+  def scanShouldNotChangeAnything[T,S]()(implicit meat: RepoPR) {
+    scanShouldNotChange { issue => (issue.labelNames, issue.getCommentsCount) }
+  }
+
+  def scanShouldNotChange[T,S](issueState: GHIssue => S)(implicit repoPR: RepoPR) {
     val issueBeforeScan = repoPR.getIssue()
     val beforeState = issueState(issueBeforeScan)
 
     for (check <- 1 to 3) {
-      whenReady(droid.scan(repoPR.githubRepo)(checkpointSnapshoter)) { s =>
+      whenReady(repoPR.scheduler.scan()) { s =>
         issueState(repoPR.getIssue()) must equal(beforeState)
       }
     }
@@ -88,16 +107,13 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     eventually(pr.merge("Go for it"))
 
-    RepoPR(githubRepo, pr)
+    RepoPR(pr)
   }
 
-  def checkpointWith(branch: String)(implicit meat: RepoPR): (Checkpoint) => Future[CheckpointSnapshot] = {
+  def checkpointWith(branch: String)(implicit meat: RepoPR): CheckpointSnapshoter =
     checkpointWith(meat.githubRepo.getBranches()(branch).getSHA1.asObjectId)
-  }
 
-  def checkpointWith(zeroId: ObjectId): (Config.Checkpoint) => Future[CheckpointSnapshot] = {
-    c => Future.successful(CheckpointSnapshot(c, Some(zeroId)))
-  }
+  def checkpointWith(zeroId: ObjectId): CheckpointSnapshoter = _ => Future.successful(Some(zeroId))
 
   def createTestRepo(fileName: String): GHRepository = {
     val gitHub = conn()
