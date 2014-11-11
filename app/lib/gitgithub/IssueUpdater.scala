@@ -1,11 +1,11 @@
 package lib.gitgithub
 
 import lib.Delayer
-import org.kohsuke.github.{GHPullRequest, GHRepository, GHIssue}
-import play.api.Logger
 import lib.Implicits._
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.kohsuke.github.{GHIssue, GHPullRequest, GHRepository}
+import play.api.Logger
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 /**

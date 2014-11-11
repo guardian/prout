@@ -4,7 +4,7 @@ import com.madgag.git._
 import org.eclipse.jgit.lib.ObjectReader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.{TreeFilter, AndTreeFilter, PathFilterGroup}
+import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, PathFilterGroup, TreeFilter}
 
 import scala.collection.convert.wrapAll._
 

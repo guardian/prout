@@ -3,7 +3,6 @@ package lib.actions
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.binary.Base64.decodeBase64
 import play.api.libs.Codecs
 import play.api.mvc.Results.Unauthorized

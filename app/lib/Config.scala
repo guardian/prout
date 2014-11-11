@@ -2,13 +2,11 @@ package lib
 
 import com.madgag.git._
 import com.netaporter.uri.Uri
-import com.github.nscala_time.time.Implicits._
 import lib.Config.{Checkpoint, CheckpointDetails}
-import org.eclipse.jgit.lib.{ObjectReader, ObjectId}
+import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
-import play.api.libs.json._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, _}
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails]) {
   lazy val checkpointSet = checkpoints.map {

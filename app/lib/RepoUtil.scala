@@ -16,16 +16,16 @@
 
 package lib
 
-import org.eclipse.jgit.api.{GitCommand, TransportCommand, Git}
-import org.eclipse.jgit.transport.{RefSpec, CredentialsProvider, UsernamePasswordCredentialsProvider}
-import com.madgag.git._
-import scalax.io.Resource
 import java.io.File
-import org.eclipse.jgit.lib.{Constants, Repository}
-import scalax.file.ImplicitConversions._
+
+import com.madgag.git._
+import org.eclipse.jgit.api.{Git, GitCommand, TransportCommand}
+import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.CredentialsProvider
 import play.api.Logger
-import collection.convert.wrapAll._
+
+import scalax.file.ImplicitConversions._
 
 object RepoUtil {
 

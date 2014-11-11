@@ -3,7 +3,7 @@ package lib
 import akka.agent.Agent
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Future, Promise}
 
 /**
  * Requirements:
