@@ -27,7 +27,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
   def actionTaker(snapshot: Snapshot)
 
   def process(issueLike: IssueType): Future[Option[Snapshot]] = {
-    Logger.info(s"handling ${issueLike.getNumber}")
+    Logger.trace(s"handling ${issueLike.getNumber}")
     val issue: GHIssue = issueLike match {
       case pr: GHPullRequest => repo.getIssue(issueLike.getNumber)
       case _ => issueLike
