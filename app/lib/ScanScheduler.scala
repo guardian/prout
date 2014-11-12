@@ -5,6 +5,7 @@ import com.github.nscala_time.time.Imports._
 import lib.Implicits._
 import org.joda.time.{DateTime, Instant}
 import org.kohsuke.github.GitHub
+import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 
@@ -23,6 +24,8 @@ class ScanScheduler(repoFullName: RepoFullName,
   private val dogpile = new Dogpile({
     val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
     for (summaries <- summariesF) {
+      Logger.info(s"${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
+
       val overdueTimes = summaries.collect {
         case summary => summary.soonestPendingCheckpointOverdueTime
       }.flatten

@@ -38,7 +38,7 @@ trait IssueUpdater[IssueType <: GHIssue, PersistableState, Snapshot <: StateSnap
     if (!ignoreItemsWithExistingState(existingPersistedState)) {
       for (currentSnapshot <- snapshot(existingPersistedState, issueLike)) yield {
         val newPersistableState = currentSnapshot.newPersistableState
-        Logger.info(s"handling ${issueLike.getNumber} : $currentSnapshot state: existing=$existingPersistedState new=$newPersistableState")
+        Logger.debug(s"handling #${issueLike.getNumber} : state: existing=$existingPersistedState new=$newPersistableState")
 
         if (newPersistableState != existingPersistedState) {
           Logger.info(s"#${issue.getNumber} state-change: $existingPersistedState -> $newPersistableState")
