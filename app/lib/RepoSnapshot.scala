@@ -89,6 +89,8 @@ case class RepoSnapshot(
     c => c -> checkpointSnapshoter(c).map(commitId => CheckpointSnapshot(c, commitId))
   }.toMap
 
+  lazy val activeSnapshotsF = Future.sequence(activeConfig.map(checkpointSnapshotsF))
+
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
 

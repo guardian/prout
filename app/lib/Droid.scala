@@ -19,7 +19,11 @@ class Droid {
     for {
       repoSnapshot <- repoSnapshotF
       pullRequestUpdates <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.issueUpdater.process)
-    } yield pullRequestUpdates.flatten
+      activeSnapshots <- repoSnapshot.activeSnapshotsF
+    } yield {
+      Logger.info(s"${activeSnapshots.size} activeSnapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.name()).getOrElse("None")).toMap}")
+      pullRequestUpdates.flatten
+    }
   }
 
 }
