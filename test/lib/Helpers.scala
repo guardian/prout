@@ -4,7 +4,7 @@ import com.madgag.git._
 import com.squareup.okhttp.OkHttpClient
 import lib.Implicits._
 import lib.gitgithub.GitHubCredentials
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.kohsuke.github.GHIssueState.OPEN
 import org.kohsuke.github._
@@ -32,14 +32,18 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
 
-    var checkpointCommit: Option[ObjectId] = None
+    var checkpointCommit: Iterator[AbbreviatedObjectId] = Iterator.empty
 
-    def setCheckpointTo(commitId: ObjectId) {
-      checkpointCommit = Some(commitId)
+    def setCheckpointTo(commitId: AbbreviatedObjectId) {
+      checkpointCommit = Iterator(commitId)
+    }
+
+    def setCheckpointTo(objectId: ObjectId) {
+      setCheckpointTo(AbbreviatedObjectId.fromObjectId(objectId))
     }
 
     def setCheckpointTo(branchName: String) {
-      setCheckpointTo(githubRepo.getBranches()(branchName).getSHA1.asObjectId)
+      setCheckpointTo(AbbreviatedObjectId.fromString(githubRepo.getBranches()(branchName).getSHA1))
     }
 
     val checkpointSnapshoter: CheckpointSnapshoter = _ => Future.successful(checkpointCommit)
@@ -109,11 +113,6 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     RepoPR(pr)
   }
-
-  def checkpointWith(branch: String)(implicit meat: RepoPR): CheckpointSnapshoter =
-    checkpointWith(meat.githubRepo.getBranches()(branch).getSHA1.asObjectId)
-
-  def checkpointWith(zeroId: ObjectId): CheckpointSnapshoter = _ => Future.successful(Some(zeroId))
 
   def createTestRepo(fileName: String): GHRepository = {
     val gitHub = conn()

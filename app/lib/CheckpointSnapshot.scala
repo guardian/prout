@@ -16,11 +16,9 @@
 
 package lib
 
-import com.madgag.git._
 import lib.Config.Checkpoint
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.joda.time.{DateTime, ReadableInstant}
-import play.api.Logger
 import play.api.libs.ws.WS
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,11 +28,11 @@ object CheckpointSnapshot {
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
-  def apply(checkpoint: Checkpoint): Future[Option[ObjectId]] = {
+  def apply(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
     import play.api.Play.current
 
-    WS.url(checkpoint.url.toString).get().map(resp => hexRegex.findFirstIn(resp.body).map(_.asObjectId)).andThen {
-      case ci => Logger.info(s"Site '${checkpoint.name}' commit id: ${ci.map(_.map(_.name()))}")
+    WS.url(checkpoint.url.toString).get().map {
+      resp => hexRegex.findAllIn(resp.body).map(AbbreviatedObjectId.fromString)
     }
   }
 }

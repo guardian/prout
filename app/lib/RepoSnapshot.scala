@@ -16,6 +16,7 @@
 
 package lib
 
+import com.madgag.git._
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import lib.Config.Checkpoint
@@ -33,6 +34,7 @@ import scala.collection.convert.wrapAsScala._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.util.Success
 import scalax.file.ImplicitConversions._
 
 object RepoSnapshot {
@@ -86,7 +88,15 @@ case class RepoSnapshot(
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
 
   lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
-    c => c -> checkpointSnapshoter(c).map(commitId => CheckpointSnapshot(c, commitId))
+    c =>
+      c -> {
+        for (possibleIds <- checkpointSnapshoter(c)) yield {
+          val objectIdOpt = possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
+            case Success(objectId) => objectId
+          }
+          CheckpointSnapshot(c, objectIdOpt)
+        }
+      }
   }.toMap
 
   lazy val activeSnapshotsF = Future.sequence(activeConfig.map(checkpointSnapshotsF))
