@@ -124,6 +124,10 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     config.setString("remote", "origin", "url", testGithubRepo.gitHttpTransportUrl)
     config.save()
 
+    eventually {
+      testGithubRepo.getBranches mustBe empty
+    }
+
     val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
 
     forAll (pushResults.toSeq) { pushResult =>
