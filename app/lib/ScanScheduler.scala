@@ -21,7 +21,7 @@ class ScanScheduler(repoFullName: RepoFullName,
 
   val earliestFollowUpScanTime = Agent(Instant.now)
 
-  private val dogpile = new Dogpile({
+  private val dogpile = new Dogpile(Delayer.delayTheFuture {
     val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
     for (summaries <- summariesF) {
       Logger.info(s"${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
