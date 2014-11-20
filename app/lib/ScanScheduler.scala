@@ -15,7 +15,9 @@ import scala.concurrent.Future
 
 class ScanScheduler(repoFullName: RepoFullName,
                     checkpointSnapshoter: CheckpointSnapshoter,
-                    conn: => GitHub) {
+                    conn: => GitHub) { selfScanScheduler =>
+
+  val logger = Logger(getClass)
 
   val droid = new Droid
 
@@ -24,7 +26,7 @@ class ScanScheduler(repoFullName: RepoFullName,
   private val dogpile = new Dogpile(Delayer.delayTheFuture {
     val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
     for (summaries <- summariesF) {
-      Logger.info(s"${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
+      logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
 
       val overdueTimes = summaries.collect {
         case summary => summary.soonestPendingCheckpointOverdueTime

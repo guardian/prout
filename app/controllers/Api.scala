@@ -29,6 +29,8 @@ import scala.concurrent.Future
 
 object Api extends Controller {
 
+  val logger = Logger(getClass)
+
   val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshot(_)
 
   def githubHook() = Action.async(parse.json) { request =>
@@ -54,7 +56,9 @@ object Api extends Controller {
       require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
 
       Cache.getOrElse(repoFullName.text) {
-        new ScanScheduler(repoFullName, checkpointSnapshoter, Bot.githubCredentials.conn())
+        val scheduler = new ScanScheduler(repoFullName, checkpointSnapshoter, Bot.githubCredentials.conn())
+        logger.info(s"Creating $scheduler for $repoFullName")
+        scheduler
       }.scan()
     }
     val mightBePrivate = !whiteList.publicRepos(repoFullName)
