@@ -16,7 +16,6 @@
 
 package lib
 
-import com.madgag.git._
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import lib.Config.Checkpoint
@@ -79,11 +78,18 @@ case class RepoSnapshot(
 
   lazy val config = ConfigFinder.config(masterCommit)
 
-  lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = (for {
+  lazy val affectedFoldersByPullRequest: Map[GHPullRequest, Set[String]] = (for {
     pr <- mergedPullRequests
-  } yield {
-    pr -> config.validConfigByFolder.filterKeys(pr.affects(config.foldersWithValidConfig)).values.map(_.checkpointSet).flatten.toSet
-  }).toMap
+  } yield pr -> pr.affects(config.foldersWithValidConfig).toSet).toMap
+
+
+  lazy val pullRequestsByAffectedFolder : Map[String, Set[GHPullRequest]] = config.foldersWithValidConfig.map {
+    folder => folder -> mergedPullRequests.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
+  }.toMap
+
+  lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = affectedFoldersByPullRequest.mapValues {
+    _.map(config.validConfigByFolder(_).checkpointSet).flatten
+  }
 
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
 
