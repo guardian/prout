@@ -24,7 +24,7 @@ object ConfigFinder {
 
   def config(c: RevCommit)(implicit reader: ObjectReader): RepoConfig = {
     val checkpointsByNameByFolder: Map[String, JsResult[ConfigFile]] = configIdMapFrom(c).mapValues(Config.readConfigFrom)
-    println(s"Book $checkpointsByNameByFolder")
+    println(s"Checkpoints By Name, By Folder : $checkpointsByNameByFolder")
     RepoConfig(checkpointsByNameByFolder)
   }
 }
