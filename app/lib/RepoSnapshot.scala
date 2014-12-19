@@ -87,6 +87,8 @@ case class RepoSnapshot(
     folder => folder -> mergedPullRequests.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
   }.toMap
 
+  Logger.info(s"ZZ affectedFoldersByPullRequest=${pullRequestsByAffectedFolder.mapValues(_.map(_.getNumber))}")
+
   lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = affectedFoldersByPullRequest.mapValues {
     _.map(config.validConfigByFolder(_).checkpointSet).flatten
   }
