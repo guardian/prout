@@ -21,7 +21,7 @@ class Droid {
       pullRequestUpdates <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.issueUpdater.process)
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
-      Logger.info(s"affectedFoldersByPullRequest=${repoSnapshot.affectedFoldersByPullRequest}")
+      Logger.info(s"affectedFoldersByPullRequest=${repoSnapshot.pullRequestsByAffectedFolder.mapValues(_.map(_.getNumber))}")
       Logger.info(s"${activeSnapshots.size} activeSnapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.name()).getOrElse("None")).toMap}")
       pullRequestUpdates.flatten
     }
