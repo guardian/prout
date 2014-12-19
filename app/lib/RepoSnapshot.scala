@@ -102,6 +102,7 @@ case class RepoSnapshot(
           val objectIdOpt = possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
             case Success(objectId) => objectId
           }
+          Logger.info(s"${repo.getFullName} ${c.name} has $objectIdOpt")
           CheckpointSnapshot(c, objectIdOpt)
         }
       }

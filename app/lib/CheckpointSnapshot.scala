@@ -19,7 +19,8 @@ package lib
 import lib.Config.Checkpoint
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.joda.time.{DateTime, ReadableInstant}
-import play.api.libs.ws.WS
+import play.api.Logger
+import play.api.libs.ws.{WSResponse, WS}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -31,7 +32,13 @@ object CheckpointSnapshot {
   def apply(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
     import play.api.Play.current
 
-    WS.url(checkpoint.url.toString).get().map {
+    val responseF: Future[WSResponse] = WS.url(checkpoint.url.toString).get()
+
+    responseF.onComplete { r =>
+      Logger.info(s"XX $r")
+    }
+
+    responseF.map {
       resp => hexRegex.findAllIn(resp.body).map(AbbreviatedObjectId.fromString)
     }
   }
