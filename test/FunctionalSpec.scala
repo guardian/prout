@@ -1,6 +1,10 @@
+import lib.Config.{CheckpointDetails, Checkpoint}
 import lib.Implicits._
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId
+import org.joda.time.Period
+
+import com.netaporter.uri.dsl._
 
 class FunctionalSpec extends Helpers {
 
@@ -43,6 +47,13 @@ class FunctionalSpec extends Helpers {
 
       scan(shouldAddComment = true) {
         _.labelNames must contain only ("Seen-on-PROD")
+      }
+    }
+
+    "be able to hit Ophan" in {
+      val checkpoint = Checkpoint("PROD", CheckpointDetails("https://dashboard.ophan.co.uk/login", Period.parse("PT1H")))
+      whenReady(CheckpointSnapshot(checkpoint)) { s =>
+        s must not be 'empty
       }
     }
   }

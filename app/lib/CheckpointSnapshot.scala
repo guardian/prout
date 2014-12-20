@@ -16,30 +16,33 @@
 
 package lib
 
+import com.squareup.okhttp.OkHttpClient
+import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
+import lib.okhttpscala._
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.joda.time.{DateTime, ReadableInstant}
 import play.api.Logger
-import play.api.libs.ws.{WSResponse, WS}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 
 object CheckpointSnapshot {
 
+  val client = new OkHttpClient()
+
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
   def apply(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
-    import play.api.Play.current
 
-    val responseF: Future[WSResponse] = WS.url(checkpoint.url.toString).get()
+    val responseF = client.execute(new Builder().url(checkpoint.url.toString).build())
 
     responseF.onComplete { r =>
-      Logger.info(s"XX $r")
+      Logger.info(s"${checkpoint.name} : $r")
     }
 
     responseF.map {
-      resp => hexRegex.findAllIn(resp.body).map(AbbreviatedObjectId.fromString)
+      resp => hexRegex.findAllIn(resp.body().string).map(AbbreviatedObjectId.fromString)
     }
   }
 }
