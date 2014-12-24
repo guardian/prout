@@ -36,8 +36,9 @@ class ScanScheduler(repoFullName: RepoFullName,
         val nextOverdue: Instant = overdueTimes.min
         earliestFollowUpScanTime.send {
           oldFollowupTime =>
-            if (Instant.now > oldFollowupTime || nextOverdue < oldFollowupTime) {
-              Akka.system.scheduler.scheduleOnce((DateTime.now to nextOverdue).duration) {
+            val now = DateTime.now
+            if (now > oldFollowupTime || nextOverdue < oldFollowupTime) {
+              Akka.system.scheduler.scheduleOnce((now to nextOverdue).duration) {
                 scan()
               }
               nextOverdue
