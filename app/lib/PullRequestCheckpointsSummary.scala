@@ -61,6 +61,8 @@ case class PullRequestCheckpointsSummary(
   val checkpointsByState: Map[PullRequestCheckpointStatus, Set[Checkpoint]] =
     checkpointStatuses.statusByCheckpoint.groupBy(_._2).mapValues(_.keySet.map(tuple => snapshotsByName(tuple).checkpoint))
 
+  val hasPendingCheckpoints = checkpointsByState.get(Pending).exists(_.nonEmpty)
+
   val soonestPendingCheckpointOverdueTime: Option[Instant] =
     checkpointsByState.get(Pending).map(_.map(_.details.overdue).min).map(new Instant(pr.getMergedAt) + _.standardDuration)
 

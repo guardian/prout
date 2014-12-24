@@ -28,20 +28,24 @@ class ScanScheduler(repoFullName: RepoFullName,
     for (summaries <- summariesF) {
       logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
 
+      val scanTimeForPendingOpt = summaries.find(_.hasPendingCheckpoints).map(_ => Instant.now + 1.minute)
+
       val overdueTimes = summaries.collect {
         case summary => summary.soonestPendingCheckpointOverdueTime
       }.flatten
 
-      if (overdueTimes.nonEmpty) {
-        val nextOverdue: Instant = overdueTimes.min
+      val candidateFollowUpScanTimes = overdueTimes ++ scanTimeForPendingOpt
+
+      if (candidateFollowUpScanTimes.nonEmpty) {
+        val earliestCandidateScanTime: Instant = candidateFollowUpScanTimes.min
         earliestFollowUpScanTime.send {
           oldFollowupTime =>
             val now = DateTime.now
-            if (now > oldFollowupTime || nextOverdue < oldFollowupTime) {
-              Akka.system.scheduler.scheduleOnce((now to nextOverdue).duration) {
+            if (now > oldFollowupTime || earliestCandidateScanTime < oldFollowupTime) {
+              Akka.system.scheduler.scheduleOnce((now to earliestCandidateScanTime).duration) {
                 scan()
               }
-              nextOverdue
+              earliestCandidateScanTime
             } else oldFollowupTime
         }
       }
