@@ -87,7 +87,7 @@ case class RepoSnapshot(
     folder => folder -> mergedPullRequests.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
   }.toMap
 
-  Logger.info(s"ZZ affectedFoldersByPullRequest=${pullRequestsByAffectedFolder.mapValues(_.map(_.getNumber))}")
+  Logger.info(s"${repo.getFullName} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapValues(_.map(_.getNumber))}")
 
   lazy val activeConfigByPullRequest: Map[GHPullRequest, Set[Checkpoint]] = affectedFoldersByPullRequest.mapValues {
     _.map(config.validConfigByFolder(_).checkpointSet).flatten
@@ -102,7 +102,6 @@ case class RepoSnapshot(
           val objectIdOpt = possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
             case Success(objectId) => objectId
           }
-          Logger.info(s"${repo.getFullName} ${c.name} has $objectIdOpt")
           CheckpointSnapshot(c, objectIdOpt)
         }
       }

@@ -6,6 +6,7 @@ import play.api.Logger
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import com.madgag.git._
 
 class Droid {
 
@@ -21,8 +22,7 @@ class Droid {
       pullRequestUpdates <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.issueUpdater.process)
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
-      Logger.info(s"affectedFoldersByPullRequest=${repoSnapshot.pullRequestsByAffectedFolder.mapValues(_.map(_.getNumber))}")
-      Logger.info(s"${activeSnapshots.size} activeSnapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.name()).getOrElse("None")).toMap}")
+      Logger.info(s"${githubRepo.getFullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.shortName).getOrElse("None")).toMap}")
       pullRequestUpdates.flatten
     }
   }
