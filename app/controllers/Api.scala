@@ -55,11 +55,24 @@ object Api extends Controller {
       Logger.debug(s"$repoFullName known=$knownRepo")
       require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
 
-      Cache.getOrElse(repoFullName.text) {
+      val scanScheduler = Cache.getOrElse(repoFullName.text) {
         val scheduler = new ScanScheduler(repoFullName, checkpointSnapshoter, Bot.githubCredentials.conn())
         logger.info(s"Creating $scheduler for $repoFullName")
         scheduler
-      }.scan()
+      }
+
+      val firstScanF = scanScheduler.scan()
+
+      firstScanF.onComplete { _ => Delayer.delayTheFuture {
+        /* Do a *second* scan shortly after the first one ends, to cope with:
+         * 1. Latency in GH API
+         * 2. Checkpoint site stabilising on the new version after deploy
+         */
+          scanScheduler.scan()
+        }
+      }
+
+      firstScanF
     }
     val mightBePrivate = !whiteList.publicRepos(repoFullName)
     if (mightBePrivate) {
