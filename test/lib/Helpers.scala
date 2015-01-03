@@ -1,5 +1,7 @@
 package lib
 
+import java.net.URL
+
 import com.madgag.git._
 import com.squareup.okhttp.OkHttpClient
 import lib.Implicits._
@@ -15,11 +17,15 @@ import org.scalatestplus.play._
 import scala.collection.convert.wrapAll._
 import scala.concurrent.Future
 
+case class PRText(title: String, desc: String)
+
 trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFutures with Eventually with IntegrationPatience with BeforeAndAfterAll {
 
   val testRepoNamePrefix = "prout-test-"
 
   val githubCredentials = new GitHubCredentials(sys.env("PROUT_GITHUB_ACCESS_TOKEN"), new OkHttpClient)
+
+  val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
   def conn(): GitHub = githubCredentials.conn()
 
@@ -97,7 +103,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
-  def mergePullRequestIn(fileName: String, merging: String) = {
+  def mergePullRequestIn(fileName: String, merging: String, prText: PRText = PRText("title", "desc")) = {
     val githubRepo = createTestRepo(fileName)
 
     eventually {
@@ -105,7 +111,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
       githubRepo.getPullRequests(OPEN) mustBe empty
     }
 
-    val pr = githubRepo.createPullRequest(s"title", merging, "master", "desc")
+    val pr = githubRepo.createPullRequest(prText.title, merging, "master", prText.desc)
 
     eventually(githubRepo.getPullRequest(pr.getNumber).getHead.getRef must be(merging))
 

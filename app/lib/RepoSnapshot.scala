@@ -18,6 +18,8 @@ package lib
 
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
+import com.netaporter.uri.Uri
+import com.netaporter.uri.dsl._
 import lib.Config.Checkpoint
 import lib.Implicits._
 import lib.RepoSnapshot._
@@ -47,6 +49,12 @@ object RepoSnapshot {
 
     def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getMasterBranch
 
+    val hooksF = Future { githubRepo.getHooks }.map {
+      _.flatMap {
+        _.getConfig.toMap.get("url").map(_.uri)
+      }.toList
+    }
+
     val mergedPullRequestsF = Future {
       githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(50).toList
     } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
@@ -61,7 +69,7 @@ object RepoSnapshot {
     for {
       mergedPullRequests <- mergedPullRequestsF
       gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, checkpointSnapshoter)
+    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
   }
 }
 
@@ -69,6 +77,7 @@ case class RepoSnapshot(
   repo: GHRepository,
   gitRepo: Repository,
   mergedPullRequests: Seq[GHPullRequest],
+  hooksF: Future[Seq[Uri]]  ,
   checkpointSnapshoter: CheckpointSnapshoter) {
   self =>
 
@@ -148,11 +157,13 @@ case class RepoSnapshot(
           }
         }
 
+        for (hooks <- hooksF) {
+          slack.DeployReporter.report(snapshot, hooks)
+        }
+
         commentOn(Seen, "Please check your changes!")
         commentOn(Overdue, "What's gone wrong?")
       }
     }
   }
-
-
 }
