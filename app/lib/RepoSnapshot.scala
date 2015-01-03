@@ -134,17 +134,17 @@ case class RepoSnapshot(
       for (cs <- checkpointSnapshotsFor(pr)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
-      val mergeToNow = new DateTime(snapshot.pr.getMergedAt) to DateTime.now
+      val pr = snapshot.pr
+      val mergeToNow = new DateTime(pr.getMergedAt) to DateTime.now
       if (mergeToNow.duration < WorthyOfCommentWindow) {
         Logger.trace(s"changedSnapshotsByState : ${snapshot.changedSnapshotsByState}")
 
-        val mergedBy = snapshot.pr.getMergedBy.atLogin
         val timeSinceMerge = mergeToNow.toPeriod.withMillis(0).toString(pf)
-        val mergedText = s"(merged by $mergedBy $timeSinceMerge ago)"
+        val mergedText = s"(merged by ${pr.getMergedBy.atLogin} $timeSinceMerge ago)"
 
         def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
           for (changedSnapshots <- snapshot.changedSnapshotsByState.get(status)) {
-            snapshot.pr.comment(status.name  + " on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText+". "+advice)
+            pr.comment(status.name  + " on " + changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")+" "+mergedText+". "+advice)
           }
         }
 
