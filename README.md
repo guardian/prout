@@ -4,14 +4,14 @@ _"Has your pull request been deployed yet?"_
 
 Tells you when your pull-requests are live. Tells you when they're not, and should be.
 
-Prout comes from the philosophy that:
+Prout comes from the tenet that:
 
     Developers are responsible for checking their changes on Production
 
 This becomes more important, and _easier_ once you move to a Continuous Deployment
 release process. Important, because now a developer can break the site simply by
 hitting 'Merge' on a pull request - but also easier because with such a small delay
-(ie less than 10 minutes) between merging the work and having it ready to view in a
+(say, [less than 10 minutes](https://github.com/guardian/membership-frontend/pull/14#issuecomment-68436665)) between merging the work and having it ready to view in a
 Production setting, the developer is in a much better place to review their work;
 it's still fresh in their mind.
 
@@ -55,8 +55,7 @@ that response, Prout will be able to work out whether or not the PR has been dep
 ### Add callbacks
 
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
-so Prout can immediately check your site
-[(full list of supported callbacks)](https://github.com/guardian/prout/blob/master/conf/routes).
+so that Prout can immediately check your site.
 
 ##### GitHub
 
