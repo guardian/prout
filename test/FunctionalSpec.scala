@@ -52,22 +52,23 @@ class FunctionalSpec extends Helpers {
       }
     }
 
-    "report slackishly" in {
+    for (slackWebhookUrl <- slackWebhookUrlOpt) {
+      "report slackishly" in {
 
-      val pr = conn().getRepository("guardian/membership-frontend").getPullRequest(15)
-      val prText = PRText(pr.getTitle, pr.getBody)
+        val pr = conn().getRepository("guardian/membership-frontend").getPullRequest(15)
+        val prText = PRText(pr.getTitle, pr.getBody)
 
-      implicit val repoPR = mergePullRequestIn("/feature-branches.top-level-config.git.zip", "feature-1", prText)
+        implicit val repoPR = mergePullRequestIn("/feature-branches.top-level-config.git.zip", "feature-1", prText)
 
-      for (slackWebhookUrl <- slackWebhookUrlOpt) {
+
         repoPR.githubRepo.createWebHook(slackWebhookUrl, Set(GHEvent.WATCH)) // Don't really want the hook to fire!
         eventually(repoPR.githubRepo.getHooks must not be empty)
-      }
 
-      repoPR setCheckpointTo "master"
+        repoPR setCheckpointTo "master"
 
-      scan(shouldAddComment = true) {
-        _.labelNames must contain only ("Seen-on-PROD")
+        scan(shouldAddComment = true) {
+          _.labelNames must contain only ("Seen-on-PROD")
+        }
       }
     }
 
