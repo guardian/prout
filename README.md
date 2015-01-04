@@ -55,30 +55,29 @@ that response, Prout will be able to work out whether or not the PR has been dep
 ### Add callbacks
 
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
-so Prout can immediately check your site. Full list of supported callbacks: https://github.com/guardian/prout/blob/master/conf/routes
+so Prout can immediately check your site
+[(full list of supported callbacks)](https://github.com/guardian/prout/blob/master/conf/routes).
 
 ##### GitHub
 
 Add a [GitHub webhook](https://developer.github.com/webhooks/creating/#setting-up-a-webhook)
 with these settings:
 
-* Payload URL : https://prout-bot.herokuapp.com/api/hooks/github
+* Payload URL : `https://prout-bot.herokuapp.com/api/hooks/github`
 * Content type : `application/json`
 
 The hook should be set to activate on `Pull Request` events.
 
 ##### Post-deploy hooks
 
-RiffRaff, Heroku etc, can all trigger an update by hitting https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
-(your repo lives on https://github.com/[owner]/[repo]) post-deploy.
+RiffRaff, Heroku etc, can all trigger an update by hitting `https://prout-bot.herokuapp.com/api/update/[owner]/[repo]`
+(your repo lives on `https://github.com/[owner]/[repo]`) post-deploy.
 
 ### Expose the commit id
 
-You must embed the commit id in your site - we do this on:
-
-https://membership.theguardian.com/
-
-...for instance.
+You must embed the commit id in your site - we do this on
+[membership.theguardian.com](https://membership.theguardian.com/)
+for instance.
 
 I use the `sbt-buildinfo` plugin to store the Git commit id in my stored artifact, and then expose
 that value on the production site. The ugly-looking SBT config is:
