@@ -19,11 +19,11 @@ class Droid {
 
     for {
       repoSnapshot <- repoSnapshotF
-      pullRequestUpdates <- Future.traverse(repoSnapshot.mergedPullRequests)(repoSnapshot.issueUpdater.process)
+      pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
       Logger.info(s"${githubRepo.getFullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.shortName).getOrElse("None")).toMap}")
-      pullRequestUpdates.flatten
+      pullRequestUpdates
     }
   }
 

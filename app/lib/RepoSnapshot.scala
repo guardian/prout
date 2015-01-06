@@ -166,4 +166,6 @@ case class RepoSnapshot(
       }
     }
   }
+
+  def processMergedPullRequests() = Future.traverse(mergedPullRequests)(issueUpdater.process).map(_.flatten)
 }
