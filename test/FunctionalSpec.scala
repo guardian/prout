@@ -30,6 +30,36 @@ class FunctionalSpec extends Helpers {
       scanShouldNotChangeAnything()
     }
 
+    "not act on a pull request if it does not touch a .prout.json configured folder" in {
+      implicit val repoPR = mergePullRequestIn("/multi-project.ignorable-changes.zip", "bard-feature")
+
+      repoPR setCheckpointTo zeroId
+
+      scanShouldNotChangeAnything()
+
+      repoPR setCheckpointTo "master"
+
+      scanShouldNotChangeAnything()
+    }
+
+    "act on a pull request if it touches a .prout.json configured folder" in {
+      implicit val repoPR = mergePullRequestIn("/multi-project.ignorable-changes.zip", "food-feature")
+
+      repoPR setCheckpointTo zeroId
+
+      scan(shouldAddComment = false) {
+        _.labelNames must contain only ("Pending-on-PROD")
+      }
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
+        _.labelNames must contain only ("Seen-on-PROD")
+      }
+
+      scanShouldNotChangeAnything()
+    }
+
     "report an overdue merge without being called" in {
       implicit val repoPR = mergePullRequestIn("/impatient-top-level-config.git.zip", "feature-1")
 
