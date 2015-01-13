@@ -17,8 +17,6 @@ class ScanScheduler(repoFullName: RepoFullName,
                     checkpointSnapshoter: CheckpointSnapshoter,
                     conn: => GitHub) { selfScanScheduler =>
 
-  val logger = Logger(getClass)
-
   val droid = new Droid
 
   val earliestFollowUpScanTime = Agent(Instant.now)
@@ -26,7 +24,7 @@ class ScanScheduler(repoFullName: RepoFullName,
   private val dogpile = new Dogpile(Delayer.delayTheFuture {
     val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
     for (summaries <- summariesF) {
-      logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
+      Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
 
       val scanTimeForPendingOpt = summaries.find(_.hasPendingCheckpoints).map(_ => Instant.now + 1.minute)
 
