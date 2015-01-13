@@ -31,7 +31,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn("/multi-project.ignorable-changes.zip", "bard-feature")
+      implicit val repoPR = mergePullRequestIn("/multi-project.master-updated-before-feature-merged.git.zip", "bard-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -43,7 +43,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "act on a pull request if it touches a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn("/multi-project.ignorable-changes.zip", "food-feature")
+      implicit val repoPR = mergePullRequestIn("/multi-project.master-updated-before-feature-merged.git.zip", "food-feature")
 
       repoPR setCheckpointTo zeroId
 
