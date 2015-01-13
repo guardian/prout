@@ -3,7 +3,7 @@ package lib
 import com.madgag.git._
 import lib.GitChanges.affectedFolders
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.scalatestplus.play._
 
 class GitChangesSpec extends PlaySpec {
@@ -37,6 +37,17 @@ class GitChangesSpec extends PlaySpec {
       affectedFolders(commitAt("master"), commitAt("mod-foo-and-bar"), fooBarBaz) mustEqual(Set("/foo/", "/bar/"))
 
       affectedFolders(commitAt("master"), commitAt("del-baz-thing"), fooBarBaz) mustEqual(Set("/baz/"))
+    }
+
+    "not confuse changes on master with changes on the feature branch" in {
+      implicit val localGitRepo: Repository = test.unpackRepo("/multi-project.master-updated-before-feature-merged.git.zip")
+      implicit val (revWalk, reader) = localGitRepo.singleThreadedReaderTuple
+
+      def commitAt(revstr: String) = localGitRepo.resolve(revstr).asRevCommit
+
+      affectedFolders(commitAt("master"), commitAt("food-feature"), Set("/food/")) mustEqual(Set("/food/"))
+
+      affectedFolders(commitAt("master"), commitAt("bard-feature"), Set("/food/")) mustBe empty
     }
   }
 }
