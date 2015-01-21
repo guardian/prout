@@ -1,8 +1,8 @@
 {
   "name": "prout",
-  "description": "A bot that updates your GitHub pull-requests with deployment observations",
+  "description": "Tells you when your pull-requests are live. Tells you when they're not, and should be.",
   "repository": "https://github.com/guardian/prout",
-  "logo": "https://cloud.githubusercontent.com/assets/52038/6084/94fb8e46-c0ea-11e3-90f8-708387e95b4d.png",
+  "logo": "https://cloud.githubusercontent.com/assets/52038/5842786/aed6db4a-a19f-11e4-820b-48bce30a8eee.png",
   "success_url": "/",
   "keywords": ["github", "pull request", "continuous", "deployment"],
   "env": {
