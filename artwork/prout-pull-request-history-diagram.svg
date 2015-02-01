@@ -15,7 +15,7 @@
    version="1.1"
    inkscape:version="0.48.5 r10040"
    sodipodi:docname="prout-pull-request-history-diagram.svg"
-   inkscape:export-filename="/home/roberto/development/prout/artwork/prout-pull-request-history-diagram.A2.png"
+   inkscape:export-filename="/home/roberto/development/prout/artwork/prout-pull-request-history-diagram.A5.png"
    inkscape:export-xdpi="180"
    inkscape:export-ydpi="180">
   <defs
@@ -620,8 +620,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="569.6778"
-     inkscape:cy="394.11902"
+     inkscape:cx="657.6778"
+     inkscape:cy="314.11902"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -1163,15 +1163,23 @@
        inkscape:transform-center-y="44.927334" />
     <text
        xml:space="preserve"
-       style="font-size:20px;font-style:italic;font-variant:normal;font-weight:500;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Medium Italic"
-       x="535.61713"
-       y="728.16437"
+       style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:105%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu;-inkscape-font-specification:Ubuntu Italic"
+       x="582.66351"
+       y="658.16437"
        id="text4030-0"
-       sodipodi:linespacing="125%"><tspan
+       sodipodi:linespacing="105%"><tspan
          sodipodi:role="line"
-         id="tspan4032-3"
-         x="535.61713"
-         y="728.16437">seen on site</tspan></text>
+         x="582.66351"
+         y="658.16437"
+         id="tspan3191">commit id</tspan><tspan
+         sodipodi:role="line"
+         x="582.66351"
+         y="678.16437"
+         id="tspan3189">being served</tspan><tspan
+         sodipodi:role="line"
+         x="582.66351"
+         y="698.16437"
+         id="tspan3199">by live site</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:none;marker-mid:url(#Arrow2Mend);marker-end:none"
        d="m 671.5682,1007.6289 10e-6,-70.86614 0,-70.86614"
@@ -1231,7 +1239,7 @@
        sodipodi:cy="494.92731"
        sodipodi:rx="44.927334"
        sodipodi:ry="44.927334"
-       d="m 273.9703,494.92731 a 44.927334,44.927334 0 1 1 -89.85467,0 44.927334,44.927334 0 1 1 89.85467,0 z"
+       d="m 273.9703,494.92731 c 0,24.81268 -20.11465,44.92733 -44.92733,44.92733 -24.81268,0 -44.92734,-20.11465 -44.92734,-44.92733 0,-24.81268 20.11466,-44.92734 44.92734,-44.92734 24.81268,0 44.92733,20.11466 44.92733,44.92734 z"
        transform="matrix(0.52360662,0,0,0.52360662,674.40274,677.61556)"
        inkscape:transform-center-y="44.927334" />
     <g
@@ -1266,7 +1274,7 @@
        style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:github-octicons;-inkscape-font-specification:github-octicons"
        inkscape:connector-curvature="0"
        id="path3336"
-       d="m 671.58743,710.41434 c -3.88023,3e-5 -7.68231,1.25003 -11.40625,3.75 -3.72397,2.50002 -6.58855,6.25002 -8.59375,11.25 1.92708,3.80209 4.63541,6.82292 8.125,9.0625 3.48957,2.23958 7.4479,3.38542 11.875,3.4375 4.42705,-0.0521 8.38538,-1.19792 11.875,-3.4375 3.48954,-2.23958 6.19787,-5.26041 8.125,-9.0625 -2.00525,-4.99998 -4.86983,-8.74998 -8.59375,-11.25 -3.72399,-2.49997 -7.52607,-3.74997 -11.40625,-3.75 m 0,25 c -3.82815,-0.10416 -7.10939,-1.14583 -9.84375,-3.125 -2.73439,-1.97916 -4.45314,-4.27082 -5.15625,-6.875 0.70311,-2.60415 2.42186,-4.89582 5.15625,-6.875 2.73436,-1.97915 6.0156,-3.02081 9.84375,-3.125 3.8281,0.10419 7.10934,1.14585 9.84375,3.125 2.73434,1.97918 4.45309,4.27085 5.15625,6.875 -0.70316,2.60418 -2.42191,4.89584 -5.15625,6.875 -2.73441,1.97917 -6.01565,3.02084 -9.84375,3.125 m 0,-17.5 c -0.75523,0.0261 -1.4844,0.14325 -2.1875,0.35156 0.65102,0.31252 1.17185,0.76825 1.5625,1.36719 0.41664,0.57293 0.62498,1.25002 0.625,2.03125 -0.0261,1.06772 -0.39065,1.95314 -1.09375,2.65625 -0.70315,0.70314 -1.58856,1.06772 -2.65625,1.09375 -0.78127,10e-6 -1.47137,-0.1953 -2.07032,-0.58594 -0.57293,-0.41665 -1.01564,-0.9505 -1.32812,-1.60156 -0.20835,0.6771 -0.32554,1.40626 -0.35156,2.1875 0.0521,2.13543 0.78123,3.90626 2.1875,5.3125 1.40623,1.40626 3.17706,2.13542 5.3125,2.1875 2.13539,-0.0521 3.90622,-0.78124 5.3125,-2.1875 1.40622,-1.40624 2.13538,-3.17707 2.1875,-5.3125 -0.0521,-2.1354 -0.78128,-3.90623 -2.1875,-5.3125 -1.40628,-1.40623 -3.17711,-2.1354 -5.3125,-2.1875" />
+       d="m 727.58743,402.41434 c -3.88023,3e-5 -7.68231,1.25003 -11.40625,3.75 -3.72397,2.50002 -6.58855,6.25002 -8.59375,11.25 1.92708,3.80209 4.63541,6.82292 8.125,9.0625 3.48957,2.23958 7.4479,3.38542 11.875,3.4375 4.42705,-0.0521 8.38538,-1.19792 11.875,-3.4375 3.48954,-2.23958 6.19787,-5.26041 8.125,-9.0625 -2.00525,-4.99998 -4.86983,-8.74998 -8.59375,-11.25 -3.72399,-2.49997 -7.52607,-3.74997 -11.40625,-3.75 m 0,25 c -3.82815,-0.10416 -7.10939,-1.14583 -9.84375,-3.125 -2.73439,-1.97916 -4.45314,-4.27082 -5.15625,-6.875 0.70311,-2.60415 2.42186,-4.89582 5.15625,-6.875 2.73436,-1.97915 6.0156,-3.02081 9.84375,-3.125 3.8281,0.10419 7.10934,1.14585 9.84375,3.125 2.73434,1.97918 4.45309,4.27085 5.15625,6.875 -0.70316,2.60418 -2.42191,4.89584 -5.15625,6.875 -2.73441,1.97917 -6.01565,3.02084 -9.84375,3.125 m 0,-17.5 c -0.75523,0.0261 -1.4844,0.14325 -2.1875,0.35156 0.65102,0.31252 1.17185,0.76825 1.5625,1.36719 0.41664,0.57293 0.62498,1.25002 0.625,2.03125 -0.0261,1.06772 -0.39065,1.95314 -1.09375,2.65625 -0.70315,0.70314 -1.58856,1.06772 -2.65625,1.09375 -0.78127,1e-5 -1.47137,-0.1953 -2.07032,-0.58594 -0.57293,-0.41665 -1.01564,-0.9505 -1.32812,-1.60156 -0.20835,0.6771 -0.32554,1.40626 -0.35156,2.1875 0.0521,2.13543 0.78123,3.90626 2.1875,5.3125 1.40623,1.40626 3.17706,2.13542 5.3125,2.1875 2.13539,-0.0521 3.90622,-0.78124 5.3125,-2.1875 1.40622,-1.40624 2.13538,-3.17707 2.1875,-5.3125 -0.0521,-2.1354 -0.78128,-3.90623 -2.1875,-5.3125 -1.40628,-1.40623 -3.17711,-2.1354 -5.3125,-2.1875" />
     <text
        xml:space="preserve"
        style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu;-inkscape-font-specification:Ubuntu"
@@ -1299,20 +1307,26 @@
     </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:9, 9;stroke-dashoffset:0;marker-end:url(#marker4305)"
-       d="m 412,722.36218 c 0,0 36.33333,-12 54.5,-12 18.16667,0 54.5,12 54.5,12"
+       d="m 360,448.36218 c 0,0 36.33333,-12 54.5,-12 18.16667,0 54.5,12 54.5,12"
        id="path4388"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccc" />
     <text
        xml:space="preserve"
        style="font-size:56px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:github-octicons;-inkscape-font-specification:github-octicons"
-       x="295"
-       y="418.86218"
+       x="643.5874"
+       y="741.66431"
        id="text4864"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan4866"
-         x="295"
-         y="418.86218"></tspan></text>
+         x="643.5874"
+         y="741.66431"></tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 633,694.86218 13.5,9.5"
+       id="path3206"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>
