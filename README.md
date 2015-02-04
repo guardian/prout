@@ -1,6 +1,6 @@
 # Prout
 
-_"Has your pull request been deployed yet?"_
+_"Has your pull request been deployed yet?"_ - [Guardian blogpost](http://www.theguardian.com/info/developer-blog/2015/feb/03/prout-is-your-pull-request-out)
 
 Tells you when your pull-requests are live. Tells you when they're not, and should be.
 
