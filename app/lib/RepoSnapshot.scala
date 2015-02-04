@@ -149,7 +149,10 @@ case class RepoSnapshot(
         Logger.trace(s"changedSnapshotsByState : ${snapshot.changedSnapshotsByState}")
 
         val timeSinceMerge = mergeToNow.toPeriod.withMillis(0).toString(pf)
-        val responsibleText = s"merged by ${pr.getMergedBy.atLogin} $timeSinceMerge ago"
+        val mergedByText = s"merged by ${pr.getMergedBy.atLogin} $timeSinceMerge ago"
+        val responsibleText = if (pr.getUser == pr.getMergedBy) mergedByText else {
+          s"created by ${pr.getUser.atLogin} and $mergedByText"
+        }
 
         def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
           for (changedSnapshots <- snapshot.changedSnapshotsByState.get(status)) {
