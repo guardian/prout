@@ -101,6 +101,26 @@ buildInfoKeys := Seq[BuildInfoKey](
     )
 ```
 
+### Slack
+
+Users [can configure a Slack hook](https://github.com/guardian/prout/pull/11) for Prout
+by creating a new Slack 'Incoming Webhook':
+
+https://your-domain.slack.com/services/new/incoming-webhook
+
+...this will get you a 'Webhook URL', which looks something like this:
+
+https://hooks.slack.com/services/T05FTQF9H/B012N1Y2Y/p9VyRC1ZlTqNGuu
+
+...stick that url into a GitHub webhook for your repo as the 'Payload URL':
+
+https://github.com/my-org/my-repo/settings/hooks/new
+
+...and then (optionally) **disable** the hook in GitHub! You don't actually want to send _GitHub_
+events to the hook - this is just a place to store the private url where Prout can find it.
+**Note that Prout needs repo-admin access in order to read the hook data!**
+
+
 # Run your own instance of Prout
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/guardian/prout)
