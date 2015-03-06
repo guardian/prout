@@ -56,7 +56,7 @@ object RepoSnapshot {
     }
 
     val mergedPullRequestsF = Future {
-      githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(50).toList
+      githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(100).toList
     } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
 
     val gitRepoF = Future {
