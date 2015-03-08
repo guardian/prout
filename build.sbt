@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
