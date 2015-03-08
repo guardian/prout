@@ -9,9 +9,12 @@ import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails]) {
-  lazy val checkpointSet = checkpoints.map {
-    case (name, details) => Checkpoint(name, details)
-  }.toSet
+
+  lazy val checkpointsByName: Map[String, Checkpoint] = checkpoints.map {
+    case (name, details) => name -> Checkpoint(name, details)
+  }
+
+  lazy val checkpointSet = checkpointsByName.values.toSet
 }
 
 object Config {
@@ -61,12 +64,14 @@ object Config {
     val foldersWithValidConfig: Set[String] = validConfigByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- validConfigByFolder.mapValues(_.checkpointSet.map(_.name)).toSeq
+      (folder, checkpointNames) <- validConfigByFolder.mapValues(_.checkpoints.keySet).toSeq
       checkpointName <- checkpointNames
     } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
 
     val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
 
     require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: $checkpointsNamedInMultipleFolders")
+
+    val checkpointsByName: Map[String, Checkpoint] = validConfigByFolder.values.map(_.checkpointsByName).reduce(_ ++ _)
   }
 }

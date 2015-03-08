@@ -171,5 +171,21 @@ case class RepoSnapshot(
     }
   }
 
-  def processMergedPullRequests() = Future.traverse(mergedPullRequests)(issueUpdater.process).map(_.flatten)
+  def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsSummary]] = for {
+    _ <- attemptToCreateMissingLabels()
+    summaryOpts <- Future.traverse(mergedPullRequests)(issueUpdater.process)
+  } yield summaryOpts.flatten
+
+  def attemptToCreateMissingLabels(): Future[Set[GHLabel]] = {
+    val existingLabels: Set[String] = repo.listLabels.toSet[GHLabel].map(_.getName)
+
+    val labelUpdateFutures: Set[Future[GHLabel]] = for {
+      prcs <- PullRequestCheckpointStatus.all
+      checkpointName <- config.checkpointsByName.keySet
+      label = prcs.labelFor(checkpointName)
+      if !existingLabels(label)
+    } yield Future { repo.createLabel(label, prcs.defaultColour) }
+
+    Future.sequence(labelUpdateFutures).recover[Set[GHLabel]] { case _ => Set.empty }
+  }
 }
