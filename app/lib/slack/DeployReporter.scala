@@ -21,7 +21,7 @@ object DeployReporter {
         val checkpoints = changedSnapshots.map(_.checkpoint)
         val attachments = Seq(Attachment(s"PR #${pr.getNumber} deployed to ${checkpoints.map(_.name).mkString(", ")}",
           Seq(
-            Attachment.Field("PR", s"<${pr.getUrl}|#${pr.getNumber}>", true),
+            Attachment.Field("PR", s"<${pr.getHtmlUrl}|#${pr.getNumber}>", true),
             Attachment.Field("Merged by", s"<${mergedBy.getHtmlUrl}|${mergedBy.atLogin}>", true)
           )
         ))
