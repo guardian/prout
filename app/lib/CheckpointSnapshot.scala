@@ -19,6 +19,7 @@ package lib
 import com.squareup.okhttp.OkHttpClient
 import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
+import lib.SSL.InsecureSocketFactory
 import lib.okhttpscala._
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.joda.time.{DateTime, ReadableInstant}
@@ -30,12 +31,15 @@ import scala.concurrent._
 object CheckpointSnapshot {
 
   val client = new OkHttpClient()
+  val insecureClient = new OkHttpClient().setSslSocketFactory(InsecureSocketFactory)
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
   def apply(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
 
-    val responseF = client.execute(new Builder().url(checkpoint.url.toString).build())
+    val clientForCheckpoint = if (checkpoint.sslVerification) client else insecureClient
+
+    val responseF = clientForCheckpoint.execute(new Builder().url(checkpoint.url.toString).build())
 
     responseF.onComplete { r =>
       Logger.info(s"${checkpoint.name} : $r")

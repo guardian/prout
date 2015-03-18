@@ -1,0 +1,5 @@
+{
+  "url": "https://workflow.release.dev-gutools.co.uk/management/healthcheck",
+  "overdue": "14M",
+  "disableSSLVerification": true
+}

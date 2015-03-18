@@ -46,7 +46,9 @@ object Config {
     Json.fromJson[ConfigFile](fileJson)
   }
 
-  case class CheckpointDetails(url: Uri, overdue: Period)
+  case class CheckpointDetails(url: Uri, overdue: Period, disableSSLVerification: Option[Boolean] = None) {
+    val sslVerification = !disableSSLVerification.contains(true)
+  }
 
   object Checkpoint {
     implicit def checkpointToDetails(c: Checkpoint) = c.details
