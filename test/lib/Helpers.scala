@@ -2,10 +2,12 @@ package lib
 
 import java.net.URL
 
+import com.google.common.io.Files
 import com.madgag.git._
 import com.squareup.okhttp.OkHttpClient
 import lib.Implicits._
 import lib.gitgithub.GitHubCredentials
+import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.kohsuke.github.GHIssueState.OPEN
@@ -122,17 +124,15 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
   def createTestRepo(fileName: String): GHRepository = {
     val gitHub = conn()
-    val testGithubRepo = gitHub.createRepository(testRepoNamePrefix + System.currentTimeMillis().toString, fileName, "", true)
+    val testRepoFullName = gitHub.createRepository(testRepoNamePrefix + System.currentTimeMillis().toString, fileName, "", true).getFullName
 
     val localGitRepo = test.unpackRepo(fileName)
+
+    val testGithubRepo = eventually { gitHub.getRepository(testRepoFullName) }
 
     val config = localGitRepo.getConfig()
     config.setString("remote", "origin", "url", testGithubRepo.gitHttpTransportUrl)
     config.save()
-
-    eventually {
-      testGithubRepo.getBranches mustBe empty
-    }
 
     val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
 
@@ -143,6 +143,11 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     eventually {
       testGithubRepo.getBranches must not be empty
     }
+
+    eventually {
+      Git.cloneRepository().setBare(true).setURI(testGithubRepo.gitHttpTransportUrl).setDirectory(Files.createTempDir()).call()
+    }
+
     testGithubRepo
   }
 }
