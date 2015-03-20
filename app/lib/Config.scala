@@ -72,7 +72,7 @@ object Config {
 
     val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
 
-    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: $checkpointsNamedInMultipleFolders")
+    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: ${checkpointsNamedInMultipleFolders.mapValues(_.mkString("(",", ",")"))}")
 
     val checkpointsByName: Map[String, Checkpoint] = validConfigByFolder.values.map(_.checkpointsByName).reduce(_ ++ _)
   }
