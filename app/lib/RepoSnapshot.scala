@@ -145,7 +145,8 @@ case class RepoSnapshot(
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       val pr = snapshot.pr
       val mergeToNow = new DateTime(pr.getMergedAt) to DateTime.now
-      if (mergeToNow.duration < WorthyOfCommentWindow) {
+      val previouslyTouchedByProut = snapshot.oldState.statusByCheckpoint.nonEmpty
+      if (previouslyTouchedByProut || mergeToNow.duration < WorthyOfCommentWindow) {
         Logger.trace(s"changedSnapshotsByState : ${snapshot.changedSnapshotsByState}")
 
         val timeSinceMerge = mergeToNow.toPeriod.withMillis(0).toString(pf)
