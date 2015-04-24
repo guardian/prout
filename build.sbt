@@ -6,10 +6,6 @@ scalaVersion := "2.11.6"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-herokuAppName in Compile := "prout-bot"
-
-herokuJdkVersion in Compile := "1.8"
-
 buildInfoSettings
 
 sourceGenerators in Compile <+= buildInfo
