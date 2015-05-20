@@ -31,13 +31,13 @@ class ScanScheduler(repoFullName: RepoFullName,
         case Success(summaries) =>
           Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
 
-          val scanTimeForPendingOpt = summaries.find(_.hasPendingCheckpoints).map(_ => Instant.now + 1.minute)
+          val scanTimeForUnseenOpt = summaries.find(!_.checkpointStatuses.all(Seen)).map(_ => Instant.now + 1.minute)
 
           val overdueTimes = summaries.collect {
             case summary => summary.soonestPendingCheckpointOverdueTime
           }.flatten
 
-          val candidateFollowUpScanTimes = overdueTimes ++ scanTimeForPendingOpt
+          val candidateFollowUpScanTimes = overdueTimes ++ scanTimeForUnseenOpt
 
           if (candidateFollowUpScanTimes.nonEmpty) {
             val earliestCandidateScanTime: Instant = candidateFollowUpScanTimes.min

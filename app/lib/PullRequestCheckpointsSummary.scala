@@ -15,11 +15,13 @@ import play.api.Logger
 import scala.util.Try
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
-  def hasStateForCheckpointsWhichHaveAllBeenSeen = statusByCheckpoint.nonEmpty && all(Seen)
+  val states = statusByCheckpoint.values.toSet
 
-  def all(s: PullRequestCheckpointStatus) = statusByCheckpoint.values.forall(_ == s)
+  val hasStateForCheckpointsWhichHaveAllBeenSeen = states == Set(Seen)
 
-  def has(s: PullRequestCheckpointStatus) = statusByCheckpoint.values.exists(_ == s)
+  def all(s: PullRequestCheckpointStatus) = states.forall(_ == s)
+
+  def has(s: PullRequestCheckpointStatus) = states.contains(s)
 
   def changeFrom(oldState: PRCheckpointState) =
     (statusByCheckpoint.toSet -- oldState.statusByCheckpoint.toSet).toMap
@@ -60,8 +62,6 @@ case class PullRequestCheckpointsSummary(
 
   val checkpointsByState: Map[PullRequestCheckpointStatus, Set[Checkpoint]] =
     checkpointStatuses.statusByCheckpoint.groupBy(_._2).mapValues(_.keySet.map(tuple => snapshotsByName(tuple).checkpoint))
-
-  val hasPendingCheckpoints = checkpointsByState.get(Pending).exists(_.nonEmpty)
 
   val soonestPendingCheckpointOverdueTime: Option[Instant] =
     checkpointsByState.get(Pending).map(_.map(_.details.overdue).min).map(new Instant(pr.getMergedAt) + _.standardDuration)
