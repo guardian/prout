@@ -16,7 +16,8 @@
 
 package lib
 
-import com.ning.http.util.AllowAllHostnameVerifier
+import javax.net.ssl.{HostnameVerifier, SSLSession}
+
 import com.squareup.okhttp.OkHttpClient
 import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
@@ -32,7 +33,9 @@ import scala.concurrent._
 object CheckpointSnapshot {
 
   val client = new OkHttpClient()
-  val insecureClient = new OkHttpClient().setSslSocketFactory(InsecureSocketFactory).setHostnameVerifier(new AllowAllHostnameVerifier)
+  val insecureClient = new OkHttpClient().setSslSocketFactory(InsecureSocketFactory).setHostnameVerifier(new HostnameVerifier {
+    override def verify(hostname: String, sslSession: SSLSession): Boolean = true
+  })
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
