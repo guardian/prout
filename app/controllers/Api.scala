@@ -60,6 +60,7 @@ object Api extends Controller {
         logger.info(s"Creating $scheduler for $repoFullName")
         scheduler
       }
+      Logger.debug(s"$repoFullName scanScheduler=$scanScheduler")
 
       val firstScanF = scanScheduler.scan()
 
