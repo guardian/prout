@@ -18,13 +18,13 @@ class FunctionalSpec extends Helpers {
       repoPR setCheckpointTo zeroId
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only ("Pending-on-PROD")
+        _.labelNames must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only ("Seen-on-PROD")
+        _.labelNames must contain only "Seen-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -48,13 +48,13 @@ class FunctionalSpec extends Helpers {
       repoPR setCheckpointTo zeroId
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only ("Pending-on-PROD")
+        _.labelNames must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only ("Seen-on-PROD")
+        _.labelNames must contain only "Seen-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -66,11 +66,11 @@ class FunctionalSpec extends Helpers {
       repoPR setCheckpointTo zeroId
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only ("Pending-on-PROD")
+        _.labelNames must contain only "Pending-on-PROD"
       }
 
       waitUntil(shouldAddComment = true) {
-        _.labelNames must contain only ("Overdue-on-PROD")
+        _.labelNames must contain only "Overdue-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -78,7 +78,7 @@ class FunctionalSpec extends Helpers {
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only ("Seen-on-PROD")
+        _.labelNames must contain only "Seen-on-PROD"
       }
     }
 
@@ -97,7 +97,7 @@ class FunctionalSpec extends Helpers {
         repoPR setCheckpointTo "master"
 
         scan(shouldAddComment = true) {
-          _.labelNames must contain only ("Seen-on-PROD")
+          _.labelNames must contain only "Seen-on-PROD"
         }
       }
     }
