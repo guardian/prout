@@ -41,14 +41,14 @@ case class PullRequestCheckpointsSummary(
     cs =>
       val timeBetweenMergeAndSnapshot = (new DateTime(pr.getMergedAt) to cs.time).duration
 
-      val isVisibleOnSite: Boolean = Try {
+      val isVisibleOnSite: Boolean = (for (commitId <- cs.commitIdTry) yield {
         implicit val w: RevWalk = new RevWalk(gitRepo)
         val prCommit: RevCommit = pr.getHead.asRevCommit
-        val siteCommit: RevCommit = cs.commitId.get.asRevCommit
+        val siteCommit: RevCommit = commitId.get.asRevCommit
         Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()}")
 
         w.isMergedInto(prCommit, siteCommit)
-      }.getOrElse(false)
+      }).getOrElse(false)
 
       val currentStatus: PullRequestCheckpointStatus =
         if (isVisibleOnSite) Seen else if (timeBetweenMergeAndSnapshot > cs.checkpoint.overdue.standardDuration) Overdue else Pending

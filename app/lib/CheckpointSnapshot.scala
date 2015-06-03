@@ -29,6 +29,7 @@ import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.util.Try
 
 object CheckpointSnapshot {
 
@@ -57,6 +58,6 @@ object CheckpointSnapshot {
 
 case class CheckpointSnapshot(
   checkpoint: Checkpoint,
-  commitId: Option[ObjectId],
+  commitIdTry: Try[Option[ObjectId]],
   time: ReadableInstant = DateTime.now
 )

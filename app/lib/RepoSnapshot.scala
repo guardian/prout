@@ -107,11 +107,13 @@ case class RepoSnapshot(
   lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
     c =>
       c -> {
-        for (possibleIds <- checkpointSnapshoter(c)) yield {
-          val objectIdOpt = possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
-            case Success(objectId) => objectId
+        for (possibleIdsTry <- checkpointSnapshoter(c).trying) yield {
+          val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
+            possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
+              case Success(objectId) => objectId
+            }
           }
-          CheckpointSnapshot(c, objectIdOpt)
+          CheckpointSnapshot(c, objectIdTry)
         }
       }
   }.toMap

@@ -82,6 +82,29 @@ class FunctionalSpec extends Helpers {
       }
     }
 
+    "report a broken site as overdue" in {
+      implicit val repoPR = mergePullRequestIn("/impatient-top-level-config.git.zip", "feature-1")
+
+      repoPR setCheckpointFailureTo new Exception("This website went Boom!")
+
+      scan(shouldAddComment = false) {
+        _.labelNames must contain only "Pending-on-PROD"
+      }
+
+      waitUntil(shouldAddComment = true) {
+        _.labelNames must contain only "Overdue-on-PROD"
+      }
+
+      scanShouldNotChangeAnything()
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
+        _.labelNames must contain only "Seen-on-PROD"
+      }
+    }
+
+
     for (slackWebhookUrl <- slackWebhookUrlOpt) {
       "report slackishly" in {
 

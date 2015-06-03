@@ -22,7 +22,7 @@ class Droid {
       pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
-      Logger.info(s"${githubRepo.getFullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitId.map(_.shortName).getOrElse("None")).toMap}")
+      Logger.info(s"${githubRepo.getFullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
       pullRequestUpdates
     }
   }

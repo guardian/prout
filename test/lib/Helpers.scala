@@ -40,10 +40,10 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     def getIssue(): GHIssue = githubRepo.getIssue(pr.getNumber)
 
-    var checkpointCommit: Iterator[AbbreviatedObjectId] = Iterator.empty
+    var checkpointCommitFuture: Future[Iterator[AbbreviatedObjectId]] = Future.successful(Iterator.empty)
 
     def setCheckpointTo(commitId: AbbreviatedObjectId) {
-      checkpointCommit = Iterator(commitId)
+      checkpointCommitFuture = Future.successful(Iterator(commitId))
     }
 
     def setCheckpointTo(objectId: ObjectId) {
@@ -54,7 +54,11 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
       setCheckpointTo(AbbreviatedObjectId.fromString(githubRepo.getBranches()(branchName).getSHA1))
     }
 
-    val checkpointSnapshoter: CheckpointSnapshoter = _ => Future.successful(checkpointCommit)
+    def setCheckpointFailureTo(exception: Exception) {
+      checkpointCommitFuture = Future.failed(exception)
+    }
+
+    val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
 
     val scheduler = new ScanScheduler(RepoFullName(githubRepo), checkpointSnapshoter, conn())
   }
