@@ -35,7 +35,7 @@ import scala.collection.convert.wrapAsScala._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-import scala.util.Success
+import scala.util.{Try, Success}
 import scalax.file.ImplicitConversions._
 
 object RepoSnapshot {
@@ -104,7 +104,7 @@ case class RepoSnapshot(
 
   val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.reduce(_ ++ _)
 
-  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
+  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[Try[CheckpointSnapshot]]] = activeConfig.map {
     c =>
       c -> {
         for (possibleIds <- checkpointSnapshoter(c)) yield {
@@ -113,12 +113,12 @@ case class RepoSnapshot(
           }
           CheckpointSnapshot(c, objectIdOpt)
         }
-      }
+      }.trying
   }.toMap
 
   lazy val activeSnapshotsF = Future.sequence(activeConfig.map(checkpointSnapshotsF))
 
-  def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
+  def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[Try[CheckpointSnapshot]]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
 
   val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] {

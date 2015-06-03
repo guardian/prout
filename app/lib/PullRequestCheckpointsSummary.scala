@@ -30,7 +30,7 @@ case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpoi
 
 case class PullRequestCheckpointsSummary(
   pr: GHPullRequest,
-  snapshots: Set[CheckpointSnapshot],
+  snapshots: Set[Try[CheckpointSnapshot]],
   gitRepo: Repository,
   oldState: PRCheckpointState
 ) extends StateSnapshot[PRCheckpointState] {
