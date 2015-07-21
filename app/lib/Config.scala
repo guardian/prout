@@ -3,6 +3,7 @@ package lib
 import com.madgag.git._
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails}
+import lib.travis.TravisCI
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
@@ -37,6 +38,12 @@ object Config {
 
   implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.parse(input))
 
+  case class AfterSeen(travis: Option[TravisCI])
+
+  object AfterSeen {
+    implicit val readsAfterSeen = Json.reads[AfterSeen]
+  }
+
   implicit val readsCheckpointDetails = Json.reads[CheckpointDetails]
 
   implicit val readsConfig = Json.reads[ConfigFile]
@@ -46,7 +53,12 @@ object Config {
     Json.fromJson[ConfigFile](fileJson)
   }
 
-  case class CheckpointDetails(url: Uri, overdue: Period, disableSSLVerification: Option[Boolean] = None) {
+  case class CheckpointDetails(
+    url: Uri,
+    overdue: Period,
+    disableSSLVerification: Option[Boolean] = None,
+    afterSeen: Option[AfterSeen] = None
+  ) {
     val sslVerification = !disableSSLVerification.contains(true)
   }
 
