@@ -1,0 +1,11 @@
+{
+  "url": "https://subscribe.theguardian.com/",
+  "overdue": "14M",
+  "afterSeen": {
+    "travis": {
+      "config": {
+        "script": "sbt ++$TRAVIS_SCALA_VERSION acceptance-test"
+      }
+    }
+  }
+}

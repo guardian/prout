@@ -8,15 +8,13 @@ import play.api.Logger
 import scalax.file.ImplicitConversions._
 import scalax.file.Path
 
-object Bot {
-  import play.api.Play.current
-  val config = play.api.Play.configuration.underlying
+trait Bot {
+
+  val accessToken: String
 
   val parentWorkDir = Path.fromString("/tmp") / "bot" / "working-dir"
 
   parentWorkDir.mkdirs()
-
-  val accessToken: String = config.getString("github.access.token")
 
   lazy val okHttpClient = {
     val client = new OkHttpClient
@@ -32,5 +30,12 @@ object Bot {
 
   lazy val githubCredentials = new GitHubCredentials(accessToken, okHttpClient)
 
-  val user = githubCredentials.conn().getMyself
+  lazy val user = githubCredentials.conn().getMyself
+}
+
+object Bot extends Bot {
+  import play.api.Play.current
+  val config = play.api.Play.configuration.underlying
+
+  val accessToken: String = config.getString("github.access.token")
 }

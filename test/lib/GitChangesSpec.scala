@@ -3,7 +3,7 @@ package lib
 import com.madgag.git._
 import lib.GitChanges.affectedFolders
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.RevCommit
 import org.scalatestplus.play._
 
 class GitChangesSpec extends PlaySpec {

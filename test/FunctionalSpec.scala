@@ -1,19 +1,20 @@
-import com.netaporter.uri.dsl._
-import lib.Config.{Checkpoint, CheckpointDetails}
+import com.netaporter.uri.Uri
 import lib.Implicits._
 import lib._
+import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.ObjectId.zeroId
-import org.joda.time.Period
 import org.kohsuke.github.GHEvent
+import org.scalatest.Inside
+import play.api.libs.json.{JsDefined, JsString, JsSuccess}
 
 import scala.collection.convert.wrapAll._
 
-class FunctionalSpec extends Helpers {
+class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
   "Update repo" must {
 
     "not spam not spam not spam" in {
-      implicit val repoPR = mergePullRequestIn("/feature-branches.top-level-config.git.zip", "feature-1")
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/feature-branches.top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointTo zeroId
 
@@ -31,7 +32,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn("/multi-project.master-updated-before-feature-merged.git.zip", "bard-feature")
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -43,7 +44,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "act on a pull request if it touches a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn("/multi-project.master-updated-before-feature-merged.git.zip", "food-feature")
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "food-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -61,7 +62,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "report an overdue merge without being called" in {
-      implicit val repoPR = mergePullRequestIn("/impatient-top-level-config.git.zip", "feature-1")
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointTo zeroId
 
@@ -83,7 +84,7 @@ class FunctionalSpec extends Helpers {
     }
 
     "report a broken site as overdue" in {
-      implicit val repoPR = mergePullRequestIn("/impatient-top-level-config.git.zip", "feature-1")
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointFailureTo new Exception("This website went Boom!")
 
@@ -104,31 +105,59 @@ class FunctionalSpec extends Helpers {
       }
     }
 
-
-    for (slackWebhookUrl <- slackWebhookUrlOpt) {
-      "report slackishly" in {
-
+    "report slackishly" in {
+      assume(slackWebhookUrlOpt.isDefined, "No Slack credentials")
+      val slackWebhookUrl = slackWebhookUrlOpt.get
+      val prText = {
         val pr = conn().getRepository("guardian/membership-frontend").getPullRequest(15)
-        val prText = PRText(pr.getTitle, pr.getBody)
+        PRText(pr.getTitle, pr.getBody)
+      }
 
-        implicit val repoPR = mergePullRequestIn("/feature-branches.top-level-config.git.zip", "feature-1", prText)
+      val githubRepo = createTestRepo("/feature-branches.top-level-config.git.zip")
+      implicit val repoPR = mergePullRequestIn(githubRepo, "feature-1", prText)
 
+      githubRepo.createWebHook(slackWebhookUrl, Set(GHEvent.WATCH)) // Don't really want the hook to fire!
+      eventually(githubRepo.getHooks must not be empty)
 
-        repoPR.githubRepo.createWebHook(slackWebhookUrl, Set(GHEvent.WATCH)) // Don't really want the hook to fire!
-        eventually(repoPR.githubRepo.getHooks must not be empty)
+      repoPR setCheckpointTo "master"
 
-        repoPR setCheckpointTo "master"
-
-        scan(shouldAddComment = true) {
-          _.labelNames must contain only "Seen-on-PROD"
-        }
+      scan(shouldAddComment = true) {
+        _.labelNames must contain only "Seen-on-PROD"
       }
     }
 
-    "be able to hit Ophan" in {
-      val checkpoint = Checkpoint("PROD", CheckpointDetails("https://dashboard.ophan.co.uk/login", Period.parse("PT1H")))
-      whenReady(CheckpointSnapshot(checkpoint)) { s =>
-        s must not be 'empty
+    "trigger a post-deploy travis build" in {
+      val githubRepo = conn().getMyself.getRepository("test-travis-builds")
+
+      val id = System.currentTimeMillis().toString
+
+      val masterSha = defaultBranchShaFor(githubRepo)
+
+      githubRepo.createRef("refs/heads/" + id, masterSha)
+
+      githubRepo.createContent(Array[Byte](), "a", "junk/"+id, id)
+
+      implicit val repoPR = mergePullRequestIn(githubRepo, id)
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
+        _.labelNames must contain only "Seen-on-PROD"
+      }
+
+      val t = new TravisApiClient(githubToken)
+      eventually {
+        val status = Option(githubRepo.getLastCommitStatus(defaultBranchShaFor(githubRepo))).value
+
+        val buildId = Uri.parse(status.getTargetUrl).pathParts.last.part
+        whenReady(t.build(buildId)) {
+          buildResponse => inside(buildResponse) {
+            case JsSuccess(b, _) =>
+              inside (b.build.config \ "script") { case JsDefined(script) =>
+                script mustEqual JsString("echo Prout - afterSeen script")
+              }
+          }
+        }
       }
     }
   }

@@ -24,6 +24,7 @@ import lib.Config.Checkpoint
 import lib.Implicits._
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
+import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 import org.joda.time.DateTime
@@ -42,12 +43,14 @@ object RepoSnapshot {
 
   val WorthyOfCommentWindow: Duration = 12.hours
 
+  val travisApiClient = new TravisApiClient(Bot.accessToken)
+
   def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[RepoSnapshot] = {
     val conn = Bot.githubCredentials.conn()
 
     val repoFullName = RepoFullName(githubRepo.getFullName)
 
-    def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getMasterBranch
+    def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getDefaultBranch
 
     val hooksF = Future { githubRepo.getHooks }.map {
       _.flatMap {
@@ -83,7 +86,7 @@ case class RepoSnapshot(
 
   private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
 
-  lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getMasterBranch).asRevCommit
+  lazy val masterCommit:RevCommit = gitRepo.resolve(repo.getDefaultBranch).asRevCommit
 
   lazy val config = ConfigFinder.config(masterCommit)
 
@@ -166,6 +169,19 @@ case class RepoSnapshot(
 
         for (hooks <- hooksF) {
           slack.DeployReporter.report(snapshot, hooks)
+        }
+
+        for {
+          newlySeenSnapshot <- snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
+          afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
+          travis <- afterSeen.travis
+        } {
+          val repo = snapshot.pr.getRepository
+
+          val buildBranch = repo.getDefaultBranch
+          val repoId = repo.getFullName
+
+          travisApiClient.requestBuild(repoId, travis, buildBranch)
         }
 
         commentOn(Seen, "Please check your changes!")
