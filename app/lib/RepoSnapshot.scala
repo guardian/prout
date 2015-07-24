@@ -20,6 +20,7 @@ import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
+import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
 import lib.Implicits._
 import lib.RepoSnapshot._
@@ -126,7 +127,7 @@ case class RepoSnapshot(
   def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
 
-  val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] {
+  val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] with LazyLogging {
     val repo = self.repo
 
     val pf=PeriodFormat.getDefault()
@@ -176,7 +177,7 @@ case class RepoSnapshot(
           afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
           travis <- afterSeen.travis
         } {
-          val repo = snapshot.pr.getRepository
+          logger.info(s"${pr.getId} going to do $travis")
 
           val buildBranch = repo.getDefaultBranch
           val repoId = repo.getFullName
