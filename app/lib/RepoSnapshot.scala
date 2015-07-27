@@ -150,6 +150,17 @@ case class RepoSnapshot(
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       val pr = snapshot.pr
+
+      for {
+        newlySeenSnapshot <- snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
+        afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
+        travis <- afterSeen.travis
+      } {
+        logger.info(s"${pr.getId} going to do $travis")
+
+        travisApiClient.requestBuild(repo.getFullName, travis, repo.getDefaultBranch)
+      }
+
       val mergeToNow = new DateTime(pr.getMergedAt) to DateTime.now
       val previouslyTouchedByProut = snapshot.oldState.statusByCheckpoint.nonEmpty
       if (previouslyTouchedByProut || mergeToNow.duration < WorthyOfCommentWindow) {
@@ -170,19 +181,6 @@ case class RepoSnapshot(
 
         for (hooks <- hooksF) {
           slack.DeployReporter.report(snapshot, hooks)
-        }
-
-        for {
-          newlySeenSnapshot <- snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
-          afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
-          travis <- afterSeen.travis
-        } {
-          logger.info(s"${pr.getId} going to do $travis")
-
-          val buildBranch = repo.getDefaultBranch
-          val repoId = repo.getFullName
-
-          travisApiClient.requestBuild(repoId, travis, buildBranch)
         }
 
         commentOn(Seen, "Please check your changes!")
