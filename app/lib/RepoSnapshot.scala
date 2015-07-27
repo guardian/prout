@@ -151,8 +151,12 @@ case class RepoSnapshot(
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       val pr = snapshot.pr
 
+      val newlySeenSnapshots = snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
+
+      logger.info(s"action taking: ${pr.getId} newlySeenSnapshots = $newlySeenSnapshots")
+
       for {
-        newlySeenSnapshot <- snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
+        newlySeenSnapshot <- newlySeenSnapshots
         afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
         travis <- afterSeen.travis
       } {
