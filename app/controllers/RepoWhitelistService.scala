@@ -23,14 +23,7 @@ object RepoWhitelistService {
 
   private def getAllKnownRepos = {
     val gitHub = Bot.githubCredentials.conn()
-    val organisationRepos: Set[GHRepository] = (for {
-      teamSet <- gitHub.getMyTeams.values
-      team <- teamSet if permissionsThatCanPush(team.getPermission)
-      repo <- team.listRepositories()
-    } yield repo).toSet
-
-    val userRepos = gitHub.getMyself.listRepositories().asList().toSet
-    val allRepos = organisationRepos ++ userRepos
+    val allRepos = gitHub.getMyself.listRepositories().filter(_.hasPushAccess).toSet
     val publicRepos = allRepos.filterNot(_.isPrivate)
 
     val wl = RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
