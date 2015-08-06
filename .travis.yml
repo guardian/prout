@@ -6,7 +6,8 @@ jdk:
 sudo: false
 cache:
   directories:
-  - $HOME/.sbt
+  - $HOME/.sbt/0.13
+  - $HOME/.sbt/boot/scala*
   - $HOME/.ivy2
 before_cache:
   - find $HOME/.sbt -name "*.lock" -type f -delete
