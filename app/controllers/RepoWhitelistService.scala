@@ -1,8 +1,9 @@
 package controllers
 
 import akka.agent.Agent
+import com.typesafe.scalalogging.LazyLogging
+import lib.ConfigFinder.ProutConfigFileName
 import lib.{Bot, RepoFullName}
-import org.kohsuke.github.GHRepository
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -14,7 +15,7 @@ import scala.concurrent.duration._
 
 case class RepoWhitelist(allKnownRepos: Set[RepoFullName], publicRepos: Set[RepoFullName])
 
-object RepoWhitelistService {
+object RepoWhitelistService extends LazyLogging {
   lazy val repoWhitelist = Agent[RepoWhitelist](RepoWhitelist(Set.empty, Set.empty))
 
   def whitelist(): Future[RepoWhitelist] = repoWhitelist.future()
@@ -23,12 +24,22 @@ object RepoWhitelistService {
 
   private def getAllKnownRepos = {
     val gitHub = Bot.githubCredentials.conn()
-    val allRepos = gitHub.getMyself.listRepositories().filter(_.hasPushAccess).toSet
+    val allReposWithPushAccess = gitHub.getMyself.listRepositories().filter(_.hasPushAccess).toSet
+
+    logger.info(s"Starting allReposWithPushAccess (${allReposWithPushAccess.size}) filter")
+    val allRepos = allReposWithPushAccess.par.filter {
+      r =>
+        val defaultBranchSha = r.getRef(s"heads/${r.getDefaultBranch}").getObject.getSha
+        val treeRecursive = r.getTreeRecursive(defaultBranchSha, 1)
+        if (treeRecursive.isTruncated) logger.error("Truncated tree for "+r.getFullName)
+        treeRecursive.getTree.exists(_.getPath.endsWith(ProutConfigFileName))
+    }.seq
+
+    logger.warn(s"allRepos size = ${allRepos.size}")
+
     val publicRepos = allRepos.filterNot(_.isPrivate)
 
-    val wl = RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
-    Logger.trace(s"wl=$wl")
-    wl
+    RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
   }
 
   def start() {
