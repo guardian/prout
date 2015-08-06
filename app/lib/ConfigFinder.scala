@@ -8,8 +8,12 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import play.api.libs.json.JsResult
 
 object ConfigFinder {
-
-  private val configFilter: TreeWalk => Boolean = w => w.isSubtree || w.getNameString == ".prout.json"
+  
+  val ProutConfigFileName = ".prout.json"
+  
+  private val configFilter: TreeWalk => Boolean = w => {
+    w.isSubtree || w.getNameString == ProutConfigFileName
+  }
 
   /**
    *
