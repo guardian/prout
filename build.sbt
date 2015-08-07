@@ -26,6 +26,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-agent" % "2.3.2",
   "org.webjars" % "bootstrap" % "3.3.2-1",
   "org.kohsuke" % "github-api" % "1.69" exclude("org.jenkins-ci", "annotation-indexer"),
+  "net.kencochrane.raven" % "raven-logback" % "6.0.0",
   "com.github.nscala-time" %% "nscala-time" % "2.0.0",
   "com.netaporter" %% "scala-uri" % "0.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
