@@ -12,6 +12,7 @@ import scala.collection.convert.wrapAll._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
 case class RepoWhitelist(allKnownRepos: Set[RepoFullName], publicRepos: Set[RepoFullName])
 
@@ -29,10 +30,13 @@ object RepoWhitelistService extends LazyLogging {
     logger.info(s"Starting allReposWithPushAccess (${allReposWithPushAccess.size}) filter")
     val allRepos = allReposWithPushAccess.par.filter {
       r =>
-        val defaultBranchSha = r.getRef(s"heads/${r.getDefaultBranch}").getObject.getSha
-        val treeRecursive = r.getTreeRecursive(defaultBranchSha, 1)
-        if (treeRecursive.isTruncated) logger.error("Truncated tree for "+r.getFullName)
-        treeRecursive.getTree.exists(_.getPath.endsWith(ProutConfigFileName))
+        val refTry = Try(r.getRef(s"heads/${r.getDefaultBranch}"))
+        refTry.map {ref =>
+          val defaultBranchSha = ref.getObject.getSha
+          val treeRecursive = r.getTreeRecursive(defaultBranchSha, 1)
+          if (treeRecursive.isTruncated) logger.error("Truncated tree for "+r.getFullName)
+          treeRecursive.getTree.exists(_.getPath.endsWith(ProutConfigFileName))
+        }.getOrElse(false)
     }.seq
 
     logger.warn(s"allRepos size = ${allRepos.size}")
