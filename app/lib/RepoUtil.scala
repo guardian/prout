@@ -38,7 +38,7 @@ object RepoUtil {
     }
 
     def getUpToDateRepo(): Repository = {
-      val gitdir = dataDirectory / "people.git"
+      val gitdir = dataDirectory / "repo.git"
 
       if (gitdir.exists) {
         Logger.info("Updating Git repo with fetch...")
