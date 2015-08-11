@@ -38,6 +38,8 @@ object RepoUtil {
     }
 
     def getUpToDateRepo(): Repository = {
+      dataDirectory.mkdirs()
+
       val gitdir = dataDirectory / "repo.git"
 
       if (gitdir.exists) {

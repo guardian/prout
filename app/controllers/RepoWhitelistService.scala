@@ -4,6 +4,7 @@ import akka.agent.Agent
 import com.typesafe.scalalogging.LazyLogging
 import lib.ConfigFinder.ProutConfigFileName
 import lib.{Bot, RepoFullName}
+import monitoring.GitHubQuota.trackQuotaOn
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -25,25 +26,28 @@ object RepoWhitelistService extends LazyLogging {
 
   private def getAllKnownRepos = {
     val gitHub = Bot.githubCredentials.conn()
-    val allReposWithPushAccess = gitHub.getMyself.listRepositories().filter(_.hasPushAccess).toSet
 
-    logger.info(s"Starting allReposWithPushAccess (${allReposWithPushAccess.size}) filter")
-    val allRepos = allReposWithPushAccess.par.filter {
-      r =>
-        val refTry = Try(r.getRef(s"heads/${r.getDefaultBranch}"))
-        refTry.map {ref =>
-          val defaultBranchSha = ref.getObject.getSha
-          val treeRecursive = r.getTreeRecursive(defaultBranchSha, 1)
-          if (treeRecursive.isTruncated) logger.error("Truncated tree for "+r.getFullName)
-          treeRecursive.getTree.exists(_.getPath.endsWith(ProutConfigFileName))
-        }.getOrElse(false)
-    }.seq
+    trackQuotaOn(gitHub, "RepoWhitelist") {
+      val allReposWithPushAccess = gitHub.getMyself.listRepositories().filter(_.hasPushAccess).toSet
 
-    logger.warn(s"allRepos size = ${allRepos.size}")
+      logger.info(s"Starting allReposWithPushAccess (${allReposWithPushAccess.size}) filter")
+      val allRepos = allReposWithPushAccess.par.filter {
+        r =>
+          val refTry = Try(r.getRef(s"heads/${r.getDefaultBranch}"))
+          refTry.map {ref =>
+            val defaultBranchSha = ref.getObject.getSha
+            val treeRecursive = r.getTreeRecursive(defaultBranchSha, 1)
+            if (treeRecursive.isTruncated) logger.error("Truncated tree for "+r.getFullName)
+            treeRecursive.getTree.exists(_.getPath.endsWith(ProutConfigFileName))
+          }.getOrElse(false)
+      }.seq
 
-    val publicRepos = allRepos.filterNot(_.isPrivate)
+      logger.warn(s"allRepos size = ${allRepos.size}")
 
-    RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
+      val publicRepos = allRepos.filterNot(_.isPrivate)
+
+      RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
+    }
   }
 
   def start() {
