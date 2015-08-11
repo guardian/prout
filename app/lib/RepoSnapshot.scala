@@ -26,6 +26,7 @@ import lib.Implicits._
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.travis.TravisApiClient
+import monitoring.GitHubQuota.trackQuotaOver
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 import org.joda.time.DateTime
@@ -50,30 +51,32 @@ object RepoSnapshot {
     val conn = Bot.githubCredentials.conn()
 
     val repoFullName = RepoFullName(githubRepo.getFullName)
+    
+    trackQuotaOver(conn, s"RepoSnapshot[${repoFullName.text}]") {
+      def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getDefaultBranch
 
-    def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getDefaultBranch
+      val hooksF = Future { githubRepo.getHooks }.map {
+        _.flatMap {
+          _.getConfig.toMap.get("url").map(_.uri)
+        }.toList
+      }
 
-    val hooksF = Future { githubRepo.getHooks }.map {
-      _.flatMap {
-        _.getConfig.toMap.get("url").map(_.uri)
-      }.toList
+      val mergedPullRequestsF = Future {
+        githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(50).toList
+      } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
+
+      val gitRepoF = Future {
+        RepoUtil.getGitRepo(
+          Bot.parentWorkDir / repoFullName.owner / repoFullName.name,
+          githubRepo.gitHttpTransportUrl,
+          Some(Bot.githubCredentials.git))
+      } andThen { case r => Logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
+
+      for {
+        mergedPullRequests <- mergedPullRequestsF
+        gitRepo <- gitRepoF
+      } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
     }
-
-    val mergedPullRequestsF = Future {
-      githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(50).toList
-    } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
-
-    val gitRepoF = Future {
-      RepoUtil.getGitRepo(
-        Bot.parentWorkDir / repoFullName.owner / repoFullName.name,
-        githubRepo.gitHttpTransportUrl,
-        Some(Bot.githubCredentials.git))
-    } andThen { case r => Logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
-
-    for {
-      mergedPullRequests <- mergedPullRequestsF
-      gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
   }
 }
 
