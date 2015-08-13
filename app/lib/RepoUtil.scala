@@ -43,13 +43,15 @@ object RepoUtil {
       val gitdir = dataDirectory / "repo.git"
 
       if (gitdir.exists) {
-        Logger.info("Updating Git repo with fetch...")
+        val gitDirChildren = gitdir.children().toList.map(_.name).sorted
+        assert(gitDirChildren.nonEmpty, s"No child files found in ${gitdir.getAbsolutePath}")
+        Logger.info(s"Updating Git repo with fetch... $uri")
         val repo = FileRepositoryBuilder.create(gitdir)
         invoke(repo.git.fetch())
         repo
       } else {
         gitdir.doCreateParents()
-        Logger.info("Cloning new Git repo...")
+        Logger.info(s"Cloning new Git repo... $uri")
         invoke(Git.cloneRepository().setBare(true).setDirectory(gitdir).setURI(uri)).getRepository
       }
     }
