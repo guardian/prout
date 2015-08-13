@@ -20,11 +20,11 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
 
   def createTestRepo(fileName: String): GHRepository = {
     val gitHub = conn()
-    val testRepoFullName = gitHub.createRepository(testRepoNamePrefix + System.currentTimeMillis().toString, fileName, "", true).getFullName
+    val testRepoId = gitHub.createRepository(testRepoNamePrefix + System.currentTimeMillis().toString, fileName, "", true).getFullName
 
     val localGitRepo = test.unpackRepo(fileName)
 
-    val testGithubRepo = eventually { gitHub.getRepository(testRepoFullName) }
+    val testGithubRepo = eventually { gitHub.getRepository(testRepoId) }
 
     val config = localGitRepo.getConfig
     config.setString("remote", "origin", "url", testGithubRepo.gitHttpTransportUrl)

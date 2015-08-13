@@ -3,7 +3,7 @@ package lib.actions
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import lib.RepoFullName
+import com.madgag.github.RepoId
 import play.api.Logger
 import play.api.libs.iteratee.{Iteratee, Traversable}
 import play.api.libs.json.{JsValue, Json}
@@ -14,8 +14,8 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 object RepoSecretKey {
-  def sharedSecretForRepo(repo: RepoFullName) = {
-    val signature = Crypto.sign("GitHub-Repo:"+repo.text)
+  def sharedSecretForRepo(repo: RepoId) = {
+    val signature = Crypto.sign("GitHub-Repo:"+repo.fullName)
     Logger.debug(s"Repo $repo signature $signature")
     signature
   }
@@ -28,12 +28,12 @@ object Parsers {
     Logger.debug("HMAC Signatures matched!")
   }
 
-  def githubHookRepository: BodyParser[RepoFullName] = tolerantXHubSigned[RepoFullName](RepoSecretKey.sharedSecretForRepo, "json", 128 * 1024, "Invalid Json") {
+  def githubHookRepository: BodyParser[RepoId] = tolerantXHubSigned[RepoId](RepoSecretKey.sharedSecretForRepo, "json", 128 * 1024, "Invalid Json") {
     (requestHeader, bytes) => parseGitHubHookJson(Json.parse(bytes))
   }
 
-  def parseGitHubHookJson(jsValue: JsValue): RepoFullName =
-    (jsValue \ "repository" \ "full_name").validate[String].map(RepoFullName(_)).get
+  def parseGitHubHookJson(jsValue: JsValue): RepoId =
+    (jsValue \ "repository" \ "full_name").validate[String].map(RepoId.from).get
 
   def githubHookJson(sharedSecret: String) = tolerantXHubSigned[JsValue](_ => sharedSecret, "json", 128 * 1024, "Invalid Json") {
     (requestHeader, bytes) => Json.parse(bytes)
@@ -59,7 +59,7 @@ object Parsers {
     BodyParser(name + ", maxLength=" + maxLength) { request =>
       import play.api.libs.iteratee.Execution.Implicits.trampoline
 
-import scala.util.control.Exception._
+      import scala.util.control.Exception._
 
       val bodyParser: Iteratee[Array[Byte], Either[Result, Either[Future[Result], A]]] =
         Traversable.takeUpTo[Array[Byte]](maxLength).transform(

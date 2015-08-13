@@ -1,12 +1,11 @@
 package lib
 
+import com.madgag.git._
 import org.kohsuke.github.GHRepository
 import play.api.Logger
 
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import com.madgag.git._
 
 class Droid {
 

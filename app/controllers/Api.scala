@@ -16,6 +16,7 @@
 
 package controllers
 
+import com.madgag.github.RepoId
 import lib._
 import lib.actions.Parsers
 import play.api.Logger
@@ -38,29 +39,29 @@ object Api extends Controller {
   }
 
   def updateRepo(repoOwner: String, repoName: String) = Action.async { request =>
-    updateFor(RepoFullName(repoOwner, repoName))
+    updateFor(RepoId(repoOwner, repoName))
   }
 
-  def updateFor(repoFullName: RepoFullName): Future[Result] = {
-    Logger.debug(s"update requested for $repoFullName")
+  def updateFor(RepoId: RepoId): Future[Result] = {
+    Logger.debug(s"update requested for $RepoId")
     for {
       whiteList <- RepoWhitelistService.whitelist()
-      update <- updateFor(repoFullName, whiteList)
+      update <- updateFor(RepoId, whiteList)
     } yield update
   }
 
-  def updateFor(repoFullName: RepoFullName, whiteList: RepoWhitelist): Future[Result] = {
+  def updateFor(RepoId: RepoId, whiteList: RepoWhitelist): Future[Result] = {
     val scanGuardF = Future { // wrapped in a future to avoid timing attacks
-      val knownRepo = whiteList.allKnownRepos(repoFullName)
-      Logger.debug(s"$repoFullName known=$knownRepo")
-      require(knownRepo, s"${repoFullName.text} not on known-repo whitelist")
+      val knownRepo = whiteList.allKnownRepos(RepoId)
+      Logger.debug(s"$RepoId known=$knownRepo")
+      require(knownRepo, s"${RepoId.fullName} not on known-repo whitelist")
 
-      val scanScheduler = Cache.getOrElse(repoFullName.text) {
-        val scheduler = new ScanScheduler(repoFullName, checkpointSnapshoter, Bot.githubCredentials.conn())
-        logger.info(s"Creating $scheduler for $repoFullName")
+      val scanScheduler = Cache.getOrElse(RepoId.fullName) {
+        val scheduler = new ScanScheduler(RepoId, checkpointSnapshoter, Bot.githubCredentials.conn())
+        logger.info(s"Creating $scheduler for $RepoId")
         scheduler
       }
-      Logger.debug(s"$repoFullName scanScheduler=$scanScheduler")
+      Logger.debug(s"$RepoId scanScheduler=$scanScheduler")
 
       val firstScanF = scanScheduler.scan()
 
@@ -75,7 +76,7 @@ object Api extends Controller {
 
       firstScanF
     }
-    val mightBePrivate = !whiteList.publicRepos(repoFullName)
+    val mightBePrivate = !whiteList.publicRepos(RepoId)
     if (mightBePrivate) {
       // Response must be immediate, with no private information (e.g. even acknowledging that repo exists)
       Future.successful(NoContent)

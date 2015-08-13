@@ -1,9 +1,10 @@
 package controllers
 
 import akka.agent.Agent
+import com.madgag.github.RepoId
 import com.typesafe.scalalogging.LazyLogging
+import lib.Bot
 import lib.ConfigFinder.ProutConfigFileName
-import lib.{Bot, RepoFullName}
 import monitoring.GitHubQuota.trackQuotaOn
 import play.api.Logger
 import play.api.Play.current
@@ -15,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 
-case class RepoWhitelist(allKnownRepos: Set[RepoFullName], publicRepos: Set[RepoFullName])
+case class RepoWhitelist(allKnownRepos: Set[RepoId], publicRepos: Set[RepoId])
 
 object RepoWhitelistService extends LazyLogging {
   lazy val repoWhitelist = Agent[RepoWhitelist](RepoWhitelist(Set.empty, Set.empty))
@@ -46,7 +47,7 @@ object RepoWhitelistService extends LazyLogging {
 
       val publicRepos = allRepos.filterNot(_.isPrivate)
 
-      RepoWhitelist(allRepos.map(RepoFullName(_)), publicRepos.map(RepoFullName(_)))
+      RepoWhitelist(allRepos.map(r => RepoId.from(r.getFullName)), publicRepos.map(r => RepoId.from(r.getFullName)))
     }
   }
 

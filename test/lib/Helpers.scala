@@ -2,6 +2,7 @@ package lib
 
 import java.net.URL
 
+import com.madgag.github.RepoId
 import com.squareup.okhttp.OkHttpClient
 import lib.Implicits._
 import lib.gitgithub.GitHubCredentials
@@ -56,7 +57,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
 
-    val scheduler = new ScanScheduler(RepoFullName(githubRepo), checkpointSnapshoter, conn())
+    val scheduler = new ScanScheduler(RepoId.from(githubRepo.getFullName), checkpointSnapshoter, conn())
   }
 
   def scan[T](shouldAddComment: Boolean)(issueFun: GHIssue => T)(implicit repoPR: RepoPR) {

@@ -3,6 +3,7 @@ package lib
 import akka.agent.Agent
 import com.github.nscala_time.time.Imports._
 import com.madgag.github.Implicits._
+import com.madgag.github.RepoId
 import lib.Implicits._
 import org.joda.time.{DateTime, Instant}
 import org.kohsuke.github.GitHub
@@ -15,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class ScanScheduler(repoFullName: RepoFullName,
+class ScanScheduler(RepoId: RepoId,
                     checkpointSnapshoter: CheckpointSnapshoter,
                     conn: => GitHub) { selfScanScheduler =>
 
@@ -24,14 +25,14 @@ class ScanScheduler(repoFullName: RepoFullName,
   val earliestFollowUpScanTime = Agent(Instant.now)
 
   private val dogpile = new Dogpile(Delayer.delayTheFuture {
-    Logger.debug(s"In the dogpile for $repoFullName...")
-    val summariesF = droid.scan(conn.getRepository(repoFullName.text))(checkpointSnapshoter)
+    Logger.debug(s"In the dogpile for $RepoId...")
+    val summariesF = droid.scan(conn.getRepository(RepoId.fullName))(checkpointSnapshoter)
     for (summariesTry <- summariesF.trying) {
       summariesTry match {
         case Failure(e) =>
-          Logger.error(s"Scanning $repoFullName failed", e)
+          Logger.error(s"Scanning $RepoId failed", e)
         case Success(summaries) =>
-          Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoFullName.text}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
+          Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${RepoId.fullName}:\n${summaries.map(s => s"#${s.pr.getNumber} ${s.stateChange}").mkString("\n")}")
 
           val scanTimeForUnseenOpt = summaries.find(!_.checkpointStatuses.all(Seen)).map(_ => Instant.now + 1.minute)
 
@@ -59,6 +60,6 @@ class ScanScheduler(repoFullName: RepoFullName,
     summariesF
   })
 
-  def scan(): Future[immutable.Seq[PullRequestCheckpointsSummary]] = dogpile.doAtLeastOneMore()
+  def scan(): Future[Seq[PullRequestCheckpointsSummary]] = dogpile.doAtLeastOneMore()
 
 }

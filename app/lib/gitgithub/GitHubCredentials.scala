@@ -6,7 +6,7 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.extras.OkHttpConnector
 
 
-class GitHubCredentials(oauthAccessToken: String, okHttpClient: OkHttpClient) {
+class GitHubCredentials(val oauthAccessToken: String, val okHttpClient: OkHttpClient) {
 
   def conn() = {
     val gh = GitHub.connectUsingOAuth(oauthAccessToken)

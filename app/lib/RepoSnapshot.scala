@@ -19,6 +19,7 @@ package lib
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
 import com.madgag.github.Implicits._
+import com.madgag.github.RepoId
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
@@ -26,6 +27,7 @@ import lib.Config.Checkpoint
 import lib.Implicits._
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
+import lib.scalagithub.PullRequest
 import lib.travis.TravisApiClient
 import monitoring.GitHubQuota.trackQuotaOver
 import org.eclipse.jgit.lib.Repository
@@ -36,7 +38,6 @@ import org.kohsuke.github._
 import play.api.Logger
 
 import scala.collection.convert.wrapAsScala._
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.Success
@@ -51,10 +52,10 @@ object RepoSnapshot {
   def apply(githubRepo: GHRepository)(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[RepoSnapshot] = {
     val conn = Bot.githubCredentials.conn()
 
-    val repoFullName = RepoFullName(githubRepo.getFullName)
+    val repoId = RepoId.from(githubRepo.getFullName)
     
-    trackQuotaOver(conn, s"RepoSnapshot[${repoFullName.text}]") {
-      def isMergedToMaster(pr: GHPullRequest): Boolean = pr.isMerged && pr.getBase.getRef == githubRepo.getDefaultBranch
+    trackQuotaOver(conn, s"RepoSnapshot[${repoId.fullName}]") {
+      def isMergedToMaster(pr: PullRequest): Boolean = pr.merged_at.isDefined && pr.base.ref == githubRepo.getDefaultBranch
 
       val hooksF = Future { githubRepo.getHooks }.map {
         _.flatMap {
@@ -62,16 +63,19 @@ object RepoSnapshot {
         }.toList
       }
 
-      val mergedPullRequestsF = Future {
-        githubRepo.listPullRequests(GHIssueState.CLOSED).iterator().filter(isMergedToMaster).take(50).toList
-      } andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
+      val mergedPullRequestsF: Future[Seq[GHPullRequest]] = (for {
+        ghResponse <- Bot.github.listPullRequests(repoId)
+      } yield {
+        ghResponse.result.filter(isMergedToMaster).take(10).map(pr => githubRepo.getPullRequest(pr.number))
+      }) andThen { case cprs => Logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.getNumber).sorted.reverse)}") }
 
       val gitRepoF = Future {
         RepoUtil.getGitRepo(
-          Bot.parentWorkDir / repoFullName.owner / repoFullName.name,
+          Bot.parentWorkDir / repoId.owner / repoId.name,
           githubRepo.gitHttpTransportUrl,
           Some(Bot.githubCredentials.git))
       } andThen { case r => Logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
+
 
       for {
         mergedPullRequests <- mergedPullRequestsF

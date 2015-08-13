@@ -3,6 +3,7 @@ package lib
 import com.squareup.okhttp
 import com.squareup.okhttp.OkHttpClient
 import lib.gitgithub.GitHubCredentials
+import lib.scalagithub.GitHub
 import play.api.Logger
 
 import scalax.file.ImplicitConversions._
@@ -31,6 +32,8 @@ trait Bot {
   lazy val githubCredentials = new GitHubCredentials(accessToken, okHttpClient)
 
   lazy val user = githubCredentials.conn().getMyself
+
+  lazy val github = new GitHub(githubCredentials)
 }
 
 object Bot extends Bot {
