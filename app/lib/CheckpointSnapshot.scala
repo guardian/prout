@@ -18,11 +18,11 @@ package lib
 
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 
+import com.madgag.okhttpscala._
 import com.squareup.okhttp.OkHttpClient
 import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
-import lib.okhttpscala._
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.joda.time.{DateTime, ReadableInstant}
 import play.api.Logger

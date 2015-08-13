@@ -3,11 +3,11 @@ package lib.travis
 import java.net.URLEncoder
 
 import akka.agent.Agent
+import com.madgag.okhttpscala._
 import com.netaporter.uri.Uri
 import com.squareup.okhttp.Request.Builder
 import com.squareup.okhttp._
 import com.typesafe.scalalogging.LazyLogging
-import lib.okhttpscala._
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 

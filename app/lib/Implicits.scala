@@ -24,22 +24,11 @@ import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.kohsuke.github._
 
 import scala.collection.convert.wrapAll._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Success, Try}
 
 object Implicits {
 
   implicit def duration2SDuration(dur: org.joda.time.Duration) = FiniteDuration(dur.getMillis, TimeUnit.MILLISECONDS)
-
-  implicit class RichFuture[S](f: Future[S]) {
-    lazy val trying = {
-      val p = Promise[Try[S]]()
-      f.onComplete { case t => p.complete(Success(t)) }
-      p.future
-    }
-  }
 
   implicit class RichIssue(issue: GHIssue) {
     lazy val assignee = Option(issue.getAssignee)
@@ -79,14 +68,4 @@ object Implicits {
   }
 
   val dateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ")
-
-  implicit class RichPerson(person: GHPerson) {
-
-    lazy val createdAt = new DateTime(person.getCreatedAt)
-
-    lazy val atLogin = s"@${person.getLogin}"
-
-    lazy val displayName = Option(person.getName).filter(_.nonEmpty).getOrElse(atLogin)
-
-  }
 }

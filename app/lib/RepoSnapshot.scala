@@ -18,6 +18,7 @@ package lib
 
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
+import com.madgag.github.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
@@ -96,7 +97,7 @@ case class RepoSnapshot(
 
   lazy val affectedFoldersByPullRequest: Map[GHPullRequest, Set[String]] = (for {
     pr <- mergedPullRequests
-  } yield pr -> pr.affects(config.foldersWithValidConfig).toSet).toMap
+  } yield pr -> GitChanges.affects(pr, config.foldersWithValidConfig)).toMap
 
 
   lazy val pullRequestsByAffectedFolder : Map[String, Set[GHPullRequest]] = config.foldersWithValidConfig.map {

@@ -1,14 +1,14 @@
 package lib.slack
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.madgag.github.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
-import lib.Implicits._
 import lib.{PullRequestCheckpointsSummary, Seen}
 import play.api.Logger
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.libs.ws.WS
-import play.api.Play.current
 
 object DeployReporter {
 

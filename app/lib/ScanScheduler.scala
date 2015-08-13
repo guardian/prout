@@ -2,6 +2,7 @@ package lib
 
 import akka.agent.Agent
 import com.github.nscala_time.time.Imports._
+import com.madgag.github.Implicits._
 import lib.Implicits._
 import org.joda.time.{DateTime, Instant}
 import org.kohsuke.github.GitHub

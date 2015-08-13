@@ -25,19 +25,15 @@ libraryDependencies ++= Seq(
   ws,
   "com.typesafe.akka" %% "akka-agent" % "2.3.2",
   "org.webjars" % "bootstrap" % "3.3.2-1",
-  "org.kohsuke" % "github-api" % "1.69" exclude("org.jenkins-ci", "annotation-indexer"),
   "net.kencochrane.raven" % "raven-logback" % "6.0.0",
   "com.github.nscala-time" %% "nscala-time" % "2.0.0",
   "com.netaporter" %% "scala-uri" % "0.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-  "com.squareup.okhttp" % "okhttp" % "2.4.0",
-  "com.squareup.okhttp" % "okhttp-urlconnection" % "2.4.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
-  "org.eclipse.jgit" % "org.eclipse.jgit" % "3.7.1.201504261725-r",
-  "com.madgag.scala-git" %% "scala-git" % "2.9",
-  "com.madgag.scala-git" %% "scala-git-test" % "2.9" % "test",
-  "org.scalatestplus" %% "play" % "1.4.0-M3" % "test"
-)     
+  "com.madgag" %% "play-git-hub" % "2.0",
+  "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
+  "org.scalatestplus" %% "play" % "1.4.0-M4" % "test"
+)
 
 sources in (Compile,doc) := Seq.empty
 
