@@ -20,11 +20,13 @@ import java.io.File
 
 import com.madgag.git._
 import org.eclipse.jgit.api.{Git, GitCommand, TransportCommand}
+import org.eclipse.jgit.lib.Constants.DEFAULT_REMOTE_NAME
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.{CredentialsProvider, RemoteConfig}
 import play.api.Logger
 
+import scala.collection.convert.wrapAsScala._
 import scalax.file.ImplicitConversions._
 
 object RepoUtil {
@@ -47,6 +49,11 @@ object RepoUtil {
         assert(gitDirChildren.nonEmpty, s"No child files found in ${gitdir.getAbsolutePath}")
         Logger.info(s"Updating Git repo with fetch... $uri")
         val repo = FileRepositoryBuilder.create(gitdir)
+        val remoteConfig = new RemoteConfig(repo.getConfig, DEFAULT_REMOTE_NAME)
+        val remoteUris = remoteConfig.getURIs
+
+        val remoteUri = remoteUris.headOption.getOrElse(throw new IllegalStateException(s"No remote configured for $uri")).toString
+        assert(remoteUri == uri, s"Wrong uri - expected $uri, got $remoteUri")
         invoke(repo.git.fetch())
         repo
       } else {
