@@ -9,10 +9,11 @@ object GitHubQuota {
 
   def trackQuotaOver[T](conn: GitHub, task: String)(taskFuture: =>Future[T])(implicit ec: ExecutionContext): Future[T] = {
     val startQuota = conn.getRateLimit
-    taskFuture.onComplete {
+    val t = taskFuture
+    t.onComplete {
       case _ => logEnd(conn, task, startQuota)
     }
-    taskFuture
+    t
   }
 
   def trackQuotaOn[T](conn: GitHub, taskName: String)(task: =>T): T = {
