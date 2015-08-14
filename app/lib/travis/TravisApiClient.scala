@@ -8,6 +8,7 @@ import com.netaporter.uri.Uri
 import com.squareup.okhttp.Request.Builder
 import com.squareup.okhttp._
 import com.typesafe.scalalogging.LazyLogging
+import play.api.Logger
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
@@ -95,11 +96,8 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
           "Travis-API-Version" -> "3"
         )
       )
-    } yield {
-      logger.info(s"requestBuild on $repoId response=$response")
-      response
-    }
-  }
+    } yield response
+  } andThen { case respTry => logger.info(s"requestBuild on $repoId response=$respTry") }
 
   val authTokenSupplier = new AuthTokenSupplier[String](auth(githubToken).map(_.get.access_token))
 
