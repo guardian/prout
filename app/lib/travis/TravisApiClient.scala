@@ -95,7 +95,10 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
           "Travis-API-Version" -> "3"
         )
       )
-    } yield response
+    } yield {
+      logger.info(s"requestBuild on $repoId response=$response")
+      response
+    }
   }
 
   val authTokenSupplier = new AuthTokenSupplier[String](auth(githubToken).map(_.get.access_token))
