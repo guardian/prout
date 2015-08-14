@@ -19,6 +19,7 @@ package controllers
 import com.madgag.github.RepoId
 import lib._
 import lib.actions.Parsers
+import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
@@ -34,13 +35,20 @@ object Api extends Controller {
 
   val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshot(_)
 
-  def githubHook() = Action.async(parse.json) { request =>
-    updateFor(Parsers.parseGitHubHookJson(request.body))
+  def githubHook() = Action.async(parse.json.map(parseGitHubHookJson)) { implicit request =>
+    val repoId = request.body
+    val githubDeliveryGuid = request.headers.get("X-GitHub-Delivery")
+    Logger.info(s"githubHook repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
+    updateFor(repoId)
   }
 
-  def updateRepo(repoOwner: String, repoName: String) = Action.async { request =>
-    updateFor(RepoId(repoOwner, repoName))
+  def updateRepo(repoOwner: String, repoName: String) = Action.async { implicit request =>
+    val repoId = RepoId(repoOwner, repoName)
+    Logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
+    updateFor(repoId)
   }
+
+  def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
 
   def updateFor(RepoId: RepoId): Future[Result] = {
     Logger.debug(s"update requested for $RepoId")

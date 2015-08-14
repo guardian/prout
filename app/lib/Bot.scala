@@ -31,7 +31,11 @@ trait Bot {
 
   lazy val githubCredentials = new GitHubCredentials(accessToken, okHttpClient)
 
-  lazy val user = githubCredentials.conn().getMyself
+  lazy val user = {
+    val myself = githubCredentials.conn().getMyself
+    Logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.getLogin}")
+    myself
+  }
 
   lazy val github = new GitHub(githubCredentials)
 }
