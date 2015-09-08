@@ -132,8 +132,8 @@ case class RepoSnapshot(
 
   lazy val activeSnapshotsF = Future.sequence(activeConfig.map(checkpointSnapshotsF))
 
-  def checkpointSnapshotsFor(pr: GHPullRequest): Future[Set[CheckpointSnapshot]] =
-    Future.sequence(activeConfigByPullRequest(pr).map(checkpointSnapshotsF))
+  def checkpointSnapshotsFor(pr: GHPullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =
+    Future.sequence(activeConfigByPullRequest(pr).filter(!oldState.hasSeen(_)).map(checkpointSnapshotsF))
 
   val issueUpdater = new IssueUpdater[GHPullRequest, PRCheckpointState, PullRequestCheckpointsSummary] with LazyLogging {
     val repo = self.repo
@@ -154,7 +154,7 @@ case class RepoSnapshot(
       existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
 
     def snapshot(oldState: PRCheckpointState, pr: GHPullRequest) =
-      for (cs <- checkpointSnapshotsFor(pr)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
+      for (cs <- checkpointSnapshotsFor(pr, oldState)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
 
     override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
       val pr = snapshot.pr

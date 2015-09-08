@@ -15,7 +15,15 @@ import play.api.Logger
 import scala.util.Try
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
-  val states = statusByCheckpoint.values.toSet
+
+  val checkpointsByStatus = statusByCheckpoint.groupBy(_._2).mapValues(_.keySet).withDefaultValue(Set.empty)
+
+  def hasSeen(checkpoint: Checkpoint) = checkpointsByStatus(Seen).contains(checkpoint.name)
+
+  def updateWith(newCheckpointStatus: Map[String, PullRequestCheckpointStatus]) =
+    PRCheckpointState(newCheckpointStatus ++ statusByCheckpoint.filterKeys(checkpointsByStatus(Seen)))
+
+  val states = checkpointsByStatus.keySet
 
   val hasStateForCheckpointsWhichHaveAllBeenSeen = states == Set(Seen)
 
@@ -37,7 +45,7 @@ case class PullRequestCheckpointsSummary(
 
   val snapshotsByName: Map[String, CheckpointSnapshot] = snapshots.map(cs => cs.checkpoint.name -> cs).toMap
 
-  val checkpointStatuses: PRCheckpointState = PRCheckpointState(snapshots.map {
+  private val stringToCheckpointStatus: Map[String, PullRequestCheckpointStatus] = snapshots.map {
     cs =>
       val timeBetweenMergeAndSnapshot = (new DateTime(pr.getMergedAt) to cs.time).duration
 
@@ -54,7 +62,9 @@ case class PullRequestCheckpointsSummary(
         if (isVisibleOnSite) Seen else if (timeBetweenMergeAndSnapshot > cs.checkpoint.overdue.standardDuration) Overdue else Pending
 
       cs.checkpoint.name -> currentStatus
-  }.toMap)
+  }.toMap
+
+  val checkpointStatuses: PRCheckpointState = oldState.updateWith(stringToCheckpointStatus)
 
   override val newPersistableState = checkpointStatuses
 
