@@ -11,7 +11,7 @@
       "required": true
     },
     "APPLICATION_SECRET": {
-      "description": "Random text to use for signing session cookies. See https://www.playframework.com/documentation/2.4.x/ApplicationSecret",
+      "description": "Random text to use as a crypto seed for signing session cookies. See https://www.playframework.com/documentation/2.4.x/ApplicationSecret",
       "required": true
     }
   }
