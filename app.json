@@ -7,7 +7,11 @@
   "keywords": ["github", "pull request", "continuous", "deployment"],
   "env": {
     "PROUT_GITHUB_ACCESS_TOKEN": {
-      "description": "A GitHub access token - the bot will run with this account. Required scopes: repo",
+      "description": "A GitHub access token - the bot will run with this account. Required scope: repo. If you want Travis integration, then also read:org, user:email, repo_deployment, repo:status & write:repo_hook",
+      "required": true
+    },
+    "APPLICATION_SECRET": {
+      "description": "Random text to use for signing session cookies. See https://www.playframework.com/documentation/2.4.x/ApplicationSecret",
       "required": true
     }
   }
