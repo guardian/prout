@@ -4,7 +4,7 @@ POST        /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
 # GET because that's what RiffRaff supports...
 GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
 POST        /api/hooks/github             controllers.Api.githubHook()
-
+POST        /api/hooks/travis             controllers.Api.travisHook()
 
 
 ### Non-API endpoints - resources for humans to view
