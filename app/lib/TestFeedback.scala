@@ -33,9 +33,11 @@ object TestFeedback {
     val detailsLink =
       s"[Details](https://travis-ci.org/${r.repoSlug}/builds/${r.buildId})"
 
+    val screencastLink = s"[Screencast](https://saucelabs.com/tests/${r.remoteWebDriverSessionId})"
+
     r.testResult match {
-      case "0" => s":clap: Post-deployment testing passed! ${detailsLink}"
-      case _ => s":cry: Post-deployment testing failed! ${detailsLink}"
+      case "0" => s":clap: Post-deployment testing passed! ${detailsLink} ${screencastLink}"
+      case _ => s":cry: Post-deployment testing failed! ${detailsLink} ${screencastLink}"
     }
   }
 
@@ -51,4 +53,5 @@ object TestFeedback {
  * @param buildId build ID
  */
 case class TravisTestResult(repoSlug: String, commit: String,
-                            testResult: String, buildId: String)
+                            testResult: String, buildId: String,
+                            remoteWebDriverSessionId: String)
