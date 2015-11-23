@@ -8,7 +8,6 @@ import com.netaporter.uri.Uri
 import com.squareup.okhttp.Request.Builder
 import com.squareup.okhttp._
 import com.typesafe.scalalogging.LazyLogging
-import play.api.Logger
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 

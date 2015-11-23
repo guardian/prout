@@ -11,7 +11,6 @@ import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}

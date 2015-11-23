@@ -12,8 +12,6 @@ import org.joda.time.{DateTime, Instant}
 import org.kohsuke.github.GHPullRequest
 import play.api.Logger
 
-import scala.util.Try
-
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
 
   val checkpointsByStatus = statusByCheckpoint.groupBy(_._2).mapValues(_.keySet).withDefaultValue(Set.empty)

@@ -1,5 +1,5 @@
 import lib.Config.Checkpoint
-import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
+import org.eclipse.jgit.lib.AbbreviatedObjectId
 
 import scala.concurrent.Future
 

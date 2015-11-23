@@ -18,7 +18,6 @@ package controllers
 
 import com.madgag.github.RepoId
 import lib._
-import lib.actions.Parsers
 import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
 import play.api.Play.current

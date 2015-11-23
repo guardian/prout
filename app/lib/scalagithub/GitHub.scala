@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import com.madgag.github.RepoId
 import com.madgag.okhttpscala._
 import com.squareup.okhttp.Request.Builder
-import com.squareup.okhttp.{CacheControl, HttpUrl, OkHttpClient, Response}
+import com.squareup.okhttp.{CacheControl, HttpUrl, Response}
 import lib.gitgithub.GitHubCredentials
 import play.api.http.Status._
 import play.api.libs.json.Json
