@@ -24,6 +24,7 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
   val JsonMediaType = MediaType.parse("application/json; charset=utf-8")
 
   val DefaultJsonApiHeaders: Seq[(String, String)] = Seq(
+    "User-Agent" -> "Travis access by Prout (https://github.com/guardian/prout)",
     "Content-Type" -> "application/json",
     "Accept" -> "application/vnd.travis-ci.2+json"
   )
