@@ -43,7 +43,7 @@ object RepoWhitelistService extends LazyLogging {
           }.getOrElse(false)
       }.seq
 
-      logger.warn(s"allRepos size = ${allRepos.size}")
+      logger.warn(s"allRepos size = ${allRepos.size} : ${allRepos.map(_.getName).mkString(",")}")
 
       val publicRepos = allRepos.filterNot(_.isPrivate)
 
