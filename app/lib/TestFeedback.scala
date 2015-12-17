@@ -33,11 +33,23 @@ object TestFeedback {
     val detailsLink =
       s"[Details](https://travis-ci.org/${r.repoSlug}/builds/${r.buildId})"
 
-    val screencastLink = s"[Screencast](https://saucelabs.com/tests/${r.remoteWebDriverSessionId})"
+    val screencastLink = s"[Screencast](https://saucelabs.com/tests/${r.screencastId})"
+
+    val testsPassedMsg =
+      s"""
+        | :white_check_mark: Post-deployment testing passed! | ${screencastLink} | ${detailsLink}
+        | -------------------------------------------------- | ----------------- | --------------
+      """.stripMargin
+
+    val testsFailedMsg =
+      s"""
+         | :x: Post-deployment testing failed! | ${screencastLink} | ${detailsLink}
+         | ----------------------------------- | ----------------- | --------------
+      """.stripMargin
 
     r.testResult match {
-      case "0" => s":clap: Post-deployment testing passed! ${detailsLink} ${screencastLink}"
-      case _ => s":cry: Post-deployment testing failed! ${detailsLink} ${screencastLink}"
+      case "0" => testsPassedMsg
+      case _ => testsFailedMsg
     }
   }
 
@@ -51,7 +63,8 @@ object TestFeedback {
  * @param commit SHA
  * @param testResult build result
  * @param buildId build ID
+ * @param screencastId Remote Web Driver session ID
  */
 case class TravisTestResult(repoSlug: String, commit: String,
                             testResult: String, buildId: String,
-                            remoteWebDriverSessionId: String)
+                            screencastId: String)
