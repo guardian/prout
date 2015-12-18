@@ -100,7 +100,7 @@ object Api extends Controller {
 
   def travisHook() = Action(parse.json) { implicit r =>
     Logger.info("Travis hook triggered.")
-    implicit val personReads = Json.reads[TravisTestResult]
+    implicit val travisTestResultReads = Json.reads[TravisTestResult]
     val result = r.body.as[TravisTestResult]
     Logger.info(s"Travis test result data: ${result}}")
 
