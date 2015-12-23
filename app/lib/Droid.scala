@@ -1,7 +1,7 @@
 package lib
 
 import com.madgag.git._
-import org.kohsuke.github.GHRepository
+import com.madgag.scalagithub.model.Repo
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -9,10 +9,12 @@ import scala.concurrent.Future
 
 class Droid {
 
+  val logger = Logger(getClass)
+
   def scan(
-    githubRepo: GHRepository
+    githubRepo: Repo
   )(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[Seq[PullRequestCheckpointsSummary]] = {
-    Logger.info(s"Asked to audit ${githubRepo.getFullName}")
+    logger.info(s"Asked to audit ${githubRepo.repoId}")
 
     val repoSnapshotF = RepoSnapshot(githubRepo)
 
@@ -21,7 +23,7 @@ class Droid {
       pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
-      Logger.info(s"${githubRepo.getFullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
+      logger.info(s"${githubRepo.repoId} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
       pullRequestUpdates
     }
   }

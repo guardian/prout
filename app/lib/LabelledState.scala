@@ -1,25 +1,27 @@
 package lib
 
-import lib.Implicits._
-import org.kohsuke.github.GHIssue
+import com.madgag.scalagithub.model.PullRequest
 import play.api.Logger
 
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class LabelledState(issue: GHIssue, val applicableLabels: Set[String]) {
-  def updateLabels(newLabels: Set[String]) = {
-    val oldLabelSet = issue.labelNames.toSet
-    val unassociatedLabels = oldLabelSet -- applicableLabels
+class LabelledState(issue: PullRequest, val applicableLabels: String => Boolean) {
+
+  implicit val github = Bot.github
+
+  def currentLabelsF = issue.labels.list().map(_.map(_.name).toSet)
+
+  def updateLabels(newLabels: Set[String]) = for {
+    allOldLabels <- issue.labels.list()
+  } {
+    val allOldLabelsSet = allOldLabels.map(_.name).toSet
+    val unassociatedLabels = allOldLabelsSet.filterNot(applicableLabels)
     val newLabelSet = newLabels ++ unassociatedLabels
 
-    val labelStateChanged = newLabelSet != oldLabelSet
-    Logger.info(s"${issue.getNumber} labelStateChanged=$labelStateChanged $newLabelSet")
+    val labelStateChanged = newLabelSet != allOldLabelsSet
+    Logger.info(s"${issue.prId.slug} labelStateChanged=$labelStateChanged $newLabelSet")
     if (labelStateChanged) {
-      try {
-        issue.setLabels(newLabelSet.toSeq: _*)
-        Logger.info(s"${issue.getNumber} set labels!?!?")
-      } catch {
-        case e: Exception => Logger.error(s"Error $e")
-      }
+      issue.labels.replace(newLabelSet.toSeq)
     }
   }
 }

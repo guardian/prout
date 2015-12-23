@@ -1,13 +1,17 @@
+import java.util.Base64
+
+import com.madgag.scalagithub.commands.{CreateFile, CreateRef}
+import com.madgag.scalagithub.model.{Repo, RepoId}
 import com.netaporter.uri.Uri
-import lib.Implicits._
+import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.ObjectId.zeroId
-import org.kohsuke.github.GHEvent
 import org.scalatest.Inside
 import play.api.libs.json.{JsDefined, JsString, JsSuccess}
 
-import scala.collection.convert.wrapAll._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
 
 class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
@@ -18,14 +22,20 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointTo zeroId
 
+      eventually {
+        whenReady(repoPR.githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated)) {
+          _.result must have size 1
+        }
+      }
+
       scan(shouldAddComment = false) {
-        _.labelNames must contain only "Pending-on-PROD"
+        labelsOn(_) must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
+        labelsOn(_) must contain only "Seen-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -49,13 +59,13 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       repoPR setCheckpointTo zeroId
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only "Pending-on-PROD"
+        labelsOn(_) must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
+        labelsOn(_) must contain only "Seen-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -67,11 +77,11 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       repoPR setCheckpointTo zeroId
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only "Pending-on-PROD"
+        labelsOn(_) must contain only "Pending-on-PROD"
       }
 
       waitUntil(shouldAddComment = true) {
-        _.labelNames must contain only "Overdue-on-PROD"
+        labelsOn(_) must contain only "Overdue-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -79,7 +89,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
+        labelsOn(_) must contain only "Seen-on-PROD"
       }
     }
 
@@ -89,11 +99,11 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       repoPR setCheckpointFailureTo new Exception("This website went Boom!")
 
       scan(shouldAddComment = false) {
-        _.labelNames must contain only "Pending-on-PROD"
+        labelsOn(_) must contain only "Pending-on-PROD"
       }
 
       waitUntil(shouldAddComment = true) {
-        _.labelNames must contain only "Overdue-on-PROD"
+        labelsOn(_) must contain only "Overdue-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -101,63 +111,51 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
-      }
-    }
-
-    "report slackishly" in {
-      assume(slackWebhookUrlOpt.isDefined, "No Slack credentials")
-      val slackWebhookUrl = slackWebhookUrlOpt.get
-      val prText = {
-        val pr = conn().getRepository("guardian/membership-frontend").getPullRequest(15)
-        PRText(pr.getTitle, pr.getBody)
-      }
-
-      val githubRepo = createTestRepo("/feature-branches.top-level-config.git.zip")
-      implicit val repoPR = mergePullRequestIn(githubRepo, "feature-1", prText)
-
-      githubRepo.createWebHook(slackWebhookUrl, Set(GHEvent.WATCH)) // Don't really want the hook to fire!
-      eventually(githubRepo.getHooks must not be empty)
-
-      repoPR setCheckpointTo "master"
-
-      scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
+        labelsOn(_) must contain only "Seen-on-PROD"
       }
     }
 
     "trigger a post-deploy travis build" in {
-      val githubRepo = conn().getMyself.getRepository("test-travis-builds")
+      val testUserLogin = github.getUser().futureValue.result.login
+      val githubRepo: Repo = github.getRepo(RepoId(testUserLogin, "test-travis-builds")).futureValue
 
-      val id = System.currentTimeMillis().toString
+      val branchName = System.currentTimeMillis().toString
 
-      val masterSha = defaultBranchShaFor(githubRepo)
+      val masterSha = shaForDefaultBranchOf(githubRepo)
 
-      githubRepo.createRef("refs/heads/" + id, masterSha)
+      val createdRef = githubRepo.refs.create(CreateRef(s"refs/heads/$branchName", masterSha)).futureValue
+      createdRef.objectId mustEqual masterSha
 
-      githubRepo.createContent(Array[Byte](), "a", "junk/"+id, id)
+      val newScratchFile = s"junk-folder/$branchName/${Random.alphanumeric.take(8).mkString}"
+      val fileContents = Base64.getEncoder.encodeToString("foo".getBytes)
+      githubRepo.contents2.put(newScratchFile, CreateFile("message", fileContents, Some(branchName))).futureValue
 
-      implicit val repoPR = mergePullRequestIn(githubRepo, id)
+      implicit val repoPR = mergePullRequestIn(githubRepo, branchName)
 
       repoPR setCheckpointTo "master"
 
       scan(shouldAddComment = true) {
-        _.labelNames must contain only "Seen-on-PROD"
+        labelsOn(_) must contain only "Seen-on-PROD"
       }
 
       val t = new TravisApiClient(githubToken)
       eventually {
-        val status = Option(githubRepo.getLastCommitStatus(defaultBranchShaFor(githubRepo))).value
+        whenReady(githubRepo.combinedStatusFor(githubRepo.default_branch)) {
+          combinedStatus =>
+            val status = combinedStatus.statuses.find(_.context.startsWith("continuous-integration/travis-ci")).get
 
-        val buildId = Uri.parse(status.getTargetUrl).pathParts.last.part
-        whenReady(t.build(buildId)) {
-          buildResponse => inside(buildResponse) {
-            case JsSuccess(b, _) =>
-              inside (b.build.config \ "script") { case JsDefined(script) =>
-                script mustEqual JsString("echo Prout - afterSeen script")
+            val buildId = Uri.parse(status.target_url).pathParts.last.part
+            whenReady(t.build(buildId)) {
+              buildResponse => inside(buildResponse) {
+                case JsSuccess(b, _) =>
+                  inside (b.build.config \ "script") { case JsDefined(script) =>
+                    script mustEqual JsString("echo Prout - afterSeen script")
+                  }
               }
-          }
+            }
         }
+
+
       }
     }
   }

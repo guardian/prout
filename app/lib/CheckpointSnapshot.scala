@@ -16,6 +16,8 @@
 
 package lib
 
+import java.time.Instant
+import java.time.Instant.now
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 
 import com.madgag.okhttpscala._
@@ -24,7 +26,6 @@ import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
-import org.joda.time.{DateTime, ReadableInstant}
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,5 +60,5 @@ object CheckpointSnapshot {
 case class CheckpointSnapshot(
   checkpoint: Checkpoint,
   commitIdTry: Try[Option[ObjectId]],
-  time: ReadableInstant = DateTime.now
+  time: Instant = now
 )

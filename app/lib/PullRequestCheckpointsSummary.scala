@@ -1,15 +1,15 @@
 package lib
 
 
+import java.time.Instant.now
+
 import com.github.nscala_time.time.Imports._
 import com.madgag.git._
+import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
-import lib.Implicits._
 import lib.gitgithub.StateSnapshot
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
-import org.joda.time.{DateTime, Instant}
-import org.kohsuke.github.GHPullRequest
 import play.api.Logger
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
@@ -34,8 +34,12 @@ case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpoi
 
 }
 
+object PullRequestCheckpointsSummary {
+  val logger = Logger(getClass)
+}
+
 case class PullRequestCheckpointsSummary(
-  pr: GHPullRequest,
+  pr: PullRequest,
   snapshots: Set[CheckpointSnapshot],
   gitRepo: Repository,
   oldState: PRCheckpointState
@@ -45,11 +49,11 @@ case class PullRequestCheckpointsSummary(
 
   private val stringToCheckpointStatus: Map[String, PullRequestCheckpointStatus] = snapshots.map {
     cs =>
-      val timeBetweenMergeAndSnapshot = (new DateTime(pr.getMergedAt) to cs.time).duration
+      val timeBetweenMergeAndSnapshot = java.time.Duration.between(pr.merged_at.get.toInstant, cs.time)
 
       val isVisibleOnSite: Boolean = (for (commitId <- cs.commitIdTry) yield {
         implicit val w: RevWalk = new RevWalk(gitRepo)
-        val prCommit: RevCommit = pr.getHead.asRevCommit
+        val prCommit: RevCommit = pr.head.asRevCommit
         val siteCommit: RevCommit = commitId.get.asRevCommit
         Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()}")
 
@@ -57,7 +61,10 @@ case class PullRequestCheckpointsSummary(
       }).getOrElse(false)
 
       val currentStatus: PullRequestCheckpointStatus =
-        if (isVisibleOnSite) Seen else if (timeBetweenMergeAndSnapshot > cs.checkpoint.overdue.standardDuration) Overdue else Pending
+        if (isVisibleOnSite) Seen else {
+          val overdueThreshold = cs.checkpoint.overdueInstantFor(pr)
+          if (overdueThreshold.exists(_ isBefore now)) Overdue else Pending
+        }
 
       cs.checkpoint.name -> currentStatus
   }.toMap
@@ -71,8 +78,8 @@ case class PullRequestCheckpointsSummary(
   val checkpointsByState: Map[PullRequestCheckpointStatus, Set[Checkpoint]] =
     checkpointStatuses.statusByCheckpoint.groupBy(_._2).mapValues(_.keySet.map(tuple => snapshotsByName(tuple).checkpoint))
 
-  val soonestPendingCheckpointOverdueTime: Option[Instant] =
-    checkpointsByState.get(Pending).map(_.map(_.details.overdue).min).map(new Instant(pr.getMergedAt) + _.standardDuration)
+  val soonestPendingCheckpointOverdueTime: Option[java.time.Instant] =
+    checkpointsByState.get(Pending).map(_.flatMap(_.details.overdueInstantFor(pr)).min)
 
   val stateChange: Map[String, PullRequestCheckpointStatus] = checkpointStatuses.changeFrom(oldState)
 

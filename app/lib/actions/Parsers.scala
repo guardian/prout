@@ -3,7 +3,7 @@ package lib.actions
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import com.madgag.github.RepoId
+import com.madgag.scalagithub.model.RepoId
 import play.api.Logger
 import play.api.libs.iteratee.{Iteratee, Traversable}
 import play.api.libs.json.{JsValue, Json}

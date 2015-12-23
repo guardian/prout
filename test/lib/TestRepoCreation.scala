@@ -1,13 +1,15 @@
 package lib
 
-import com.google.common.io.Files
+import com.google.common.io.Files.createTempDir
 import com.madgag.git._
+import com.madgag.scalagithub.commands.CreateRepo
+import com.madgag.scalagithub.model.Repo
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.RemoteRefUpdate
-import org.kohsuke.github._
 import org.scalatest.BeforeAndAfterAll
 
 import scala.collection.convert.wrapAll._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
@@ -15,19 +17,22 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
   val testRepoNamePrefix: String = s"prout-test-${getClass.getSimpleName}-"
 
   override def beforeAll {
-    conn().getMyself.getAllRepositories.values.filter(_.getName.startsWith(testRepoNamePrefix)).foreach(_.delete())
+    github.listRepos("updated", "desc").futureValue.filter(_.name.startsWith(testRepoNamePrefix)).foreach(_.delete())
   }
 
-  def createTestRepo(fileName: String): GHRepository = {
-    val gitHub = conn()
-    val testRepoId = gitHub.createRepository(testRepoNamePrefix + System.currentTimeMillis().toString, fileName, "", true).getFullName
+  def createTestRepo(fileName: String): Repo = {
+    val cr = CreateRepo(
+      name = testRepoNamePrefix + System.currentTimeMillis().toString,
+      `private` = false
+    )
+    val testRepoId = github.createRepo(cr).futureValue.repoId
 
     val localGitRepo = test.unpackRepo(fileName)
 
-    val testGithubRepo = eventually { gitHub.getRepository(testRepoId) }
+    val testGithubRepo = eventually { github.getRepo(testRepoId).futureValue }
 
     val config = localGitRepo.getConfig
-    config.setString("remote", "origin", "url", testGithubRepo.gitHttpTransportUrl)
+    config.setString("remote", "origin", "url", testGithubRepo.clone_url)
     config.save()
 
     val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
@@ -37,11 +42,11 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
     }
 
     eventually {
-      testGithubRepo.getBranches must not be empty
+      whenReady(testGithubRepo.refs.list()) { _ must not be empty }
     }
 
     eventually {
-      Git.cloneRepository().setBare(true).setURI(testGithubRepo.gitHttpTransportUrl).setDirectory(Files.createTempDir()).call()
+      Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url).setDirectory(createTempDir()).call()
     }
 
     testGithubRepo

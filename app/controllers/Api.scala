@@ -16,7 +16,7 @@
 
 package controllers
 
-import com.madgag.github.RepoId
+import com.madgag.scalagithub.model.RepoId
 import lib._
 import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
@@ -57,18 +57,18 @@ object Api extends Controller {
     } yield update
   }
 
-  def updateFor(RepoId: RepoId, whiteList: RepoWhitelist): Future[Result] = {
+  def updateFor(repoId: RepoId, whiteList: RepoWhitelist): Future[Result] = {
     val scanGuardF = Future { // wrapped in a future to avoid timing attacks
-      val knownRepo = whiteList.allKnownRepos(RepoId)
-      Logger.debug(s"$RepoId known=$knownRepo")
-      require(knownRepo, s"${RepoId.fullName} not on known-repo whitelist")
+      val knownRepo = whiteList.allKnownRepos(repoId)
+      Logger.debug(s"$repoId known=$knownRepo")
+      require(knownRepo, s"${repoId.fullName} not on known-repo whitelist")
 
-      val scanScheduler = Cache.getOrElse(RepoId.fullName) {
-        val scheduler = new ScanScheduler(RepoId, checkpointSnapshoter, Bot.githubCredentials.conn())
-        logger.info(s"Creating $scheduler for $RepoId")
+      val scanScheduler = Cache.getOrElse(repoId.fullName) {
+        val scheduler = new ScanScheduler(repoId, checkpointSnapshoter, Bot.github)
+        logger.info(s"Creating $scheduler for $repoId")
         scheduler
       }
-      Logger.debug(s"$RepoId scanScheduler=$scanScheduler")
+      Logger.debug(s"$repoId scanScheduler=$scanScheduler")
 
       val firstScanF = scanScheduler.scan()
 
@@ -83,7 +83,7 @@ object Api extends Controller {
 
       firstScanF
     }
-    val mightBePrivate = !whiteList.publicRepos(RepoId)
+    val mightBePrivate = !whiteList.publicRepos(repoId)
     if (mightBePrivate) {
       // Response must be immediate, with no private information (e.g. even acknowledging that repo exists)
       Future.successful(NoContent)
@@ -92,7 +92,7 @@ object Api extends Controller {
       for {
         scanGuard <- scanGuardF
         scan <- scanGuard
-      } yield Ok(JsArray(scan.map(summary => JsNumber(summary.pr.getNumber))))
+      } yield Ok(JsArray(scan.map(summary => JsNumber(summary.pr.number))))
     }
   }
 }

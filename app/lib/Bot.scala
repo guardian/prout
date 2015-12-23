@@ -1,11 +1,14 @@
 package lib
 
+import com.madgag.scalagithub.model.User
+import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import com.squareup.okhttp
 import com.squareup.okhttp.OkHttpClient
-import lib.gitgithub.GitHubCredentials
-import lib.scalagithub.GitHub
 import play.api.Logger
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scalax.file.ImplicitConversions._
 import scalax.file.Path
 
@@ -29,15 +32,16 @@ trait Bot {
     client
   }
 
-  lazy val githubCredentials = new GitHubCredentials(accessToken, okHttpClient)
+  lazy val githubCredentials = GitHubCredentials.forAccessKey(accessToken, (parentWorkDir / "http-cache").toPath).get
 
-  lazy val user = {
-    val myself = githubCredentials.conn().getMyself
-    Logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.getLogin}")
+  lazy val github = new GitHub(githubCredentials)
+
+  lazy val user: User = {
+    val myself = Await.result(github.getUser(), 3 seconds)
+    Logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.atLogin}")
     myself
   }
 
-  lazy val github = new GitHub(githubCredentials)
 }
 
 object Bot extends Bot {
