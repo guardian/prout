@@ -104,7 +104,7 @@ object Api extends Controller {
     val result = r.body.as[TravisTestResult]
     Logger.info(s"Travis test result data: ${result}}")
 
-    val comment = TestFeedback.notify(result)
+    val comment = TestFeedback(result).notifyGitHub
     Ok(comment.getBody)
   }
 }
