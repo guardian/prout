@@ -2,7 +2,6 @@ package monitoring
 
 import ch.qos.logback.classic.filter.ThresholdFilter
 import ch.qos.logback.classic.{Logger, LoggerContext}
-import lib.BuildCommit
 import net.kencochrane.raven.RavenFactory.ravenInstance
 import net.kencochrane.raven.dsn.Dsn
 import net.kencochrane.raven.logback.SentryAppender
@@ -22,7 +21,7 @@ object SentryLogging {
         api.Logger.warn("No Sentry logging configured (OK for dev)")
       case Some(dsn) =>
         api.Logger.info(s"Initialising Sentry logging for ${dsn.getHost}")
-        val tags = Map("gitCommitId" -> BuildCommit.gitCommitId)
+        val tags = Map("gitCommitId" -> app.BuildInfo.gitCommitId)
         val tagsString = tags.map { case (key, value) => s"$key:$value" }.mkString(",")
 
         val filter = new ThresholdFilter { setLevel("ERROR") }
