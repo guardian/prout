@@ -1,22 +1,30 @@
 package lib
 
+import org.eclipse.jgit.revwalk.RevCommit
 import org.kohsuke.github.{GHIssueComment, GHPullRequest}
 import scala.collection.convert.wrapAsScala._
+import scalax.file.ImplicitConversions._
+import scalax.file.Path
+import com.madgag.git._
 
-object TestFeedback {
+/** @param r Travis test result data */
+case class TestFeedback(r: TravisTestResult) {
+
   /**
-   * Notifies GitHub of the result of post-deployment Travis test by posting
-   * the result as a comment on the original pull request.
-   *
-   * @param r Travis test result data
-   * @return newly posted comment
-   */
-  def notify(r: TravisTestResult): GHIssueComment = {
-    prByCommit(r).comment(buildResultComment(r))
+    * Notifies GitHub of the result of post-deployment Travis test by posting
+    * the result as a comment on the original pull request, and setting test
+    * result label.
+    *
+    * @return newly posted comment
+    */
+  def notifyGitHub: GHIssueComment = {
+    val pr = prByCommit
+    pr.setLabels(resultLabels: _*)
+    pr.comment(resultComment)
   }
 
   /* Finds the pull request corresponding to merge commit SHA */
-  private def prByCommit(r: TravisTestResult): GHPullRequest = {
+  private def prByCommit: GHPullRequest = {
     // get parent commits of merge commit
     val parentCommits = gitHub.getRepository(r.repoSlug).getCommit(r.commit).getParentSHA1s
 
@@ -29,7 +37,7 @@ object TestFeedback {
   }
 
   /* Builds either failure or success comment */
-  private def buildResultComment(r: TravisTestResult) = {
+  private def resultComment: String = {
     val detailsLink =
       s"[Details](https://travis-ci.org/${r.repoSlug}/builds/${r.buildId})"
 
@@ -51,6 +59,38 @@ object TestFeedback {
       case "0" => testsPassedMsg
       case _ => testsFailedMsg
     }
+  }
+
+  private def resultLabels: Seq[String] = {
+    val labels = prByCommit.getLabels.toList.map(label => label.getName)
+
+    r.testResult match {
+      case "0" => {
+        val allLabelsButFail = labels.filterNot(l => l == Fail.labelFor(checkpoint))
+        (Pass.labelFor(checkpoint) :: allLabelsButFail).toSeq
+      }
+      case _ => {
+        val allLabelsButPass = labels.filterNot(l => l == Pass.labelFor(checkpoint))
+        (Fail.labelFor(checkpoint) :: allLabelsButPass).toSeq
+      }
+    }
+  }
+
+  /* Checkpoint (stage) from .prout.json */
+  private def checkpoint: String = {
+    val gitRepo = RepoUtil.getGitRepo(
+      Bot.parentWorkDir / Path.fromString(r.repoSlug),
+      gitHub.getRepository(r.repoSlug).gitHttpTransportUrl,
+      Some(Bot.githubCredentials.git))
+
+    implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
+
+    lazy val masterCommit:RevCommit =
+      gitRepo.resolve(gitHub.getRepository(r.repoSlug).getDefaultBranch).asRevCommit
+
+    lazy val config = ConfigFinder.config(masterCommit)
+
+    config.checkpointsByName.keySet.head
   }
 
   private val gitHub = Bot.githubCredentials.conn()
