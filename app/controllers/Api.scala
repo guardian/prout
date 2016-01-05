@@ -24,6 +24,7 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.json.{JsArray, JsNumber}
 import play.api.mvc._
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -94,5 +95,15 @@ object Api extends Controller {
         scan <- scanGuard
       } yield Ok(JsArray(scan.map(summary => JsNumber(summary.pr.getNumber))))
     }
+  }
+
+  def travisHook() = Action(parse.json) { implicit r =>
+    Logger.info("Travis hook triggered.")
+    implicit val travisTestResultReads = Json.reads[TravisTestResult]
+    val result = r.body.as[TravisTestResult]
+    Logger.info(s"Travis test result data: ${result}}")
+
+    val comment = TestFeedback(result).notifyGitHub
+    Ok(comment.getBody)
   }
 }

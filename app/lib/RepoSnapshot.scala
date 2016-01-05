@@ -203,6 +203,7 @@ case class RepoSnapshot(
 
   def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsSummary]] = for {
     _ <- attemptToCreateMissingLabels()
+    _ <- attemptToCreateMissingTestLabels()
     summaryOpts <- Future.traverse(mergedPullRequests)(issueUpdater.process)
   } yield summaryOpts.flatten
 
@@ -211,6 +212,19 @@ case class RepoSnapshot(
 
     val labelUpdateFutures: Set[Future[GHLabel]] = for {
       prcs <- PullRequestCheckpointStatus.all
+      checkpointName <- config.checkpointsByName.keySet
+      label = prcs.labelFor(checkpointName)
+      if !existingLabels(label)
+    } yield Future { repo.createLabel(label, prcs.defaultColour) }
+
+    Future.sequence(labelUpdateFutures).recover[Set[GHLabel]] { case _ => Set.empty }
+  }
+
+  def attemptToCreateMissingTestLabels(): Future[Set[GHLabel]] = {
+    val existingLabels: Set[String] = repo.listLabels.toSet[GHLabel].map(_.getName)
+
+    val labelUpdateFutures: Set[Future[GHLabel]] = for {
+      prcs <- PullRequestCheckpointTestStatus.all
       checkpointName <- config.checkpointsByName.keySet
       label = prcs.labelFor(checkpointName)
       if !existingLabels(label)
