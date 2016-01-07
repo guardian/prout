@@ -1,13 +1,12 @@
 package lib
 
 import com.madgag.git._
-import lib.Implicits._
+import com.madgag.scalagithub.model.PullRequest
 import org.eclipse.jgit.lib.ObjectReader
 import org.eclipse.jgit.revwalk.filter.RevFilter.MERGE_BASE
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, PathFilterGroup, TreeFilter}
-import org.kohsuke.github.GHPullRequest
 
 import scala.collection.convert.wrapAll._
 
@@ -15,9 +14,9 @@ object GitChanges {
 
   val treeDiffFilter: TreeFilter = (w: TreeWalk) => w.isSubtree && (1 until w.getTreeCount).exists(!w.idEqual(_, 0))
 
-  def affects(pullRequest: GHPullRequest, interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = {
+  def affects(pullRequest: PullRequest, interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = {
     implicit val reader = revWalk.getObjectReader
-    GitChanges.affectedFolders(pullRequest.getBase.asRevCommit, pullRequest.getHead.asRevCommit, interestingPaths)
+    GitChanges.affectedFolders(pullRequest.base.asRevCommit, pullRequest.head.asRevCommit, interestingPaths)
   }
 
   /**

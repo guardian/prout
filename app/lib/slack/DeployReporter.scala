@@ -1,6 +1,5 @@
 package lib.slack
 
-import com.madgag.github.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import lib.{PullRequestCheckpointsSummary, Seen}
@@ -17,21 +16,21 @@ object DeployReporter {
     if (slackHooks.nonEmpty) {
       for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
         val pr = snapshot.pr
-        val mergedBy = pr.getMergedBy
+        val mergedBy = pr.merged_by.get
         val checkpoints = changedSnapshots.map(_.checkpoint)
-        val attachments = Seq(Attachment(s"PR #${pr.getNumber} deployed to ${checkpoints.map(_.name).mkString(", ")}",
+        val attachments = Seq(Attachment(s"PR #${pr.number} deployed to ${checkpoints.map(_.name).mkString(", ")}",
           Seq(
-            Attachment.Field("PR", s"<${pr.getHtmlUrl}|#${pr.getNumber}>", true),
-            Attachment.Field("Merged by", s"<${mergedBy.getHtmlUrl}|${mergedBy.atLogin}>", true)
+            Attachment.Field("PR", s"<${pr.html_url}|#${pr.number}>", true),
+            Attachment.Field("Merged by", s"<${mergedBy.html_url}|${mergedBy.atLogin}>", true)
           )
         ))
 
         val checkpointsAsSlack = checkpoints.map(c => s"<${c.details.url}|${c.name}>").mkString(", ")
         val json = Json.toJson(
           Message(
-            s"*Deployed to $checkpointsAsSlack: ${pr.getTitle}*\n\n${pr.getBody}",
-            Some(lib.Bot.user.getLogin),
-            Some(mergedBy.getAvatarUrl),
+            s"*Deployed to $checkpointsAsSlack: ${pr.title}*\n\n${pr.body}",
+            Some(lib.Bot.user.login),
+            Some(mergedBy.avatar_url),
             attachments
           )
         )

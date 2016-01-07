@@ -1,10 +1,15 @@
 package lib
 
+import java.time.Instant
+
 import com.madgag.git._
+import com.madgag.scalagithub.model.PullRequest
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails}
+import lib.Implicits._
 import lib.travis.TravisCI
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
+import org.joda
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
@@ -55,11 +60,13 @@ object Config {
 
   case class CheckpointDetails(
     url: Uri,
-    overdue: Period,
+    overdue: joda.time.Period,
     disableSSLVerification: Option[Boolean] = None,
     afterSeen: Option[AfterSeen] = None
   ) {
     val sslVerification = !disableSSLVerification.contains(true)
+
+    def overdueInstantFor(pr: PullRequest): Option[Instant] = pr.merged_at.map(_.plus(overdue).toInstant)
   }
 
   object Checkpoint {
