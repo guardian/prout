@@ -42,6 +42,7 @@ object RepoWhitelistService extends LazyLogging {
     Logger.info("Starting background repo fetch")
     Akka.system.scheduler.schedule(1.second, 60.seconds) {
       repoWhitelist.set(getAllKnownRepos)
+      github.checkRateLimit().foreach(resp => logger.info(resp.rateLimit.statusOpt))
     }
   }
 
