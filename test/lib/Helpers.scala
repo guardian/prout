@@ -39,7 +39,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     pr.labels.list().all().futureValue.map(_.name).toSet
 
   case class RepoPR(pr: PullRequest) {
-    val githubRepo = pr.base.repo
+    val githubRepo = pr.baseRepo
 
     def currentPR(): PullRequest = githubRepo.pullRequests.get(pr.number).futureValue
 
