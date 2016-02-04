@@ -46,7 +46,7 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
 
   def readResponseFrom[Resp](request: Request)(implicit rResp: Reads[Resp]): Future[JsResult[Resp]] = {
     logger.info(s"${request.method()} - ${request.httpUrl().encodedPath}")
-    for {resp <- okHttpClient.execute(request)} yield Json.parse(resp.body().byteStream()).validate[Resp]
+    okHttpClient.execute(request) { resp => Json.parse(resp.body().byteStream()).validate[Resp] }
   }
 
   case class AuthRequest(github_token: String)
