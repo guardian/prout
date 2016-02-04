@@ -45,13 +45,7 @@ object CheckpointSnapshot {
 
     val clientForCheckpoint = if (checkpoint.sslVerification) client else insecureClient
 
-    val responseF = clientForCheckpoint.execute(new Builder().url(checkpoint.url.toString).build())
-
-    responseF.onComplete { r =>
-      Logger.info(s"${checkpoint.name} : $r")
-    }
-
-    responseF.map {
+    clientForCheckpoint.execute(new Builder().url(checkpoint.url.toString).build()) {
       resp => hexRegex.findAllIn(resp.body().string).map(AbbreviatedObjectId.fromString)
     }
   }
