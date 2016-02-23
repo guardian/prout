@@ -2,6 +2,7 @@ package controllers
 
 import java.util.concurrent.atomic.AtomicReference
 
+import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.model.{Repo, RepoId}
 import com.typesafe.scalalogging.LazyLogging
@@ -27,8 +28,8 @@ object RepoWhitelistService extends LazyLogging {
   val permissionsThatCanPush = Set("admin", "push")
 
   private def hasProutConfigFile(repo: Repo): Future[Boolean] = for {
-    tree <- repo.trees2.getRecursively(s"heads/${repo.default_branch}")
-  } yield tree.tree.exists(_.path.endsWith(ProutConfigFileName))
+    treeT <- repo.trees2.getRecursively(s"heads/${repo.default_branch}").trying
+  } yield treeT.map(_.tree.exists(_.path.endsWith(ProutConfigFileName))).getOrElse(false)
 
   private def getAllKnownRepos: Future[RepoWhitelist] = for { // check this to see if it always expends quota...
     allRepos <- github.listRepos(sort="pushed", direction = "desc").all()
