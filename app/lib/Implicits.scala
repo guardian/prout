@@ -49,45 +49,5 @@ object Implicits {
 
   implicit def javaDuration2jodaDuration(dur: java.time.Duration) = org.joda.time.Duration.millis(dur.toMillis)
 
-  /*
-  implicit class RichIssue(issue: GHIssue) {
-    lazy val assignee = Option(issue.getAssignee)
-
-    lazy val labelNames = issue.getLabels.map(_.getName)
-
-    def labelledState(applicableFilter: String => Boolean) = new LabelledState(issue, issue.labelNames.toSet)
-  }
-
-  implicit class RichCommitPointer(commitPointer: GHCommitPointer) {
-    def asRevCommit(implicit revWalk: RevWalk): RevCommit = commitPointer.getSha.asObjectId.asRevCommit
-  }
-
-  implicit class RichPullRequest(pullRequest: GHPullRequest) {
-    /**
-     * @return interestingPaths which were affected by the pull request
-     */
-    def affects(interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = {
-      implicit val reader = revWalk.getObjectReader
-      GitChanges.affectedFolders(pullRequest.getBase.asRevCommit, pullRequest.getHead.asRevCommit, interestingPaths)
-    }
-  }
-
-  implicit class RichOrg(org: GHOrganization) {
-
-    lazy val membersAdminUrl = s"https://github.com/orgs/${org.getLogin}/members"
-
-    lazy val teamsByName: Map[String, GHTeam] = org.getTeams().toMap
-  }
-
-  implicit class RichTeam(team: GHTeam) {
-    def ensureHasMember(user: GHUser) {
-      if (!team.getMembers.contains(user)) {
-        team.add(user)
-      }
-    }
-  }
-
-  */
-
   val dateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 }
