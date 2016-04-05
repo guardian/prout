@@ -6,7 +6,7 @@ import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails}
-import lib.Implicits._
+import com.madgag.time.Implicits._
 import lib.travis.TravisCI
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 import org.joda

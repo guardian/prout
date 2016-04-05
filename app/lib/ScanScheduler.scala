@@ -8,7 +8,7 @@ import akka.agent.Agent
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.RepoId
-import lib.Implicits._
+import com.madgag.time.Implicits._
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka

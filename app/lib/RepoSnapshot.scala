@@ -27,7 +27,7 @@ import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
-import lib.Implicits._
+import com.madgag.time.Implicits._
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.travis.TravisApiClient
