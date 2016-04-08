@@ -65,22 +65,24 @@ object RepoSnapshot {
 
     def isMergedToMaster(pr: PullRequest): Boolean = pr.merged_at.isDefined && pr.base.ref == githubRepo.default_branch
 
+    def log(message: String) = logger.info(s"${repoId.fullName} - $message")
+
     val hooksF = githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all()
 
     val mergedPullRequestsF: Future[Seq[PullRequest]] = (for {
       litePullRequests <- githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).all()
       pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).take(10))(pr => githubRepo.pullRequests.get(pr.number).map(_.result))
     } yield {
-        logger.info("PRs merged to master size="+pullRequests.size)
+      log(s"PRs merged to master size=${pullRequests.size}")
       pullRequests
-    }) andThen { case cprs => logger.info(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.number).sorted.reverse)}") }
+    }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.number).sorted.reverse)}") }
 
     val gitRepoF = Future {
       RepoUtil.getGitRepo(
         Bot.parentWorkDir / repoId.owner / repoId.name,
         githubRepo.clone_url,
         Some(Bot.githubCredentials.git))
-    } andThen { case r => logger.info(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
+    } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
 
     for {
       mergedPullRequests <- mergedPullRequestsF
