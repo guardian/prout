@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   "com.netaporter" %% "scala-uri" % "0.4.7",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
-  "com.madgag" %% "play-git-hub" % "3.15",
+  "com.madgag" %% "play-git-hub" % "3.16",
   "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
   "org.scalatestplus" %% "play" % "1.4.0-M4" % "test"
 )

@@ -9,6 +9,8 @@ import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
 import org.eclipse.jgit.lib.Repository
+import lib.labels.{Overdue, Pending, PullRequestCheckpointStatus, Seen}
+import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
 
@@ -51,13 +53,27 @@ case class PullRequestCheckpointsSummary(
     cs =>
       val timeBetweenMergeAndSnapshot = java.time.Duration.between(pr.merged_at.get.toInstant, cs.time)
 
-      val isVisibleOnSite: Boolean = (for (commitId <- cs.commitIdTry) yield {
-        implicit val w: RevWalk = new RevWalk(gitRepo)
-        val prCommit: RevCommit = pr.head.asRevCommit
-        val siteCommit: RevCommit = commitId.get.asRevCommit
-        Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()}")
+      val isVisibleOnSite: Boolean = (for (commitIdOpt <- cs.commitIdTry) yield {
+        (for {
+          siteCommitId <- commitIdOpt
+        } yield {
+          implicit val w: RevWalk = new RevWalk(gitRepo)
+          val siteCommit = siteCommitId.asRevCommit
 
-        w.isMergedInto(prCommit, siteCommit)
+          val prHeadCommit = pr.head.sha
+          val prMergeCommitOpt = pr.merge_commit_sha
+
+          val prTipCommits = Set(prHeadCommit) ++ prMergeCommitOpt
+          val (prCommitsKnown, prCommitsUnknown) = prTipCommits.partition(gitRepo.getObjectDatabase.has)
+          Logger.trace(s"prHeadCommit=${prHeadCommit.name()} prMergeCommitOpt=${prMergeCommitOpt.map(_.name())} siteCommit=${siteCommit.name()}")
+          if (prCommitsUnknown.nonEmpty) {
+            Logger.info(s"prCommitsUnknown=${prCommitsUnknown.map(_.name())}")
+          }
+
+          val (prCommitsSeenOnSite, prCommitsNotSeen) = prCommitsKnown.partition(prCommit => w.isMergedInto(prCommit.asRevCommit, siteCommit))
+
+          prCommitsSeenOnSite.nonEmpty // If any of the PR's 'tip' commits have been seen on site, the PR has been 'seen'
+        }).getOrElse(false)
       }).getOrElse(false)
 
       val currentStatus: PullRequestCheckpointStatus =
