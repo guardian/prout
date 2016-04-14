@@ -8,7 +8,7 @@ import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
-import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
 
@@ -51,13 +51,21 @@ case class PullRequestCheckpointsSummary(
     cs =>
       val timeBetweenMergeAndSnapshot = java.time.Duration.between(pr.merged_at.get.toInstant, cs.time)
 
-      val isVisibleOnSite: Boolean = (for (commitId <- cs.commitIdTry) yield {
-        implicit val w: RevWalk = new RevWalk(gitRepo)
-        val prCommit: RevCommit = pr.head.asRevCommit
-        val siteCommit: RevCommit = commitId.get.asRevCommit
-        Logger.trace(s"prCommit=${prCommit.name()} siteCommit=${siteCommit.name()}")
+      val isVisibleOnSite: Boolean = (for (commitIdOpt <- cs.commitIdTry) yield {
+        (for {
+          siteCommitId <- commitIdOpt
+        } yield {
+          implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
+          implicit val w:RevWalk = new RevWalk(repoThreadLocal.reader())
+          val siteCommit = siteCommitId.asRevCommit
 
-        w.isMergedInto(prCommit, siteCommit)
+          val (prCommitsSeenOnSite, prCommitsNotSeen) = pr.availableTipCommits.partition(prCommit => w.isMergedInto(prCommit.asRevCommit, siteCommit))
+          if (prCommitsSeenOnSite.nonEmpty && prCommitsNotSeen.nonEmpty) {
+            Logger.info(s"prCommitsSeenOnSite=${prCommitsSeenOnSite.map(_.name)} prCommitsNotSeen=${prCommitsNotSeen.map(_.name)}")
+          }
+
+          prCommitsSeenOnSite.nonEmpty // If any of the PR's 'tip' commits have been seen on site, the PR has been 'seen'
+        }).getOrElse(false)
       }).getOrElse(false)
 
       val currentStatus: PullRequestCheckpointStatus =

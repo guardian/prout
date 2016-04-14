@@ -14,10 +14,10 @@ object GitChanges {
 
   val treeDiffFilter: TreeFilter = (w: TreeWalk) => w.isSubtree && (1 until w.getTreeCount).exists(!w.idEqual(_, 0))
 
-  def affects(pullRequest: PullRequest, interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = {
-    implicit val reader = revWalk.getObjectReader
-    GitChanges.affectedFolders(pullRequest.base.asRevCommit, pullRequest.head.asRevCommit, interestingPaths)
-  }
+  def affects(pullRequest: PullRequest, interestingPaths: Set[String])(implicit revWalk: RevWalk): Set[String] = for {
+    tipCommit <- pullRequest.availableTipCommits
+    affectedPath <- affectedFolders(pullRequest.base.asRevCommit, tipCommit, interestingPaths)
+  } yield affectedPath
 
   /**
    *
