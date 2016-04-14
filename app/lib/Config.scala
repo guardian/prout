@@ -53,7 +53,8 @@ object Config {
 
   implicit val readsConfig = Json.reads[ConfigFile]
 
-  def readConfigFrom(configFileObjectId: ObjectId)(implicit objectReader : ObjectReader) = {
+  def readConfigFrom(configFileObjectId: ObjectId)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources) = {
+    implicit val reader = repoThreadLocal.reader()
     val fileJson = Json.parse(configFileObjectId.open.getCachedBytes(4096))
     Json.fromJson[ConfigFile](fileJson)
   }

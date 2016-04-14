@@ -32,7 +32,7 @@ import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.joda.time.format.PeriodFormat
 import play.api.Logger
 
@@ -102,15 +102,19 @@ case class RepoSnapshot(
 
   implicit val github = Bot.github
 
-  private implicit val (revWalk, reader) = gitRepo.singleThreadedReaderTuple
+  implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
 
-  lazy val masterCommit:RevCommit = gitRepo.resolve(repo.default_branch).asRevCommit
+  lazy val masterCommit:RevCommit = gitRepo.resolve(repo.default_branch).asRevCommit(new RevWalk(repoThreadLocal.reader()))
 
   lazy val config = ConfigFinder.config(masterCommit)
 
-  lazy val affectedFoldersByPullRequest: Map[PullRequest, Set[String]] = (for {
-    pr <- mergedPullRequests
-  } yield pr -> GitChanges.affects(pr, config.foldersWithValidConfig)).toMap
+  lazy val affectedFoldersByPullRequest: Map[PullRequest, Set[String]] = {
+    implicit val revWalk = new RevWalk(repoThreadLocal.reader())
+    println(s"getting affectedFoldersByPullRequest on ${gitRepo.getDirectory.getAbsolutePath}")
+    (for {
+      pr <- mergedPullRequests
+    } yield pr -> GitChanges.affects(pr, config.foldersWithValidConfig)).toMap
+  }
 
 
   lazy val pullRequestsByAffectedFolder : Map[String, Set[PullRequest]] = config.foldersWithValidConfig.map {
@@ -127,10 +131,11 @@ case class RepoSnapshot(
 
   lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
     c =>
+
       c -> {
         for (possibleIdsTry <- checkpointSnapshoter(c).trying) yield {
           val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
-            possibleIds.map(reader.resolveExistingUniqueId).collectFirst {
+            possibleIds.map(repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
               case Success(objectId) => objectId
             }
           }
