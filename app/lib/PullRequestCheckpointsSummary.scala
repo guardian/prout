@@ -8,8 +8,6 @@ import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
-import org.eclipse.jgit.lib.Repository
-import lib.labels.{Overdue, Pending, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
@@ -57,20 +55,14 @@ case class PullRequestCheckpointsSummary(
         (for {
           siteCommitId <- commitIdOpt
         } yield {
-          implicit val w: RevWalk = new RevWalk(gitRepo)
+          implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
+          implicit val w:RevWalk = new RevWalk(repoThreadLocal.reader())
           val siteCommit = siteCommitId.asRevCommit
 
-          val prHeadCommit = pr.head.sha
-          val prMergeCommitOpt = pr.merge_commit_sha
-
-          val prTipCommits = Set(prHeadCommit) ++ prMergeCommitOpt
-          val (prCommitsKnown, prCommitsUnknown) = prTipCommits.partition(gitRepo.getObjectDatabase.has)
-          Logger.trace(s"prHeadCommit=${prHeadCommit.name()} prMergeCommitOpt=${prMergeCommitOpt.map(_.name())} siteCommit=${siteCommit.name()}")
-          if (prCommitsUnknown.nonEmpty) {
-            Logger.info(s"prCommitsUnknown=${prCommitsUnknown.map(_.name())}")
+          val (prCommitsSeenOnSite, prCommitsNotSeen) = pr.availableTipCommits.partition(prCommit => w.isMergedInto(prCommit.asRevCommit, siteCommit))
+          if (prCommitsSeenOnSite.nonEmpty && prCommitsNotSeen.nonEmpty) {
+            Logger.info(s"prCommitsSeenOnSite=${prCommitsSeenOnSite.map(_.name)} prCommitsNotSeen=${prCommitsNotSeen.map(_.name)}")
           }
-
-          val (prCommitsSeenOnSite, prCommitsNotSeen) = prCommitsKnown.partition(prCommit => w.isMergedInto(prCommit.asRevCommit, siteCommit))
 
           prCommitsSeenOnSite.nonEmpty // If any of the PR's 'tip' commits have been seen on site, the PR has been 'seen'
         }).getOrElse(false)
@@ -84,6 +76,7 @@ case class PullRequestCheckpointsSummary(
 
       cs.checkpoint.name -> currentStatus
   }.toMap
+
 
   val checkpointStatuses: PRCheckpointState = oldState.updateWith(stringToCheckpointStatus)
 
