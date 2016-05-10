@@ -41,8 +41,7 @@ object Api extends Controller {
     updateFor(repoId)
   }
 
-  def updateRepo(repoOwner: String, repoName: String) = Action.async { implicit request =>
-    val repoId = RepoId(repoOwner, repoName)
+  def updateRepo(repoId: RepoId) = Action.async { implicit request =>
     Logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
     updateFor(repoId)
   }

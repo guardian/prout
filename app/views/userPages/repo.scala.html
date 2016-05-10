@@ -1,0 +1,33 @@
+@import lib.ConfigFinder.ProutConfigFileName
+@(repoSnapshot: lib.RepoSnapshot)(implicit req: Request[AnyContent])
+@main {
+    <div class="row">
+        <div class="col-md-6">
+            @for(permissions <- repoSnapshot.repo.permissions) {
+                <h3>Permissions for @lib.Bot.user.atLogin</h3>
+                <ul>
+                    <li><em>push</em> @if(permissions.push) {
+                        <span class="octicon octicon-check"></span>
+                    } else {
+                        <span class="octicon octicon-alert"></span>
+                        Push permission is needed for writing comments and setting labels!
+                    }
+                     </li>
+                </ul>
+            }
+            <h3>Config files</h3>
+            <p>
+                <ul>
+            @for((folder, configInFolder) <- repoSnapshot.config.checkpointsByFolder) {
+                <li>@folder@ProutConfigFileName @configInFolder.fold(errors => {
+                <span class="octicon octicon-alert"></span>
+                },validConfig => {
+                <span class="octicon octicon-check"></span>
+                })
+                </li>
+            }
+            </ul>
+            </p>
+        </div>
+    </div>
+}

@@ -49,4 +49,5 @@ object Bot extends Bot {
   val config = play.api.Play.configuration.underlying
 
   val accessToken: String = config.getString("github.access.token")
+
 }

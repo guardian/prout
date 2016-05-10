@@ -1,12 +1,19 @@
 ### Callback endpoints
 
-POST        /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
+POST        /api/update/$repo<[^/]+/[^/]+>  controllers.Api.updateRepo(repo: RepoId)
 # GET because that's what RiffRaff supports...
-GET         /api/update/:org/:repo        controllers.Api.updateRepo(org, repo)
-POST        /api/hooks/github             controllers.Api.githubHook()
+GET         /api/update/$repo<[^/]+/[^/]+>  controllers.Api.updateRepo(repo: RepoId)
+POST        /api/hooks/github               controllers.Api.githubHook()
+
+
+
 
 
 
 ### Non-API endpoints - resources for humans to view
 GET         /                             controllers.Application.index()
+GET         /view/$repo<[^/]+/[^/]+>      controllers.Application.zoomba(repo: RepoId)
 GET         /assets/*file                 controllers.Assets.at(path="/public", file)
+
+GET         /oauth/callback                                      controllers.Auth.oauthCallback(code: String)
+GET         /logout                                              controllers.Auth.logout()
