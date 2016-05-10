@@ -1,5 +1,8 @@
 package lib
 
+import java.time.Duration.ofMinutes
+import java.time.{Instant, Duration}
+
 import com.google.common.io.Files.createTempDir
 import com.madgag.git._
 import com.madgag.scalagithub.GitHub._
@@ -12,13 +15,14 @@ import org.scalatest.BeforeAndAfterAll
 import scala.collection.convert.wrapAll._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
+import com.madgag.time.Implicits._
 
 trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
 
   val testRepoNamePrefix: String = s"prout-test-${getClass.getSimpleName}-"
 
-  def isTestRepo(repo: Repo) = repo.name.startsWith(testRepoNamePrefix)
+  def isTestRepo(repo: Repo) =
+    repo.name.startsWith(testRepoNamePrefix) && repo.created_at.toInstant.age() > ofMinutes(10)
 
   override def beforeAll {
     val oldRepos = github.listRepos("updated", "desc").all().futureValue.filter(isTestRepo)
