@@ -32,6 +32,7 @@ object Application extends Controller {
   def zoomba(repoId: RepoId) = Actions.repoAuthenticated(repoId).async { implicit req =>
     implicit val checkpointSnapshoter = Api.checkpointSnapshoter
     for {
+      RepoWhitelistService.
       wl <- RepoWhitelistService.repoWhitelist.get()
       repoFetchedByProut <- Bot.github.getRepo(repoId)
       repoSnapshot <- RepoSnapshot(repoFetchedByProut)
