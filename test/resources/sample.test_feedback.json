@@ -1,0 +1,16 @@
+{
+  "checkpoints": {
+    "PROD": {
+      "url": "https://mysite.com/",
+      "overdue": "3M",
+      "afterSeen": {
+        "travis": {
+          "config": {
+            "script": "sbt test",
+            "after_script": "./sample.test_feedback.sh"
+          }
+        }
+      }
+    }
+  }
+}

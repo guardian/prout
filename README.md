@@ -1,5 +1,7 @@
 # Prout
 
+## "Has your pull request been deployed yet?"
+
 _"Has your pull request been deployed yet?"_ - [Guardian blogpost](http://www.theguardian.com/info/developer-blog/2015/feb/03/prout-is-your-pull-request-out)
 
 Tells you when your pull-requests are live. Tells you when they're not, and should be.
@@ -25,8 +27,18 @@ forget about promptly reviewing their changes on Production.
 Prout simply notifies developers in their pull request that the code has been _seen_
 in Production (a slightly stronger statement than simply saying it's been deployed).
 
+## "Have post-deployment tests passed?"
 
-# Configuration
+![prout pass-in-prod](https://cloud.githubusercontent.com/assets/13835317/12692343/a51ff6bc-c6ed-11e5-8366-eb9470e0bab1.png)
+
+Prout can facilitate _testing-in-production_ workflow by notifying developers 
+of the result of post-deployment tests that have run against production 
+(or any stage you deployed to). The result is posted as a comment on the pull request's
+conversation thread. 
+
+(Currently this feature works only with Travis CI).
+
+# Configuration <a name="config"></a>
 
 Follow the 4-step program:
 
@@ -34,6 +46,9 @@ Follow the 4-step program:
 2. Add one or more .prout.json config files to your project
 3. Add callbacks to prout - ie a GitHub webhook and ideally also a post-deploy hook
 4. Expose the commit id of your build on your deployed site
+
+For post-deployment testing configuration see [bellow](#test-config).
+
 
 ### Add config file
 
@@ -120,6 +135,26 @@ https://github.com/my-org/my-repo/settings/hooks/new
 events to the hook - this is just a place to store the private url where Prout can find it.
 **Note that Prout needs repo-admin access in order to read the hook data!**
 
+# Post-deployment testing
+
+After the pull request has been closed, merged, deployed and seen, Prout can trigger a Travis CI
+build that executes post-deployment tests. When the test build completes, Travis
+feeds back the result to Prout, which in turn posts the result on the pull request as a comment.
+
+## Configuration <a name="test-config"></a>
+
+1. Complete all the steps [above](#config). 
+2. Next add Travis configuration to `.prout.json`: see [sample](./test/resources/sample.test_feedback.json).    
+3. Note that `afterSeen` uses [Travis build customization](http://docs.travis-ci.com/user/customizing-the-build/)
+specification.
+4. Add `test_feedback.sh` (see [sample](./test/resources/sample.test_feedback.sh)) script under 
+the project root directory.
+5. Set its permissions to: `chmod ugo+x test_feedback.sh`
+6. Adjust `PROUT_HOOK` to target your Prout host.
+
+This script is triggered after the build completes. It collects relevant test result data
+from [Travis environmental variables](http://docs.travis-ci.com/user/environment-variables/)
+and feeds it back to Prout via `/api/hooks/travis` endpoint.
 
 # Run your own instance of Prout
 
