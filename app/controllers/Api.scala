@@ -22,7 +22,7 @@ import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.json.{JsArray, JsNumber}
+import play.api.libs.json.{JsArray, JsNumber, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -93,5 +93,12 @@ object Api extends Controller {
         scan <- scanGuard
       } yield Ok(JsArray(scan.map(summary => JsNumber(summary.prCheckpointDetails.pr.number))))
     }
+  }
+
+  def travisHook() = Action.async(parse.json) { implicit r =>
+    implicit val travisTestResultReads = Json.reads[TravisTestResult]
+    val result = r.body.as[TravisTestResult]
+    Logger.info(s"travisHook ${result}")
+    TestFeedback(result).notifyGitHub()
   }
 }
