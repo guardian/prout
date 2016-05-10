@@ -1,5 +1,5 @@
 @import lib.ConfigFinder.ProutConfigFileName
-@(repoSnapshot: lib.RepoSnapshot)(implicit req: Request[AnyContent])
+@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot)(implicit req: Request[AnyContent])
 @main {
     <div class="row">
         <div class="col-md-6">
@@ -16,6 +16,13 @@
                 </ul>
             }
             <h3>Config files</h3>
+            @if(!proutPresenceQuickCheck) {
+                <span class="octicon octicon-alert"></span>
+                Quick check for @ProutConfigFileName failed!
+                @if(repoSnapshot.config.checkpointsByFolder.nonEmpty) {
+                    GitHub seems to be returning data different to the Git repo itself...
+                }
+            }
             <p>
                 <ul>
             @for((folder, configInFolder) <- repoSnapshot.config.checkpointsByFolder) {
