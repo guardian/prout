@@ -25,8 +25,6 @@ object RepoWhitelistService extends LazyLogging {
 
   def whitelist(): Future[RepoWhitelist] = repoWhitelist.get()
 
-  val permissionsThatCanPush = Set("admin", "push")
-
   def hasProutConfigFile(repo: Repo): Future[Boolean] = for {
     treeT <- repo.trees2.getRecursively(s"heads/${repo.default_branch}").trying
   } yield treeT.map(_.tree.exists(_.path.endsWith(ProutConfigFileName))).getOrElse(false)
