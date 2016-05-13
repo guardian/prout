@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "3.24",
+  "com.madgag" %% "play-git-hub" % "3.25",
   "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
   "org.scalatestplus" %% "play" % "1.4.0-M4" % "test"
 )
