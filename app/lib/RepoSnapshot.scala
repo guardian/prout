@@ -70,7 +70,7 @@ object RepoSnapshot {
     val hooksF = githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all()
 
     val mergedPullRequestsF: Future[Seq[PullRequest]] = (for {
-      litePullRequests <- githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).all()
+      litePullRequests <- githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
       pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).take(10))(pr => githubRepo.pullRequests.get(pr.number).map(_.result))
     } yield {
       log(s"PRs merged to master size=${pullRequests.size}")
