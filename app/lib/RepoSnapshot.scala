@@ -67,7 +67,12 @@ object RepoSnapshot {
 
     def log(message: String) = logger.info(s"${repoId.fullName} - $message")
 
-    val hooksF = githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all()
+    githubRepo.permissions.exists(_.admin)
+
+    val hooksF: Future[Seq[Uri]] = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all() else {
+      log(s"No admin rights to check hooks")
+      Future.successful(Seq.empty)
+    }
 
     val mergedPullRequestsF: Future[Seq[PullRequest]] = (for {
       litePullRequests <- githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
