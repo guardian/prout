@@ -1,5 +1,9 @@
 @import lib.ConfigFinder.ProutConfigFileName
-@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot)(implicit req: Request[AnyContent])
+@import lib._
+@import lib.Config._
+@import scala.util.Success
+@import scala.util.Failure
+@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot, allAvailableCheckpointSnapshotsByCheckpoint: Map[Checkpoint, CheckpointSnapshot])(implicit req: Request[AnyContent])
 @main {
     <div class="row">
         <div class="col-md-6">
@@ -26,11 +30,33 @@
             <p>
                 <ul>
             @for((folder, configInFolder) <- repoSnapshot.config.checkpointsByFolder) {
-                <li>@folder@ProutConfigFileName @configInFolder.fold(errors => {
-                <span class="octicon octicon-alert"></span>
-                },validConfig => {
-                <span class="octicon octicon-check"></span>
-                })
+                <li>@folder@ProutConfigFileName @configInFolder.asOpt match {
+                    case None => {
+                        <span class="octicon octicon-alert"></span>
+                    }
+                    case Some(validConfig) => {
+                        <span class="octicon octicon-check"></span>
+                        <ul>
+                            <h5>Checkpoints</h5>
+                            @for(checkpoint <- validConfig.checkpointSet) {
+                                <li>
+                                    @checkpoint.name - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
+                                    @for(snapshot <- allAvailableCheckpointSnapshotsByCheckpoint.get(checkpoint))  {
+                                        @snapshot.commitIdTry match {
+                                            case Success(idOpt) => {
+                                                Commit Id found : <code>@idOpt.toString</code>
+                                            }
+                                            case Failure(error) => {
+                                                <span class="octicon octicon-alert"></span>
+                                                Could not read from this url, got @error
+                                            }
+                                        }
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                }
                 </li>
             }
             </ul>

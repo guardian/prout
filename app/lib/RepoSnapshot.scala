@@ -128,31 +128,38 @@ case class RepoSnapshot(
 
   Logger.info(s"${repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapValues(_.map(_.number))}")
 
+
+
+
   lazy val activeConfigByPullRequest: Map[PullRequest, Set[Checkpoint]] = affectedFoldersByPullRequest.mapValues {
     _.flatMap(config.validConfigByFolder(_).checkpointSet)
   }
 
-  val activeConfig: Set[Checkpoint] = activeConfigByPullRequest.values.flatten.toSet
+  val allAvailableCheckpoints: Set[Checkpoint] = config.checkpointsByName.values.toSet
 
-  lazy val checkpointSnapshotsF: Map[Checkpoint, Future[CheckpointSnapshot]] = activeConfig.map {
-    c =>
+  def snapshotOfAllAvailableCheckpoints: Future[Map[Checkpoint, CheckpointSnapshot]] =
+    Future.sequence(allAvailableCheckpoints.map(snapshot)).map(_.map(cs => cs.checkpoint -> cs).toMap)
 
-      c -> {
-        for (possibleIdsTry <- checkpointSnapshoter(c).trying) yield {
-          val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
-            possibleIds.map(repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
-              case Success(objectId) => objectId
-            }
-          }
-          CheckpointSnapshot(c, objectIdTry)
+  val activeCheckpoints: Set[Checkpoint] = activeConfigByPullRequest.values.flatten.toSet
+
+  lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, Future[CheckpointSnapshot]] =
+    activeCheckpoints.map { c => c -> snapshot(c) }.toMap
+
+  def snapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
+    for (possibleIdsTry <- checkpointSnapshoter(checkpoint).trying) yield {
+      val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
+        possibleIds.map(repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
+          case Success(objectId) => objectId
         }
       }
-  }.toMap
+      CheckpointSnapshot(checkpoint, objectIdTry)
+    }
+  }
 
-  lazy val activeSnapshotsF = Future.sequence(activeConfig.map(checkpointSnapshotsF))
+  lazy val activeSnapshotsF = Future.sequence(activeCheckpoints.map(snapshotsOfActiveCheckpointsF))
 
   def checkpointSnapshotsFor(pr: PullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =
-    Future.sequence(activeConfigByPullRequest(pr).filter(!oldState.hasSeen(_)).map(checkpointSnapshotsF))
+    Future.sequence(activeConfigByPullRequest(pr).filter(!oldState.hasSeen(_)).map(snapshotsOfActiveCheckpointsF))
 
   val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsSummary] with LazyLogging {
     val repo = self.repo
@@ -164,7 +171,7 @@ case class RepoSnapshot(
         case (checkpointName, cs) => cs.labelFor(checkpointName)
       }.toSet
 
-      def stateFrom(labels: Set[String]): PRCheckpointState = PRCheckpointState(activeConfig.flatMap { checkpoint =>
+      def stateFrom(labels: Set[String]): PRCheckpointState = PRCheckpointState(activeCheckpoints.flatMap { checkpoint =>
         PullRequestCheckpointStatus.fromLabels(labels, checkpoint).map(checkpoint.name -> _)
       }.toMap)
     }
