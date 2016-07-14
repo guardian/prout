@@ -40,11 +40,19 @@
                             <h5>Checkpoints</h5>
                             @for(checkpoint <- validConfig.checkpointSet) {
                                 <li>
-                                    @checkpoint.name - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
+                                    <b id="checkpoint-@checkpoint.name">@checkpoint.name</b> - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
                                     @for(snapshot <- allAvailableCheckpointSnapshotsByCheckpoint.get(checkpoint))  {
                                         @snapshot.commitIdTry match {
                                             case Success(idOpt) => {
-                                                Commit Id found : <code>@idOpt.toString</code>
+                                                @idOpt match {
+                                                    case Some(commitId) => {
+                                                        Commit Id found : <a href="@repoSnapshot.repo.html_url/commit/@commitId.name"><code>@commitId.name.take(8)</code></a>
+                                                    }
+                                                    case None => {
+                                                        <span class="octicon octicon-alert"></span>
+                                                        No commit id found
+                                                    }
+                                                }
                                             }
                                             case Failure(error) => {
                                                 <span class="octicon octicon-alert"></span>
@@ -59,6 +67,13 @@
                 }
                 </li>
             }
+            </ul>
+
+            <h3>Merged Pull Requests</h3>
+            <ul>
+                @for(pr <- repoSnapshot.mergedPullRequests) {
+                    <li><a href="@pr.html_url" >#@pr.number - @pr.title</a></li>
+                }
             </ul>
             </p>
         </div>
