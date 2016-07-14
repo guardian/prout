@@ -91,7 +91,7 @@ object Api extends Controller {
       for {
         scanGuard <- scanGuardF
         scan <- scanGuard
-      } yield Ok(JsArray(scan.map(summary => JsNumber(summary.pr.number))))
+      } yield Ok(JsArray(scan.map(summary => JsNumber(summary.prCheckpointDetails.pr.number))))
     }
   }
 }

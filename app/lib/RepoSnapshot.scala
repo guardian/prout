@@ -97,6 +97,14 @@ object RepoSnapshot {
   }
 }
 
+case class Diagnostic(
+                       snapshots: Set[CheckpointSnapshot],
+                       prDetails: Seq[PRCheckpointDetails]
+                     ) {
+
+  val snapshotsByCheckpoint: Map[Checkpoint, CheckpointSnapshot] = snapshots.map(s => s.checkpoint -> s).toMap
+}
+
 case class RepoSnapshot(
   repo: Repo,
   gitRepo: Repository,
@@ -108,6 +116,8 @@ case class RepoSnapshot(
   implicit val github = Bot.github
 
   implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
+
+
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.default_branch).asRevCommit(new RevWalk(repoThreadLocal.reader()))
 
@@ -137,15 +147,23 @@ case class RepoSnapshot(
 
   val allAvailableCheckpoints: Set[Checkpoint] = config.checkpointsByName.values.toSet
 
-  def snapshotOfAllAvailableCheckpoints: Future[Map[Checkpoint, CheckpointSnapshot]] =
-    Future.sequence(allAvailableCheckpoints.map(snapshot)).map(_.map(cs => cs.checkpoint -> cs).toMap)
+  def diagnostic(): Future[Diagnostic] = {
+    for {
+      snapshots <- snapshotOfAllAvailableCheckpoints()
+    } yield {
+      Diagnostic(snapshots, mergedPullRequests.map(pr => PRCheckpointDetails(pr, snapshots.filter(s => activeConfigByPullRequest(pr).contains(s.checkpoint)), gitRepo)))
+    }
+  }
+
+  def snapshotOfAllAvailableCheckpoints(): Future[Set[CheckpointSnapshot]] =
+    Future.sequence(allAvailableCheckpoints.map(takeCheckpointSnapshot))
 
   val activeCheckpoints: Set[Checkpoint] = activeConfigByPullRequest.values.flatten.toSet
 
   lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, Future[CheckpointSnapshot]] =
-    activeCheckpoints.map { c => c -> snapshot(c) }.toMap
+    activeCheckpoints.map { c => c -> takeCheckpointSnapshot(c) }.toMap
 
-  def snapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
+  def takeCheckpointSnapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
     for (possibleIdsTry <- checkpointSnapshoter(checkpoint).trying) yield {
       val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
         possibleIds.map(repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
@@ -161,7 +179,7 @@ case class RepoSnapshot(
   def checkpointSnapshotsFor(pr: PullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeConfigByPullRequest(pr).filter(!oldState.hasSeen(_)).map(snapshotsOfActiveCheckpointsF))
 
-  val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsSummary] with LazyLogging {
+  val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsStateChangeSummary] with LazyLogging {
     val repo = self.repo
 
     val pf=PeriodFormat.getDefault
@@ -180,18 +198,21 @@ case class RepoSnapshot(
       existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
 
     def snapshot(oldState: PRCheckpointState, pr: PullRequest) =
-      for (cs <- checkpointSnapshotsFor(pr, oldState)) yield PullRequestCheckpointsSummary(pr, cs, gitRepo, oldState)
+      for (cs <- checkpointSnapshotsFor(pr, oldState)) yield {
+        val details = PRCheckpointDetails(pr, cs, gitRepo)
+        PullRequestCheckpointsStateChangeSummary(details, oldState)
+      }
 
-    override def actionTaker(snapshot: PullRequestCheckpointsSummary) {
-      val pr = snapshot.pr
+    override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary) {
+      val pr = snapshot.prCheckpointDetails.pr
 
-      val newlySeenSnapshots = snapshot.changedSnapshotsByState.get(Seen).toSeq.flatten
+      val newlySeenSnapshots = snapshot.changedByState.get(Seen).toSeq.flatten
 
       logger.info(s"action taking: ${pr.prId} newlySeenSnapshots = $newlySeenSnapshots")
 
       for {
         newlySeenSnapshot <- newlySeenSnapshots
-        afterSeen <- newlySeenSnapshot.checkpoint.details.afterSeen
+        afterSeen <- newlySeenSnapshot.snapshot.checkpoint.details.afterSeen
         travis <- afterSeen.travis
       } {
         logger.info(s"${pr.prId} going to do $travis")
@@ -202,7 +223,7 @@ case class RepoSnapshot(
       val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
       val previouslyTouchedByProut = snapshot.oldState.statusByCheckpoint.nonEmpty
       if (previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
-        logger.trace(s"changedSnapshotsByState : ${snapshot.changedSnapshotsByState}")
+        logger.trace(s"changedSnapshotsByState : ${snapshot.changedByState}")
 
         val timeSinceMerge = mergeToNow.toPeriod().withMillis(0).toString(pf)
 
@@ -216,8 +237,8 @@ case class RepoSnapshot(
         }
 
         def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
-          for (changedSnapshots <- snapshot.changedSnapshotsByState.get(status)) {
-            val checkpoints = changedSnapshots.map(_.checkpoint.nameMarkdown).mkString(", ")
+          for (changedSnapshots <- snapshot.changedByState.get(status)) {
+            val checkpoints = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
 
             pr.comments2.create(CreateComment(s"${status.name} on $checkpoints ($responsibleText) $advice"))
           }
@@ -233,7 +254,7 @@ case class RepoSnapshot(
     }
   }
 
-  def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsSummary]] = for {
+  def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
     _ <- attemptToCreateMissingLabels()
     summaryOpts <- Future.traverse(mergedPullRequests)(issueUpdater.process)
   } yield summaryOpts.flatten

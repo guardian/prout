@@ -2,7 +2,7 @@ package lib.slack
 
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
-import lib.{PullRequestCheckpointsSummary, Seen}
+import lib.{PullRequestCheckpointsStateChangeSummary, PullRequestCheckpointsStateChangeSummary$, Seen}
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -11,13 +11,13 @@ import play.api.libs.ws.WS
 
 object DeployReporter {
 
-  def report(snapshot: PullRequestCheckpointsSummary, hooks: Seq[Uri]) {
+  def report(snapshot: PullRequestCheckpointsStateChangeSummary, hooks: Seq[Uri]) {
     val slackHooks = hooks.filter(_.host.contains("hooks.slack.com"))
     if (slackHooks.nonEmpty) {
-      for (changedSnapshots <- snapshot.changedSnapshotsByState.get(Seen)) {
-        val pr = snapshot.pr
+      for (changedSnapshots <- snapshot.changedByState.get(Seen)) {
+        val pr = snapshot.prCheckpointDetails.pr
         val mergedBy = pr.merged_by.get
-        val checkpoints = changedSnapshots.map(_.checkpoint)
+        val checkpoints = changedSnapshots.map(_.snapshot.checkpoint)
         val attachments = Seq(Attachment(s"PR #${pr.number} deployed to ${checkpoints.map(_.name).mkString(", ")}",
           Seq(
             Attachment.Field("PR", s"<${pr.html_url}|#${pr.number}>", true),

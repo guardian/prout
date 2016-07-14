@@ -13,7 +13,7 @@ class Droid {
 
   def scan(
     githubRepo: Repo
-  )(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[Seq[PullRequestCheckpointsSummary]] = {
+  )(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = {
     logger.info(s"Asked to audit ${githubRepo.repoId}")
 
     val repoSnapshotF = RepoSnapshot(githubRepo)

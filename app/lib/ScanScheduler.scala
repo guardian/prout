@@ -36,12 +36,12 @@ class ScanScheduler(repoId: RepoId,
         case Failure(e) =>
           Logger.error(s"Scanning $repoId failed", e)
         case Success(summaries) =>
-          Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoId.fullName}:\n${summaries.map(s => s"#${s.pr.prId.slug} ${s.stateChange}").mkString("\n")}")
+          Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoId.fullName}:\n${summaries.map(s => s"#${s.prCheckpointDetails.pr.prId.slug} changed=${s.changed.map(_.snapshot.checkpoint.name)}").mkString("\n")}")
 
           val scanTimeForUnseenOpt = summaries.find(!_.checkpointStatuses.all(Seen)).map(_ => now.plus(1L, MINUTES))
 
           val overdueTimes = summaries.collect {
-            case summary => summary.soonestPendingCheckpointOverdueTime
+            case summary => summary.prCheckpointDetails.soonestPendingCheckpointOverdueTime
           }.flatten
 
           val candidateFollowUpScanTimes = overdueTimes ++ scanTimeForUnseenOpt
@@ -63,6 +63,6 @@ class ScanScheduler(repoId: RepoId,
     }
   })
 
-  def scan(): Future[Seq[PullRequestCheckpointsSummary]] = dogpile.doAtLeastOneMore()
+  def scan(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = dogpile.doAtLeastOneMore()
 
 }

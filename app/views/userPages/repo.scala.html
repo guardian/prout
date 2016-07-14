@@ -3,8 +3,15 @@
 @import lib.Config._
 @import scala.util.Success
 @import scala.util.Failure
-@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot, allAvailableCheckpointSnapshotsByCheckpoint: Map[Checkpoint, CheckpointSnapshot])(implicit req: Request[AnyContent])
-@main {
+@import org.eclipse.jgit.lib.ObjectId
+@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot, diagnostic: lib.Diagnostic)(implicit req: Request[AnyContent])
+    @showCommit(commitId: ObjectId) = {<a href="@repoSnapshot.repo.html_url/commit/@commitId.name"><code>@commitId.name.take(7)</code></a>}
+    @showCommits(commitIds: Traversable[ObjectId]) = {@for(commitId<-commitIds) {@showCommit(commitId) }}
+    @configLink(folder: String) = {<a href="@repoSnapshot.repo.html_url/blob/@repoSnapshot.repo.default_branch@folder@ProutConfigFileName">@folder@ProutConfigFileName</a>}
+
+    @main {
+
+
     <div class="row">
         <div class="col-md-6">
             @for(permissions <- repoSnapshot.repo.permissions) {
@@ -30,23 +37,23 @@
             <p>
                 <ul>
             @for((folder, configInFolder) <- repoSnapshot.config.checkpointsByFolder) {
-                <li>@folder@ProutConfigFileName @configInFolder.asOpt match {
+                <li>@configLink(folder) @configInFolder.asOpt match {
                     case None => {
-                        <span class="octicon octicon-alert"></span>
+                        <span class="octicon octicon-alert" title="Invalid Prout JSON"></span>
                     }
                     case Some(validConfig) => {
-                        <span class="octicon octicon-check"></span>
+                        <span class="octicon octicon-check" title="Parsed as valid Prout JSON"></span>
                         <ul>
                             <h5>Checkpoints</h5>
                             @for(checkpoint <- validConfig.checkpointSet) {
                                 <li>
                                     <b id="checkpoint-@checkpoint.name">@checkpoint.name</b> - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
-                                    @for(snapshot <- allAvailableCheckpointSnapshotsByCheckpoint.get(checkpoint))  {
+                                    @for(snapshot <- diagnostic.snapshotsByCheckpoint.get(checkpoint))  {
                                         @snapshot.commitIdTry match {
                                             case Success(idOpt) => {
                                                 @idOpt match {
                                                     case Some(commitId) => {
-                                                        Commit Id found : <a href="@repoSnapshot.repo.html_url/commit/@commitId.name"><code>@commitId.name.take(8)</code></a>
+                                                        Commit Id found : @showCommit(commitId)
                                                     }
                                                     case None => {
                                                         <span class="octicon octicon-alert"></span>
@@ -71,11 +78,33 @@
 
             <h3>Merged Pull Requests</h3>
             <ul>
-                @for(pr <- repoSnapshot.mergedPullRequests) {
-                    <li><a href="@pr.html_url" >#@pr.number - @pr.title</a></li>
+                @for(prDetail <- diagnostic.prDetails) {
+                    <li><a href="@prDetail.pr.html_url" ><span class="octicon octicon-git-pull-request"></span> #@prDetail.pr.number - @prDetail.pr.title</a>
+                        <ul>
+                        @for(e <- prDetail.everythingByCheckpoint.values) {
+                            <li>
+                                <a href="#checkpoint-@e.snapshot.checkpoint.name"><b>@e.snapshot.checkpoint.name</b></a>
+                                - @e.checkpointStatus,
+
+                                @e.commitVisibility match {
+                                    case Some(cv) => {
+                                        @if(cv.seen.nonEmpty) {
+                                            @showCommits(cv.seen) is deployed
+                                        } else {
+                                            @showCommits(cv.unseen) not yet seen
+                                        }
+                                    }
+                                    case None => {
+                                        could not check commit visibility
+                                    }
+                                }
+                            </li>
+                        }
+                        </ul>
+                    </li>
+
                 }
             </ul>
-            </p>
         </div>
     </div>
 }

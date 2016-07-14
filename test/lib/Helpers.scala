@@ -56,7 +56,9 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
 
     def setCheckpointTo(branchName: String) {
-      setCheckpointTo(githubRepo.refs.get(s"heads/$branchName").futureValue.objectId)
+      val objectId = githubRepo.refs.get(s"heads/$branchName").futureValue.objectId
+      setCheckpointTo(objectId)
+      logger.info(s"Set checkpoint to '$branchName' (${objectId.name.take(8)})")
     }
 
     def setCheckpointFailureTo(exception: Exception) {

@@ -36,10 +36,10 @@ object Application extends Controller {
       repoFetchedByProut <- Bot.github.getRepo(repoId)
       proutPresenceQuickCheck <- RepoWhitelistService.hasProutConfigFile(repoFetchedByProut)
       repoSnapshot <- RepoSnapshot(repoFetchedByProut)
-      allAvailableCheckpointSnapshotsByCheckpoint <- repoSnapshot.snapshotOfAllAvailableCheckpoints
+      diagnostic <- repoSnapshot.diagnostic()
     } yield {
       val known = wl.allKnownRepos(repoId)
-      Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, allAvailableCheckpointSnapshotsByCheckpoint))
+      Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic))
     }
   }
 
