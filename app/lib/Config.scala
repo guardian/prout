@@ -4,11 +4,11 @@ import java.time.Instant
 
 import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
+import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails}
-import com.madgag.time.Implicits._
 import lib.travis.TravisCI
-import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
+import org.eclipse.jgit.lib.ObjectId
 import org.joda
 import org.joda.time.Period
 import play.api.data.validation.ValidationError

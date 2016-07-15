@@ -1,9 +1,7 @@
 @import lib.ConfigFinder.ProutConfigFileName
-@import lib._
-@import lib.Config._
-@import scala.util.Success
-@import scala.util.Failure
 @import org.eclipse.jgit.lib.ObjectId
+
+@import scala.util.{Failure, Success}
 @(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot, diagnostic: lib.Diagnostic)(implicit req: Request[AnyContent])
     @showCommit(commitId: ObjectId) = {<a href="@repoSnapshot.repo.html_url/commit/@commitId.name"><code>@commitId.name.take(7)</code></a>}
     @showCommits(commitIds: Traversable[ObjectId]) = {@for(commitId<-commitIds) {@showCommit(commitId) }}

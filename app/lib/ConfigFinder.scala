@@ -2,10 +2,8 @@ package lib
 
 import com.madgag.git._
 import lib.Config.RepoConfig
-import org.eclipse.jgit.lib.ObjectReader
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
-import play.api.libs.json.JsResult
 
 object ConfigFinder {
   

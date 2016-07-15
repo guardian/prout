@@ -5,6 +5,7 @@ import com.github.nscala_time.time.Imports._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
+import lib.labels.{Pending, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 

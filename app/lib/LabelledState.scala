@@ -1,6 +1,5 @@
 package lib
 
-import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.model.PullRequest
 import play.api.Logger

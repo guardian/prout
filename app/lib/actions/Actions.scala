@@ -8,10 +8,10 @@ import controllers.Application._
 import controllers.{Auth, routes}
 import lib._
 import play.api.mvc.{ActionFilter, Result}
-import scalax.file.ImplicitConversions._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scalax.file.ImplicitConversions._
 
 object Actions {
   private val authScopes = Seq("repo")

@@ -1,6 +1,5 @@
 import java.util.Base64
 
-import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreateFile, CreateRef}
 import com.madgag.scalagithub.model.{Repo, RepoId}

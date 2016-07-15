@@ -1,16 +1,11 @@
-package lib
+package lib.labels
 
 import lib.Config.Checkpoint
 
-sealed trait PullRequestCheckpointStatus {
-
-  val name = getClass.getSimpleName.dropRight(1)
-
+sealed trait PullRequestCheckpointStatus extends PullRequestLabel {
   def labelFor(checkpointName: String) = {
     name + "-on-" + checkpointName
   }
-
-  val defaultColour: String
 }
 
 object PullRequestCheckpointStatus {

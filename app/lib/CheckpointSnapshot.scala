@@ -26,7 +26,6 @@ import com.squareup.okhttp.Request.Builder
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
-import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._

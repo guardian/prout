@@ -23,23 +23,23 @@ import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreateComment, CreateLabel}
 import com.madgag.scalagithub.model.{PullRequest, Repo}
+import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
-import com.madgag.time.Implicits._
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
+import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.joda.time.format.PeriodFormat
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.math.Ordering._
 import scala.util.Success
 import scalax.file.ImplicitConversions._
 

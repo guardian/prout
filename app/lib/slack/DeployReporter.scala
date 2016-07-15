@@ -2,7 +2,8 @@ package lib.slack
 
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
-import lib.{PullRequestCheckpointsStateChangeSummary, PullRequestCheckpointsStateChangeSummary$, Seen}
+import lib.PullRequestCheckpointsStateChangeSummary
+import lib.labels.Seen
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

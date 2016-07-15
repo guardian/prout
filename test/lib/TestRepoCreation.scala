@@ -1,13 +1,13 @@
 package lib
 
 import java.time.Duration.ofMinutes
-import java.time.{Instant, Duration}
 
 import com.google.common.io.Files.createTempDir
 import com.madgag.git._
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.CreateRepo
 import com.madgag.scalagithub.model.Repo
+import com.madgag.time.Implicits._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.scalatest.BeforeAndAfterAll
@@ -15,7 +15,6 @@ import org.scalatest.BeforeAndAfterAll
 import scala.collection.convert.wrapAll._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import com.madgag.time.Implicits._
 
 trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
 

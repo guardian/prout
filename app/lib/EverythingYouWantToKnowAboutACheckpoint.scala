@@ -2,6 +2,7 @@ package lib
 
 import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
+import lib.labels.{Overdue, Pending, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevWalk
 import play.api.Logger

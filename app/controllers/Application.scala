@@ -17,10 +17,10 @@
 package controllers
 
 import com.madgag.scalagithub.model.RepoId
-import lib.{RepoSnapshot, Bot}
 import lib.actions.Actions
-import play.api.libs.json.JsBoolean
+import lib.{Bot, RepoSnapshot}
 import play.api.mvc._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Application extends Controller {
