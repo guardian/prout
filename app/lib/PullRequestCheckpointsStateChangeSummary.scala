@@ -1,16 +1,12 @@
 package lib
 
 
-import java.time.Instant.now
-
 import com.github.nscala_time.time.Imports._
-import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
-import org.eclipse.jgit.lib.{ObjectId, Repository}
-import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
-import play.api.Logger
+import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevCommit
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
 
