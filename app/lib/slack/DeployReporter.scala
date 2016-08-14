@@ -29,7 +29,7 @@ object DeployReporter {
         val checkpointsAsSlack = checkpoints.map(c => s"<${c.details.url}|${c.name}>").mkString(", ")
         val json = Json.toJson(
           Message(
-            s"*Deployed to $checkpointsAsSlack: ${pr.title}*\n\n${pr.body}",
+            s"*Deployed to $checkpointsAsSlack: ${pr.title}*\n\n${pr.body.getOrElse("")}",
             Some(lib.Bot.user.login),
             Some(mergedBy.avatar_url),
             attachments
