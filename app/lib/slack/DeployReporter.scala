@@ -21,15 +21,15 @@ object DeployReporter {
         val checkpoints = changedSnapshots.map(_.snapshot.checkpoint)
         val attachments = Seq(Attachment(s"PR #${pr.number} deployed to ${checkpoints.map(_.name).mkString(", ")}",
           Seq(
-            Attachment.Field("PR", s"<${pr.html_url}|#${pr.number}>", true),
-            Attachment.Field("Merged by", s"<${mergedBy.html_url}|${mergedBy.atLogin}>", true)
+            Attachment.Field("PR", s"<${pr.html_url}|#${pr.number}>", short = true),
+            Attachment.Field("Merged by", s"<${mergedBy.html_url}|${mergedBy.atLogin}>", short = true)
           )
         ))
 
         val checkpointsAsSlack = checkpoints.map(c => s"<${c.details.url}|${c.name}>").mkString(", ")
         val json = Json.toJson(
           Message(
-            s"*Deployed to $checkpointsAsSlack: ${pr.title}*\n\n${pr.body}",
+            s"*Deployed to $checkpointsAsSlack: ${pr.title}*\n\n${pr.body.mkString}",
             Some(lib.Bot.user.login),
             Some(mergedBy.avatar_url),
             attachments
