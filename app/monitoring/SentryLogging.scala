@@ -2,9 +2,9 @@ package monitoring
 
 import ch.qos.logback.classic.filter.ThresholdFilter
 import ch.qos.logback.classic.{Logger, LoggerContext}
-import net.kencochrane.raven.RavenFactory.ravenInstance
-import net.kencochrane.raven.dsn.Dsn
-import net.kencochrane.raven.logback.SentryAppender
+import com.getsentry.raven.RavenFactory.ravenInstance
+import com.getsentry.raven.dsn.Dsn
+import com.getsentry.raven.logback.SentryAppender
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory
 import play.api
