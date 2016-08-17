@@ -20,6 +20,7 @@ import java.time.Instant.now
 
 import com.madgag.git._
 import com.madgag.github.Implicits._
+import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreateComment, CreateLabel}
 import com.madgag.scalagithub.model.{PullRequest, Repo}
@@ -57,30 +58,32 @@ object RepoSnapshot {
     "direction" -> "desc"
   )
 
+  def log(message: String)(implicit repo: Repo) = logger.info(s"${repo.full_name} - $message")
+
+  def isMergedToMaster(pr: PullRequest)(implicit repo: Repo): Boolean = pr.merged_at.isDefined && pr.base.ref == repo.default_branch
+
+  def mergedPullRequestsFor(repo: Repo)(implicit g: GitHub): Future[Seq[PullRequest]] = {
+    implicit val r = repo
+    (for {
+      litePullRequests <- repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
+      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).take(10))(pr => repo.pullRequests.get(pr.number).map(_.result))
+    } yield {
+      log(s"PRs merged to master size=${pullRequests.size}")
+      pullRequests
+    }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.number).sorted.reverse)}") }
+  }
+
   def apply(githubRepo: Repo)(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[RepoSnapshot] = {
 
+    implicit val ir: Repo = githubRepo
     implicit val github = Bot.github
 
     val repoId = githubRepo.repoId
-
-    def isMergedToMaster(pr: PullRequest): Boolean = pr.merged_at.isDefined && pr.base.ref == githubRepo.default_branch
-
-    def log(message: String) = logger.info(s"${repoId.fullName} - $message")
-
-    githubRepo.permissions.exists(_.admin)
 
     val hooksF: Future[Seq[Uri]] = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all() else {
       log(s"No admin rights to check hooks")
       Future.successful(Seq.empty)
     }
-
-    val mergedPullRequestsF: Future[Seq[PullRequest]] = (for {
-      litePullRequests <- githubRepo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
-      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).take(10))(pr => githubRepo.pullRequests.get(pr.number).map(_.result))
-    } yield {
-      log(s"PRs merged to master size=${pullRequests.size}")
-      pullRequests
-    }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.number).sorted.reverse)}") }
 
     val gitRepoF = Future {
       RepoUtil.getGitRepo(
@@ -90,7 +93,7 @@ object RepoSnapshot {
     } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
 
     for {
-      mergedPullRequests <- mergedPullRequestsF
+      mergedPullRequests <- mergedPullRequestsFor(githubRepo)
       gitRepo <- gitRepoF
     } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
 
