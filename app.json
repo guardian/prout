@@ -13,6 +13,14 @@
     "APPLICATION_SECRET": {
       "description": "Random text to use as a crypto seed for signing session cookies. See https://www.playframework.com/documentation/2.4.x/ApplicationSecret",
       "required": true
+    },
+    "GITHUB_APP_CLIENT_ID": {
+      "description": "Prout has some admin-only screens to help diagnose problems with setup. If you want to use them, you'll need to add Prout as a Developer application in your GitHub settings: https://github.com/settings/developers",
+      "required": false
+    },
+    "GITHUB_APP_CLIENT_SECRET": {
+      "description": "The Client Secret credentials for GitHub OAuth V2.",
+      "required": false
     }
   }
 }
