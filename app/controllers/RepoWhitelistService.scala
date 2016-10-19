@@ -30,7 +30,7 @@ object RepoWhitelistService extends LazyLogging {
   } yield treeT.map(_.tree.exists(_.path.endsWith(ProutConfigFileName))).getOrElse(false)
 
   private def getAllKnownRepos: Future[RepoWhitelist] = for { // check this to see if it always expends quota...
-    allRepos <- github.listRepos(sort="pushed", direction = "desc").all()
+    allRepos <- github.listRepos(sort="pushed", direction = "desc").takeUpTo(6)
     proutRepos <- Future.traverse(allRepos.filter(_.permissions.exists(_.push))) { repo =>
       hasProutConfigFile(repo).map(hasConfig => if (hasConfig) Some(repo) else None)
     }.map(_.flatten.toSet)
