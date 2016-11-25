@@ -94,11 +94,4 @@ object Api extends Controller {
       } yield Ok(JsArray(scan.map(summary => JsNumber(summary.prCheckpointDetails.pr.number))))
     }
   }
-
-  def travisHook() = Action.async(parse.json) { implicit r =>
-    implicit val travisTestResultReads = Json.reads[TravisTestResult]
-    val result = r.body.as[TravisTestResult]
-    Logger.info(s"travisHook ${result}")
-    TestFeedback(result).notifyGitHub()
-  }
 }

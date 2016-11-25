@@ -277,4 +277,22 @@ case class RepoSnapshot(
       }
     } yield createdLabels
   }.trying
+
+
+  def latestSeenPrByCheckpoint(checkpointName: String): Future[PullRequest] = {
+
+    def isSeen(pr: PullRequest): Future[Boolean] =
+      pr.labels.list().all().map(_.exists(_.name == Seen.labelFor(checkpointName)))
+
+    // merged_at is always defined for merged PRs, so it is ok to call 'get' on an Option here
+    implicit def timeOfMergeDescendingOrdering: Ordering[PullRequest] =
+      Ordering.fromLessThan(_.merged_at.get isAfter _.merged_at.get)
+
+    for {
+      mergedPRs <- mergedPullRequestsFor(repo)
+      seenPRs <- Future.traverse(mergedPRs){ pr => isSeen(pr).map(bool => pr -> bool) }.map(_.collect{ case (pr, true) => pr })
+    } yield {
+      seenPRs.sorted.head // latest closed + merged + seen PR
+    }
+  }
 }
