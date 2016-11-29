@@ -5,7 +5,7 @@ GET         /api/update/$repo<[^/]+/[^/]+>  controllers.Api.updateRepo(repo: Rep
 POST        /api/hooks/github               controllers.Api.githubHook()
 
 # Testing-in-production
-POST        /api/tip/test-feedback          controllers.Tip.testFeedback()
+POST        /api/tip/test-feedback          controllers.TestingInProduction.testFeedback()
 
 ### Non-API endpoints - resources for humans to view
 GET         /                               controllers.Application.index()
