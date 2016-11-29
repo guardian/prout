@@ -36,44 +36,25 @@ object TestFeedback extends LazyLogging {
     }
 
   private def setTestResultLabels(pr: PullRequest, result: TestResult) = Future {
-    val checkpoint = result.checkpoint
-
-    if (testPassed(result)) {
-      val labelledState = new LabelledState(pr, _ == Fail.labelFor(checkpoint))
-      labelledState.updateLabels(Set(Pass.labelFor(checkpoint)))
+    if (result.status == "0") {
+      val labelledState = new LabelledState(pr, _ == Fail.labelFor(result.checkpoint))
+      labelledState.updateLabels(Set(Pass.labelFor(result.checkpoint)))
     }
     else {
-      val labelledState = new LabelledState(pr, _ == Pass.labelFor(checkpoint))
-      labelledState.updateLabels(Set(Fail.labelFor(checkpoint)))
+      val labelledState = new LabelledState(pr, _ == Pass.labelFor(result.checkpoint))
+      labelledState.updateLabels(Set(Fail.labelFor(result.checkpoint)))
     }
   }
 
-  private def buildComment(result: TestResult): String = {
-    val detailsLink = s"[Details](https://travis-ci.org/${result.slug}/builds/${result.build})"
-
-    val screencastLink = s"[Screencast](https://saucelabs.com/tests/${result.screencast})"
-
-    val testsPassedMsg =
+  private def buildComment(result: TestResult): String =
+    if (result.status == "0")
       s"""
-        | :white_check_mark: Post-deployment testing passed! | ${screencastLink} | ${detailsLink}
-        | -------------------------------------------------- | ----------------- | --------------
+         | :white_check_mark: Post-deployment testing passed! | ${s"[Screencast](https://saucelabs.com/tests/${result.screencast})"} | ${s"[Details](https://travis-ci.org/${result.slug}/builds/${result.build})"}
+         | -------------------------------------------------- | ----------------- | --------------
       """.stripMargin
-
-    val testsFailedMsg =
+    else
       s"""
-         | :x: Post-deployment testing failed! | ${screencastLink} | ${detailsLink}
+         | :x: Post-deployment testing failed! | ${s"[Screencast](https://saucelabs.com/tests/${result.screencast})"} | ${s"[Details](https://travis-ci.org/${result.slug}/builds/${result.build})"}
          | ----------------------------------- | ----------------- | --------------
       """.stripMargin
-
-    if (testPassed(result))
-      testsPassedMsg
-    else
-      testsFailedMsg
-  }
-
-  private def testPassed(result: TestResult): Boolean =
-    result.status match {
-      case "0" => true
-      case _ => false
-    }
 }
