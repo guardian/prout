@@ -279,10 +279,9 @@ case class RepoSnapshot(
   }.trying
 
 
-  def latestSeenPrByCheckpoint(checkpointName: String): Future[PullRequest] = {
-
+  def latestSeenPr(): Future[PullRequest] = {
     def isSeen(pr: PullRequest): Future[Boolean] =
-      pr.labels.list().all().map(_.exists(_.name == Seen.labelFor(checkpointName)))
+      pr.labels.list().all().map(_.exists(_.name == Seen.labelFor(latestSeenCheckpoint)))
 
     // merged_at is always defined for merged PRs, so it is ok to call 'get' on an Option here
     implicit def timeOfMergeDescendingOrdering: Ordering[PullRequest] =
@@ -295,4 +294,7 @@ case class RepoSnapshot(
       seenPRs.sorted.head // latest closed + merged + seen PR
     }
   }
+
+  // FIXME: How to find the latest seen checkpoint when there are multiple checkpoints?
+  def latestSeenCheckpoint = activeCheckpoints.head.name
 }

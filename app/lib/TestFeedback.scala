@@ -6,55 +6,43 @@ import com.madgag.scalagithub.model._
 import com.typesafe.scalalogging.LazyLogging
 import controllers.Api
 import lib.labels.{Fail, Pass}
-import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results.Ok
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 
-case class TestResult(slug: String, status: String, build: String, screencast: String, checkpoint: String)
-
-object TestResult {
-  implicit val travisTestResultReads = Json.reads[TestResult]
-}
-
 object TestFeedback extends LazyLogging {
   implicit val checkpointSnapshoter = Api.checkpointSnapshoter
   private implicit val github = Bot.github
 
-  def notifyGitHub(result: TestResult): Future[Result] =
+  def notifyGitHub(): Future[Result] =
     for {
-      repo <- github.getRepo(RepoId.from(result.slug))
+      repo <- github.getRepo(RepoId.from("mario-galic/sandbox"))
       repoSnaphot <- RepoSnapshot(repo)
-      pr <- repoSnaphot.latestSeenPrByCheckpoint(result.checkpoint)
-      comment = buildComment(result)
-      _ <- pr.comments2.create(CreateComment(comment))
-      _ <- setTestResultLabels(pr, result)
+      pr <- repoSnaphot.latestSeenPr
+      masterStatus <- repo.combinedStatusFor(repo.default_branch)
     } yield {
-      logger.info(s"Test result posted on PR:  ${pr.number}, ${pr.title}, ${pr.merged_at}")
-      Ok(s"${pr.number}")
+      masterStatus.statuses.find(_.context.startsWith("continuous-integration/travis-ci")).foreach { testStatus =>
+        pr.comments2.create(CreateComment(buildComment(testStatus.state, testStatus.target_url, repoSnaphot.latestSeenCheckpoint)))
+        setTestResultLabels(pr, testStatus.state, repoSnaphot.latestSeenCheckpoint)
+      }
+      Ok
     }
 
-  private def setTestResultLabels(pr: PullRequest, result: TestResult) = Future {
-    if (result.status == "0") {
-      val labelledState = new LabelledState(pr, _ == Fail.labelFor(result.checkpoint))
-      labelledState.updateLabels(Set(Pass.labelFor(result.checkpoint)))
+  private def setTestResultLabels(pr: PullRequest, testResult: String, checkpoint: String) =
+    if (testResult == "success") {
+      val labelledState = new LabelledState(pr, _ == Fail.labelFor(checkpoint))
+      labelledState.updateLabels(Set(Pass.labelFor(checkpoint)))
     }
     else {
-      val labelledState = new LabelledState(pr, _ == Pass.labelFor(result.checkpoint))
-      labelledState.updateLabels(Set(Fail.labelFor(result.checkpoint)))
+      val labelledState = new LabelledState(pr, _ == Pass.labelFor(checkpoint))
+      labelledState.updateLabels(Set(Fail.labelFor(checkpoint)))
     }
-  }
 
-  private def buildComment(result: TestResult): String =
-    if (result.status == "0")
-      s"""
-         | :white_check_mark: Post-deployment testing passed! | ${s"[Screencast](https://saucelabs.com/tests/${result.screencast})"} | ${s"[Details](https://travis-ci.org/${result.slug}/builds/${result.build})"}
-         | -------------------------------------------------- | ----------------- | --------------
-      """.stripMargin
+
+  private def buildComment(testResult: String, details: String, checkpoint: String): String =
+    if (testResult == "success")
+      s":white_check_mark: Testing in $checkpoint passed! [Details]($details)"
     else
-      s"""
-         | :x: Post-deployment testing failed! | ${s"[Screencast](https://saucelabs.com/tests/${result.screencast})"} | ${s"[Details](https://travis-ci.org/${result.slug}/builds/${result.build})"}
-         | ----------------------------------- | ----------------- | --------------
-      """.stripMargin
+      s":x: Testing in $checkpoint failed! [Details]($details)"
 }
