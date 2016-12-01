@@ -15,9 +15,9 @@ object TestFeedback extends LazyLogging {
   implicit val checkpointSnapshoter = Api.checkpointSnapshoter
   private implicit val github = Bot.github
 
-  def notifyGitHub(): Future[Result] =
+  def notifyGitHub(repoId: RepoId): Future[Result] =
     for {
-      repo <- github.getRepo(RepoId.from("mario-galic/sandbox"))
+      repo <- github.getRepo(repoId)
       repoSnaphot <- RepoSnapshot(repo)
       pr <- repoSnaphot.latestSeenPr
       masterStatus <- repo.combinedStatusFor(repo.default_branch)
