@@ -21,6 +21,7 @@ class Droid {
     for {
       repoSnapshot <- repoSnapshotF
       pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
+      _ <- repoSnapshot.processTestingInProduction()
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
       logger.info(s"${githubRepo.repoId} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")

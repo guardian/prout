@@ -31,7 +31,7 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
-import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
+import lib.labels._
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -263,7 +263,7 @@ case class RepoSnapshot(
   } yield summaryOpts.flatten
 
   def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- PullRequestCheckpointStatus.all
+    prcs <- (PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all)
     checkpointName <- config.checkpointsByName.keySet
     label = prcs.labelFor(checkpointName)
     if !existingLabelNames(label)
@@ -277,4 +277,17 @@ case class RepoSnapshot(
       }
     } yield createdLabels
   }.trying
+
+  def prByMasterCommitOpt = mergedPullRequests.find(_.merge_commit_sha.contains(masterCommit.toObjectId))
+
+  def processTestingInProduction() = // TiP currently works only when there is a single checkpoint
+    activeSnapshotsF.map { activeSnapshots =>
+      if (activeSnapshots.size == 1 && activeSnapshots.head.checkpoint.afterSeen.isDefined) {
+        prByMasterCommitOpt.foreach { masterPr =>
+          repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
+            TestingInProduction.updateFor(masterStatus, masterPr, activeSnapshots.head.checkpoint.name)
+          }
+        }
+      }
+    }
 }
