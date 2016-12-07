@@ -31,7 +31,7 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
-import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
+import lib.labels.{Overdue, PullRequestCheckpointStatus, PullRequestCheckpointTestStatus, Seen}
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -263,7 +263,7 @@ case class RepoSnapshot(
   } yield summaryOpts.flatten
 
   def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- PullRequestCheckpointStatus.all
+    prcs <- (PullRequestCheckpointStatus.all ++ PullRequestCheckpointTestStatus.all)
     checkpointName <- config.checkpointsByName.keySet
     label = prcs.labelFor(checkpointName)
     if !existingLabelNames(label)
