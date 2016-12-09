@@ -31,7 +31,7 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
-import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
+import lib.labels._
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -263,7 +263,7 @@ case class RepoSnapshot(
   } yield summaryOpts.flatten
 
   def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- PullRequestCheckpointStatus.all
+    prcs <- (PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all)
     checkpointName <- config.checkpointsByName.keySet
     label = prcs.labelFor(checkpointName)
     if !existingLabelNames(label)
@@ -277,4 +277,21 @@ case class RepoSnapshot(
       }
     } yield createdLabels
   }.trying
+
+  def activeMasterCheckpointF = activeSnapshotsF.map(_.find(_.commitIdTry.toOption.flatten.contains(masterCommit.toObjectId)))
+
+  def activeMasterPrOpt = mergedPullRequests.find(_.merge_commit_sha.contains(masterCommit.toObjectId))
+
+  def processTestingInProduction() =
+    repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
+      activeMasterCheckpointF.map { _.foreach { masterCheckpoint =>   // PR was seen
+          masterCheckpoint.checkpoint.afterSeen.foreach { _ =>        // repo has after seen config
+            activeMasterPrOpt.foreach { masterPr =>                   // PR is master head
+              TestingInProduction.updateFor(masterStatus, masterPr, masterCheckpoint.checkpoint.name)
+            }
+          }
+        }
+      }
+    }
+
 }

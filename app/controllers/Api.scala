@@ -22,7 +22,7 @@ import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.json.{JsArray, JsNumber}
+import play.api.libs.json.{JsArray, JsNumber, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,11 +48,11 @@ object Api extends Controller {
 
   def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
 
-  def updateFor(RepoId: RepoId): Future[Result] = {
-    Logger.debug(s"update requested for $RepoId")
+  def updateFor(repoId: RepoId): Future[Result] = {
+    Logger.debug(s"update requested for $repoId")
     for {
       whiteList <- RepoWhitelistService.whitelist()
-      update <- updateFor(RepoId, whiteList)
+      update <- updateFor(repoId, whiteList)
     } yield update
   }
 
