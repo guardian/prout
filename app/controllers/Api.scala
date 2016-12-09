@@ -22,7 +22,7 @@ import lib.actions.Parsers.parseGitHubHookJson
 import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.json.{JsArray, JsNumber}
+import play.api.libs.json.{JsArray, JsNumber, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global

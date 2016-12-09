@@ -31,7 +31,7 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.Checkpoint
 import lib.RepoSnapshot._
 import lib.gitgithub.{IssueUpdater, LabelMapping}
-import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
+import lib.labels.{Overdue, PullRequestCheckpointStatus, PullRequestCheckpointTestStatus, Seen}
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -263,7 +263,7 @@ case class RepoSnapshot(
   } yield summaryOpts.flatten
 
   def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- PullRequestCheckpointStatus.all
+    prcs <- (PullRequestCheckpointStatus.all ++ PullRequestCheckpointTestStatus.all)
     checkpointName <- config.checkpointsByName.keySet
     label = prcs.labelFor(checkpointName)
     if !existingLabelNames(label)
@@ -277,4 +277,24 @@ case class RepoSnapshot(
       }
     } yield createdLabels
   }.trying
+
+
+  def latestSeenPr(): Future[PullRequest] = {
+    def isSeen(pr: PullRequest): Future[Boolean] =
+      pr.labels.list().all().map(_.exists(_.name == Seen.labelFor(latestSeenCheckpoint)))
+
+    // merged_at is always defined for merged PRs, so it is ok to call 'get' on an Option here
+    implicit def timeOfMergeDescendingOrdering: Ordering[PullRequest] =
+      Ordering.fromLessThan(_.merged_at.get isAfter _.merged_at.get)
+
+    for {
+      mergedPRs <- mergedPullRequestsFor(repo)
+      seenPRs <- Future.traverse(mergedPRs){ pr => isSeen(pr).map(bool => pr -> bool) }.map(_.collect{ case (pr, true) => pr })
+    } yield {
+      seenPRs.sorted.head // latest closed + merged + seen PR
+    }
+  }
+
+  // FIXME: How to find the latest seen checkpoint when there are multiple checkpoints?
+  def latestSeenCheckpoint = activeCheckpoints.head.name
 }
