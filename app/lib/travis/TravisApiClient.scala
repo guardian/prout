@@ -83,12 +83,10 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
 
   def build(buildId: String) = getJson[BuildResponse](s"/builds/$buildId")
 
-  val triggerdByProutMsg = "Triggered by Prout"
-
-  def requestBuild(repoId: String, travis: TravisCI, buildBranch: String) = {
+  def requestBuild(repoId: String, travis: TravisCI, message: String, buildBranch: String) = {
     val bodyJson = Json.obj(
       "request" -> Json.obj(
-        "message" -> triggerdByProutMsg,
+        "message" -> message,
         "branch" -> buildBranch,
         "config" -> travis.config
       )
@@ -107,15 +105,6 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
     } yield response
   } andThen { case respTry => logger.info(s"requestBuild on $repoId response=$respTry") }
 
-  def completedProutBuild(buildId: String): Future[Boolean] =
-    build(buildId).map {_ match {
-        case JsSuccess(buildResponse, _) =>
-          buildResponse.commit.message == triggerdByProutMsg && Set("passed", "failed").contains(buildResponse.build.state)
-        case _ =>
-          logger.error("Could not get build info from Travis")
-          false // assume false for now
-      }
-    }
 
   val authTokenSupplier = new AuthTokenSupplier[String](auth(githubToken).map(_.get.access_token))
 

@@ -6,6 +6,7 @@ import com.madgag.scalagithub.model._
 import com.netaporter.uri.Uri
 import com.typesafe.scalalogging.LazyLogging
 import lib.labels.{Fail, Pass}
+import play.api.libs.json.JsSuccess
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -14,27 +15,42 @@ import scala.util.Success
 object TestingInProduction extends LazyLogging {
   implicit val github = Bot.github
 
+
+  val TriggerdByProutMsg = "Triggered by Prout"
+
   def updateFor(masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] =
     buildTriggeredByProut(masterStatus).map { proutBuildStatusOpt =>
       proutBuildStatusOpt.foreach(status => setTestResult(seenPr, checkpoint, status))
+    }
+
+
+  val CompletedTravisBuildStates = Set("passed", "failed")
+
+  def completedProutBuild(buildId: String): Future[Boolean] =
+    RepoSnapshot.travisApiClient.build(buildId).map {_ match {
+      case JsSuccess(buildResponse, _) =>
+        buildResponse.commit.message == TriggerdByProutMsg && CompletedTravisBuildStates.contains(buildResponse.build.state)
+      case _ =>
+        logger.error("Could not get build info from Travis")
+        false // assume false for now
+      }
     }
 
   private def buildTriggeredByProut(masterStatus: CombinedStatus): Future[Option[CombinedStatus.Status]] =
     completedTravisBuildStatus(masterStatus) match {
       case Some(buildStatus) =>
         val buildId = Uri.parse(buildStatus.target_url).pathParts.last.part
-        RepoSnapshot.travisApiClient.completedProutBuild(buildId).map { proutBuild =>
-          if (proutBuild)
-            Some(buildStatus)
-          else
-            None
+        completedProutBuild(buildId).map { proutBuild =>
+          if (proutBuild) Some(buildStatus) else None
         }
 
       case None => Future.successful(None)
     }
 
+  val GitHubCompletionStates = Set("success", "failure")
+
   private def completedTravisBuildStatus(masterStatus: CombinedStatus) =
-    masterStatus.statuses.find(status => status.context.startsWith("continuous-integration/travis-ci") && Set("success", "failure").contains(status.state))
+    masterStatus.statuses.find(status => status.context.startsWith("continuous-integration/travis-ci") && GitHubCompletionStates.contains(status.state))
 
   private def setTestResult(pr: PullRequest, checkpoint: String, status: CombinedStatus.Status) = {
     val (labelToSet, labelToRemove) =

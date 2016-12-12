@@ -28,8 +28,9 @@ import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
-import lib.Config.Checkpoint
+import lib.Config.{AfterSeen, Checkpoint}
 import lib.RepoSnapshot._
+import lib.TestingInProduction.TriggerdByProutMsg
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
 import lib.travis.TravisApiClient
@@ -220,7 +221,7 @@ case class RepoSnapshot(
       } {
         logger.info(s"${pr.prId} going to do $travis")
 
-        travisApiClient.requestBuild(repo.full_name, travis, repo.default_branch)
+        travisApiClient.requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
       }
 
       val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
@@ -280,14 +281,20 @@ case class RepoSnapshot(
 
   def prByMasterCommitOpt = mergedPullRequests.find(_.merge_commit_sha.contains(masterCommit.toObjectId))
 
-  def processTestingInProduction() = // TiP currently works only when there is a single checkpoint
+  def checkForResultsOfPostDeployTesting() = {
+    // TiP currently works only when there is a single checkpoint with after seen instructions
     activeSnapshotsF.map { activeSnapshots =>
-      if (activeSnapshots.size == 1 && activeSnapshots.head.checkpoint.afterSeen.isDefined) {
+      val activeCheckpointsWithAfterSeenInstructions: Set[Checkpoint] = activeSnapshots.map(_.checkpoint).filter {
+        _.details.afterSeen.isDefined
+      }
+
+      if (activeCheckpointsWithAfterSeenInstructions.size == 1) {
         prByMasterCommitOpt.foreach { masterPr =>
           repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
-            TestingInProduction.updateFor(masterStatus, masterPr, activeSnapshots.head.checkpoint.name)
+            TestingInProduction.updateFor(masterStatus, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
           }
         }
       }
     }
+  }
 }
