@@ -28,10 +28,11 @@ import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
-import lib.Config.Checkpoint
+import lib.Config.{AfterSeen, Checkpoint}
 import lib.RepoSnapshot._
+import lib.TestingInProduction.TriggerdByProutMsg
 import lib.gitgithub.{IssueUpdater, LabelMapping}
-import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
+import lib.labels._
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
@@ -220,7 +221,7 @@ case class RepoSnapshot(
       } {
         logger.info(s"${pr.prId} going to do $travis")
 
-        travisApiClient.requestBuild(repo.full_name, travis, repo.default_branch)
+        travisApiClient.requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
       }
 
       val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
@@ -263,7 +264,7 @@ case class RepoSnapshot(
   } yield summaryOpts.flatten
 
   def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- PullRequestCheckpointStatus.all
+    prcs <- (PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all)
     checkpointName <- config.checkpointsByName.keySet
     label = prcs.labelFor(checkpointName)
     if !existingLabelNames(label)
@@ -277,4 +278,23 @@ case class RepoSnapshot(
       }
     } yield createdLabels
   }.trying
+
+  def prByMasterCommitOpt = mergedPullRequests.find(_.merge_commit_sha.contains(masterCommit.toObjectId))
+
+  def checkForResultsOfPostDeployTesting() = {
+    // TiP currently works only when there is a single checkpoint with after seen instructions
+    activeSnapshotsF.map { activeSnapshots =>
+      val activeCheckpointsWithAfterSeenInstructions: Set[Checkpoint] = activeSnapshots.map(_.checkpoint).filter {
+        _.details.afterSeen.isDefined
+      }
+
+      if (activeCheckpointsWithAfterSeenInstructions.size == 1) {
+        prByMasterCommitOpt.foreach { masterPr =>
+          repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
+            TestingInProduction.updateFor(masterStatus, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
+          }
+        }
+      }
+    }
+  }
 }

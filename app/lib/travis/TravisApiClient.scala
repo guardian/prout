@@ -57,13 +57,19 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
 
   case class AuthResponse(access_token: String)
 
-  case class Build(id: Int, config: JsValue)
+  case class Build(id: Int, config: JsValue, state: String)
 
   object Build {
     implicit val readsBuild = Json.reads[Build]
   }
 
-  case class BuildResponse(build: Build)
+  case class Commit(sha: String, message: String)
+
+  object Commit {
+    implicit val readsCommit = Json.reads[Commit]
+  }
+
+  case class BuildResponse(build: Build, commit: Commit)
 
   object BuildResponse {
     implicit val readsBuildResponse = Json.reads[BuildResponse]
@@ -77,10 +83,10 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
 
   def build(buildId: String) = getJson[BuildResponse](s"/builds/$buildId")
 
-  def requestBuild(repoId: String, travis: TravisCI, buildBranch: String) = {
+  def requestBuild(repoId: String, travis: TravisCI, message: String, buildBranch: String) = {
     val bodyJson = Json.obj(
       "request" -> Json.obj(
-        "message" -> "Triggered by Prout",
+        "message" -> message,
         "branch" -> buildBranch,
         "config" -> travis.config
       )
@@ -98,6 +104,7 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
       )
     } yield response
   } andThen { case respTry => logger.info(s"requestBuild on $repoId response=$respTry") }
+
 
   val authTokenSupplier = new AuthTokenSupplier[String](auth(githubToken).map(_.get.access_token))
 
