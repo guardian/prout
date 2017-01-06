@@ -50,6 +50,8 @@ object RepoSnapshot {
 
   val logger = Logger(getClass)
 
+  val MaxPRsToScanPerRepo = 30
+
   val WorthyOfScanWindow: java.time.Duration = 14.days
 
   val WorthyOfCommentWindow: java.time.Duration = 12.hours
@@ -74,7 +76,7 @@ object RepoSnapshot {
     implicit val r = repo
     (for {
       litePullRequests <- repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
-      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).filter(isNewEnoughToBeWorthScanning).take(30))(pr => repo.pullRequests.get(pr.number).map(_.result))
+      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).filter(isNewEnoughToBeWorthScanning).take(MaxPRsToScanPerRepo))(pr => repo.pullRequests.get(pr.number).map(_.result))
     } yield {
       log(s"PRs merged to master size=${pullRequests.size}")
       pullRequests
