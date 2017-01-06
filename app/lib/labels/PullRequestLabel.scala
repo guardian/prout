@@ -7,3 +7,7 @@ trait PullRequestLabel {
 
   val defaultColour: String
 }
+
+object PullRequestLabel {
+  val all: Set[PullRequestLabel] = PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all
+}
