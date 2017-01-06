@@ -151,6 +151,11 @@ case class RepoSnapshot(
 
   val allAvailableCheckpoints: Set[Checkpoint] = config.checkpointsByName.values.toSet
 
+  val allPossibleCheckpointPRLabels: Set[String] = for {
+    prLabel <- PullRequestLabel.all
+    checkpoint <- allAvailableCheckpoints
+  } yield prLabel.labelFor(checkpoint.name)
+
   def diagnostic(): Future[Diagnostic] = {
     for {
       snapshots <- snapshotOfAllAvailableCheckpoints()
@@ -185,6 +190,8 @@ case class RepoSnapshot(
 
   val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsStateChangeSummary] with LazyLogging {
     val repo = self.repo
+
+    val repoSnapshot: RepoSnapshot = self
 
     val pf=PeriodFormat.getDefault
 

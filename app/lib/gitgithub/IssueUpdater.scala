@@ -2,7 +2,7 @@ package lib.gitgithub
 
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.model.{PullRequest, Repo}
-import lib.{Bot, Delayer, LabelledState}
+import lib.{Bot, Delayer, LabelledState, RepoSnapshot}
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,6 +24,8 @@ trait IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: State
 
   val repo: Repo
 
+  val repoSnapshot: RepoSnapshot
+
   val labelToStateMapping:LabelMapping[PersistableState]
 
   def ignoreItemsWithExistingState(existingState: PersistableState): Boolean
@@ -35,7 +37,7 @@ trait IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: State
   def process(issueLike: IssueType): Future[Option[Snapshot]] = {
     logger.trace(s"handling ${issueLike.prId.slug}")
     for {
-      oldLabels <- new LabelledState(issueLike, _ => true).currentLabelsF
+      oldLabels <- new LabelledState(issueLike, repoSnapshot.allPossibleCheckpointPRLabels).currentLabelsF
       snapshot <- takeSnapshotOf(issueLike, oldLabels)
     } yield snapshot
   }
