@@ -17,6 +17,7 @@
 package lib
 
 import java.time.Instant.now
+import java.time.ZonedDateTime
 
 import com.madgag.git._
 import com.madgag.github.Implicits._
@@ -49,6 +50,10 @@ object RepoSnapshot {
 
   val logger = Logger(getClass)
 
+  val MaxPRsToScanPerRepo = 30
+
+  val WorthyOfScanWindow: java.time.Duration = 14.days
+
   val WorthyOfCommentWindow: java.time.Duration = 12.hours
 
   val travisApiClient = new TravisApiClient(Bot.accessToken)
@@ -64,10 +69,14 @@ object RepoSnapshot {
   def isMergedToMaster(pr: PullRequest)(implicit repo: Repo): Boolean = pr.merged_at.isDefined && pr.base.ref == repo.default_branch
 
   def mergedPullRequestsFor(repo: Repo)(implicit g: GitHub): Future[Seq[PullRequest]] = {
+    val now = ZonedDateTime.now()
+    val timeThresholdForScan = now.minus(WorthyOfScanWindow)
+    def isNewEnoughToBeWorthScanning(pr: PullRequest) = pr.merged_at.exists(_.isAfter(timeThresholdForScan))
+
     implicit val r = repo
     (for {
       litePullRequests <- repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
-      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).take(10))(pr => repo.pullRequests.get(pr.number).map(_.result))
+      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).filter(isNewEnoughToBeWorthScanning).take(MaxPRsToScanPerRepo))(pr => repo.pullRequests.get(pr.number).map(_.result))
     } yield {
       log(s"PRs merged to master size=${pullRequests.size}")
       pullRequests
