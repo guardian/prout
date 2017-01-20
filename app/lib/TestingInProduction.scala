@@ -50,7 +50,10 @@ object TestingInProduction extends LazyLogging {
   val GitHubCompletionStates = Set("success", "failure")
 
   private def completedTravisBuildStatus(masterStatus: CombinedStatus) =
-    masterStatus.statuses.find(status => status.context.startsWith("continuous-integration/travis-ci") && GitHubCompletionStates.contains(status.state))
+    masterStatus.statuses.find(isCompletedTravisTest)
+
+  def isCompletedTravisTest(status: CombinedStatus.Status): Boolean =
+    status.context.startsWith("continuous-integration/travis-ci") && GitHubCompletionStates(status.state)
 
   private def setTestResult(pr: PullRequest, checkpoint: String, status: CombinedStatus.Status) = {
     val (labelToSet, labelToRemove) =

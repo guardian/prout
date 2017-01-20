@@ -2,6 +2,7 @@ package lib
 
 import com.madgag.git._
 import com.madgag.scalagithub.model.Repo
+import lib.postdeploytesting.TravisTesting
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,6 +23,7 @@ class Droid {
       repoSnapshot <- repoSnapshotF
       pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
       activeSnapshots <- repoSnapshot.activeSnapshotsF
+      _ <- TravisTesting.handleResultsOfPostDeployTesting()
       _ <- repoSnapshot.checkForResultsOfPostDeployTesting()
     } yield {
       logger.info(s"${githubRepo.repoId} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
