@@ -87,7 +87,7 @@ You must embed the commit id in your site - we do this on
 [membership.theguardian.com](https://membership.theguardian.com/)
 for instance.
 
-I use the `sbt-buildinfo` plugin to store the Git commit id in my stored artifact, and then expose
+I use the [`sbt-buildinfo`](https://github.com/sbt/sbt-buildinfo) plugin to store the Git commit id in my stored artifact, and then expose
 that value on the production site. The ugly-looking SBT config is:
 
 ```
