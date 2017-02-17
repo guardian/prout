@@ -5,8 +5,8 @@ import java.net.URLEncoder
 import akka.agent.Agent
 import com.madgag.okhttpscala._
 import com.netaporter.uri.Uri
-import com.squareup.okhttp.Request.Builder
-import com.squareup.okhttp._
+import okhttp3.Request.Builder
+import okhttp3._
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
@@ -45,7 +45,7 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
   def headersContainer(headers: Seq[(String, String)]) = Headers.of(headers.toMap.asJava)
 
   def readResponseFrom[Resp](request: Request)(implicit rResp: Reads[Resp]): Future[JsResult[Resp]] = {
-    logger.info(s"${request.method()} - ${request.httpUrl().encodedPath}")
+    logger.info(s"${request.method()} - ${request.url.encodedPath}")
     okHttpClient.execute(request) { resp => Json.parse(resp.body().byteStream()).validate[Resp] }
   }
 

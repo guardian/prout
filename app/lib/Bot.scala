@@ -2,8 +2,7 @@ package lib
 
 import com.madgag.scalagithub.model.User
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
-import com.squareup.okhttp
-import com.squareup.okhttp.OkHttpClient
+import okhttp3.OkHttpClient
 import play.api.Logger
 
 import scala.concurrent.Await
@@ -21,15 +20,15 @@ trait Bot {
   parentWorkDir.mkdirs()
 
   lazy val okHttpClient = {
-    val client = new OkHttpClient
+    val clientBuilder = new OkHttpClient.Builder()
 
     val responseCacheDir = parentWorkDir / "http-cache"
     responseCacheDir.mkdirs()
     if (responseCacheDir.exists) {
-      client.setCache(new okhttp.Cache(responseCacheDir, 5 * 1024 * 1024))
+      clientBuilder.cache(new okhttp3.Cache(responseCacheDir, 5 * 1024 * 1024))
     } else Logger.warn(s"Couldn't create HttpResponseCache dir ${responseCacheDir.path}")
 
-    client
+    clientBuilder.build()
   }
 
   lazy val githubCredentials = GitHubCredentials.forAccessKey(accessToken, (parentWorkDir / "http-cache").toPath).get

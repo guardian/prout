@@ -21,8 +21,8 @@ import java.time.Instant.now
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 
 import com.madgag.okhttpscala._
-import com.squareup.okhttp.OkHttpClient
-import com.squareup.okhttp.Request.Builder
+import okhttp3.OkHttpClient
+import okhttp3.Request.Builder
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
@@ -34,9 +34,11 @@ import scala.util.Try
 object CheckpointSnapshot {
 
   val client = new OkHttpClient()
-  val insecureClient = new OkHttpClient().setSslSocketFactory(InsecureSocketFactory).setHostnameVerifier(new HostnameVerifier {
-    override def verify(hostname: String, sslSession: SSLSession): Boolean = true
-  })
+  val insecureClient = new OkHttpClient.Builder()
+    .sslSocketFactory(InsecureSocketFactory, SSL.TrustEveryoneTrustManager)
+    .hostnameVerifier(new HostnameVerifier {
+      override def verify(hostname: String, sslSession: SSLSession): Boolean = true
+    }).build()
 
   val hexRegex = """\b\p{XDigit}{40}\b""".r
 
