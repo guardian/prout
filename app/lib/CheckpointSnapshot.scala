@@ -21,10 +21,10 @@ import java.time.Instant.now
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 
 import com.madgag.okhttpscala._
-import okhttp3.OkHttpClient
-import okhttp3.Request.Builder
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
+import okhttp3.OkHttpClient
+import okhttp3.Request.Builder
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 
 import scala.concurrent.ExecutionContext.Implicits.global

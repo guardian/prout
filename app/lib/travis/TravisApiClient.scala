@@ -5,9 +5,9 @@ import java.net.URLEncoder
 import akka.agent.Agent
 import com.madgag.okhttpscala._
 import com.netaporter.uri.Uri
+import com.typesafe.scalalogging.LazyLogging
 import okhttp3.Request.Builder
 import okhttp3._
-import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
