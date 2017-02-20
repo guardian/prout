@@ -16,8 +16,7 @@
 
 package lib
 
-import java.time.Instant.now
-import java.time.ZonedDateTime
+import java.time.{Instant, ZonedDateTime}
 
 import com.madgag.git._
 import com.madgag.github.Implicits._
@@ -29,15 +28,17 @@ import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
-import lib.Config.{AfterSeen, Checkpoint}
+import lib.Config.Checkpoint
 import lib.RepoSnapshot._
+import lib.Responsibility.{createdByAndMergedByFor, responsibilityAndRecencyFor}
 import lib.TestingInProduction.TriggerdByProutMsg
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
+import lib.librato.LibratoApiClient
+import lib.librato.model.{Annotation, Link}
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
-import org.joda.time.format.PeriodFormat
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -202,8 +203,6 @@ case class RepoSnapshot(
 
     val repoSnapshot: RepoSnapshot = self
 
-    val pf=PeriodFormat.getDefault
-
     val labelToStateMapping = new LabelMapping[PRCheckpointState] {
       def labelsFor(s: PRCheckpointState): Set[String] = s.statusByCheckpoint.map {
         case (checkpointName, cs) => cs.labelFor(checkpointName)
@@ -225,6 +224,7 @@ case class RepoSnapshot(
 
     override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary) {
       val pr = snapshot.prCheckpointDetails.pr
+      val now = Instant.now()
 
       val newlySeenSnapshots = snapshot.changedByState.get(Seen).toSeq.flatten
 
@@ -232,12 +232,31 @@ case class RepoSnapshot(
 
       for {
         newlySeenSnapshot <- newlySeenSnapshots
-        afterSeen <- newlySeenSnapshot.snapshot.checkpoint.details.afterSeen
-        travis <- afterSeen.travis
       } {
-        logger.info(s"${pr.prId} going to do $travis")
+        val checkpoint = newlySeenSnapshot.snapshot.checkpoint
+        for { librato <- LibratoApiClient.instanceOpt } {
+          librato.createAnnotation(s"${pr.baseRepo.name}.deploy", Annotation(
+            title = s"PR #${pr.number} : '${pr.title}' deployed",
+            description = Some(createdByAndMergedByFor(pr).capitalize),
+            start_time = pr.merged_at.map(_.toInstant),
+            end_time = Some(now),
+            source = Some(checkpoint.name),
+            links = Seq(Link(
+              rel = "github",
+              label = Some(s"PR #${pr.number}"),
+              href = Uri.parse(pr.html_url)
+            ))
+          ))
+        }
 
-        travisApiClient.requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
+        for {
+          afterSeen <- checkpoint.details.afterSeen
+          travis <- afterSeen.travis
+        } {
+          logger.info(s"${pr.prId} going to do $travis")
+
+          travisApiClient.requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
+        }
       }
 
       val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
@@ -245,22 +264,11 @@ case class RepoSnapshot(
       if (previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
         logger.trace(s"changedSnapshotsByState : ${snapshot.changedByState}")
 
-        val timeSinceMerge = mergeToNow.toPeriod().withMillis(0).toString(pf)
-
-        val mergedByOpt = pr.merged_by
-
-        logger.info(s"mergedByOpt=$mergedByOpt merged_at=${pr.merged_at}")
-
-        val mergedByText = s"merged by ${mergedByOpt.get.atLogin} $timeSinceMerge ago"
-        val responsibleText = if (pr.user.id == mergedByOpt.get.id) mergedByText else {
-          s"created by ${pr.user.atLogin} and $mergedByText"
-        }
-
         def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
           for (changedSnapshots <- snapshot.changedByState.get(status)) {
             val checkpoints = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
 
-            pr.comments2.create(CreateComment(s"${status.name} on $checkpoints ($responsibleText) $advice"))
+            pr.comments2.create(CreateComment(s"${status.name} on $checkpoints (${responsibilityAndRecencyFor(pr)}) $advice"))
           }
         }
 
@@ -272,6 +280,8 @@ case class RepoSnapshot(
         commentOn(Overdue, "What's gone wrong?")
       }
     }
+
+
   }
 
   def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
@@ -314,3 +324,4 @@ case class RepoSnapshot(
     }
   }
 }
+
