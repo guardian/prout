@@ -235,7 +235,7 @@ case class RepoSnapshot(
       } {
         val checkpoint = newlySeenSnapshot.snapshot.checkpoint
         for { librato <- LibratoApiClient.instanceOpt } {
-          librato.createAnnotation(s"${pr.baseRepo.name}.deploy", Annotation(
+          librato.createAnnotation(s"${pr.baseRepo.name}.prout", Annotation(
             title = s"PR #${pr.number} : '${pr.title}' deployed",
             description = Some(createdByAndMergedByFor(pr).capitalize),
             start_time = pr.merged_at.map(_.toInstant),
