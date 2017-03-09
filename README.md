@@ -124,3 +124,7 @@ events to the hook - this is just a place to store the private url where Prout c
 # Run your own instance of Prout
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/guardian/prout)
+
+...you want to run your own instance of Prout - the instance at https://prout-bot.herokuapp.com/
+is really only for the Guardian.
+
