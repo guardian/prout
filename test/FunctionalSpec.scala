@@ -42,6 +42,26 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       scanShouldNotChangeAnything()
     }
 
+    "preserve existing labels" in {
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/feature-branches.top-level-config.git.zip"), "feature-1")
+
+      repoPR.pr.labels.replace(Seq("Special", "Sauce"))
+
+      repoPR setCheckpointTo zeroId
+      
+      scan(shouldAddComment = false) {
+        labelsOn(_) must contain only ("Special", "Sauce", "Pending-on-PROD")
+      }
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) {
+        labelsOn(_) must contain only ("Special", "Sauce", "Seen-on-PROD")
+      }
+
+      scanShouldNotChangeAnything()
+    }
+
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
       implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
 
