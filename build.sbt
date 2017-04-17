@@ -25,13 +25,13 @@ libraryDependencies ++= Seq(
   ws,
   "com.typesafe.akka" %% "akka-agent" % "2.3.2",
   "org.webjars" % "bootstrap" % "3.3.2-1",
-  "com.getsentry.raven" % "raven-logback" % "7.6.0",
-  "com.github.nscala-time" %% "nscala-time" % "2.0.0",
-  "com.netaporter" %% "scala-uri" % "0.4.7",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
+  "com.getsentry.raven" % "raven-logback" % "8.0.2",
+  "com.github.nscala-time" %% "nscala-time" % "2.16.0",
+  "com.netaporter" %% "scala-uri" % "0.4.16",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "4.0",
+  "com.madgag" %% "play-git-hub" % "4.1",
   "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
   "org.scalatestplus" %% "play" % "1.4.0" % "test"
 )
