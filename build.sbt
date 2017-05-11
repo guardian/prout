@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "4.1",
+  "com.madgag" %% "play-git-hub" % "4.3",
   "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
   "org.scalatestplus" %% "play" % "1.4.0" % "test"
 )
