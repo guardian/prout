@@ -6,7 +6,7 @@ import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
-import lib.Config.{Checkpoint, CheckpointDetails}
+import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
 import lib.travis.TravisCI
 import org.eclipse.jgit.lib.ObjectId
 import org.joda
@@ -14,7 +14,8 @@ import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
 
-case class ConfigFile(checkpoints: Map[String, CheckpointDetails]) {
+case class ConfigFile(checkpoints: Map[String, CheckpointDetails],
+  sentry: Option[Sentry] = None) {
 
   lazy val checkpointsByName: Map[String, Checkpoint] = checkpoints.map {
     case (name, details) => name -> Checkpoint(name, details)
@@ -45,6 +46,12 @@ object Config {
 
   case class AfterSeen(travis: Option[TravisCI])
 
+  case class Sentry(projects: Seq[String])
+
+  object Sentry {
+    implicit val readsSentry = Json.reads[Sentry]
+  }
+
   object AfterSeen {
     implicit val readsAfterSeen = Json.reads[AfterSeen]
   }
@@ -53,7 +60,7 @@ object Config {
 
   implicit val readsConfig = Json.reads[ConfigFile]
 
-  def readConfigFrom(configFileObjectId: ObjectId)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources) = {
+  def readConfigFrom(configFileObjectId: ObjectId)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources): JsResult[ConfigFile] = {
     implicit val reader = repoThreadLocal.reader()
     val fileJson = Json.parse(configFileObjectId.open.getCachedBytes(4096))
     Json.fromJson[ConfigFile](fileJson)
@@ -78,8 +85,10 @@ object Config {
     lazy val nameMarkdown = s"[$name](${details.url})"
   }
 
-  case class RepoConfig(checkpointsByFolder: Map[String, JsResult[ConfigFile]]) {
-    val validConfigByFolder: Map[String, ConfigFile] = checkpointsByFolder.collect {
+  case class RepoConfig(
+   configByFolder: Map[String, JsResult[ConfigFile]]
+  ) {
+    val validConfigByFolder: Map[String, ConfigFile] = configByFolder.collect {
       case (folder, JsSuccess(config, _)) => folder -> config
     }
     

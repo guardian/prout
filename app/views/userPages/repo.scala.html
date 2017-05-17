@@ -28,21 +28,22 @@
             @if(!proutPresenceQuickCheck) {
                 <span class="octicon octicon-alert"></span>
                 Quick check for @ProutConfigFileName failed!
-                @if(repoSnapshot.config.checkpointsByFolder.nonEmpty) {
+                @if(repoSnapshot.config.configByFolder.nonEmpty) {
                     GitHub seems to be returning data different to the Git repo itself...
                 }
             }
+
             <p>
                 <ul>
-            @for((folder, configInFolder) <- repoSnapshot.config.checkpointsByFolder) {
+            @for((folder, configInFolder) <- repoSnapshot.config.configByFolder) {
                 <li>@configLink(folder) @configInFolder.asOpt match {
                     case None => {
                         <span class="octicon octicon-alert" title="Invalid Prout JSON"></span>
                     }
                     case Some(validConfig) => {
                         <span class="octicon octicon-check" title="Parsed as valid Prout JSON"></span>
+                        <h5>Checkpoints</h5>
                         <ul>
-                            <h5>Checkpoints</h5>
                             @for(checkpoint <- validConfig.checkpointSet) {
                                 <li>
                                     <b id="checkpoint-@checkpoint.name">@checkpoint.name</b> - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
@@ -67,7 +68,20 @@
                                     }
                                 </li>
                             }
+
                         </ul>
+
+                        @for(sentryConf <- validConfig.sentry) {
+                            <h5>Sentry</h5>
+                            <ul>
+                            @for(sentryProject <- sentryConf.projects) {
+                                <li>@sentryProject</li>
+                            }
+                            </ul>
+                            @if(lib.sentry.SentryApiClient.instanceOpt.isEmpty) {
+                                ...but no Sentry credentials are available! <span class="octicon octicon-alert" title="No Sentry Creds"></span>
+                            }
+                        }
                     }
                 }
                 </li>

@@ -2,6 +2,7 @@ package lib
 
 import com.madgag.git._
 import lib.Config.RepoConfig
+import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
 
@@ -13,7 +14,7 @@ object ConfigFinder {
     w.isSubtree || w.getNameString == ProutConfigFileName
   }
 
-  def configIdMapFrom(c: RevCommit)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources) = {
+  def configIdMapFrom(c: RevCommit)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources): Map[String, ObjectId] = {
     implicit val reader = repoThreadLocal.reader()
     walk(c.getTree)(configFilter).map { tw =>
       val configPath = tw.slashPrefixedPath

@@ -36,8 +36,10 @@ import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
 import lib.librato.LibratoApiClient
 import lib.librato.model.{Annotation, Link}
+import lib.sentry.SentryApiClient
+import lib.sentry.model.CreateRelease
 import lib.travis.TravisApiClient
-import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
 
@@ -152,11 +154,12 @@ case class RepoSnapshot(
 
   Logger.info(s"${repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapValues(_.map(_.number))}")
 
+  lazy val activeConfByPullRequest: Map[PullRequest, Set[ConfigFile]] = affectedFoldersByPullRequest.mapValues {
+    _.map(config.validConfigByFolder(_))
+  }
 
-
-
-  lazy val activeConfigByPullRequest: Map[PullRequest, Set[Checkpoint]] = affectedFoldersByPullRequest.mapValues {
-    _.flatMap(config.validConfigByFolder(_).checkpointSet)
+  lazy val activeCheckpointsByPullRequest: Map[PullRequest, Set[Checkpoint]] = activeConfByPullRequest.mapValues {
+    _.flatMap(_.checkpointSet)
   }
 
   val allAvailableCheckpoints: Set[Checkpoint] = config.checkpointsByName.values.toSet
@@ -170,14 +173,14 @@ case class RepoSnapshot(
     for {
       snapshots <- snapshotOfAllAvailableCheckpoints()
     } yield {
-      Diagnostic(snapshots, mergedPullRequests.map(pr => PRCheckpointDetails(pr, snapshots.filter(s => activeConfigByPullRequest(pr).contains(s.checkpoint)), gitRepo)))
+      Diagnostic(snapshots, mergedPullRequests.map(pr => PRCheckpointDetails(pr, snapshots.filter(s => activeCheckpointsByPullRequest(pr).contains(s.checkpoint)), gitRepo)))
     }
   }
 
   def snapshotOfAllAvailableCheckpoints(): Future[Set[CheckpointSnapshot]] =
     Future.sequence(allAvailableCheckpoints.map(takeCheckpointSnapshot))
 
-  val activeCheckpoints: Set[Checkpoint] = activeConfigByPullRequest.values.flatten.toSet
+  val activeCheckpoints: Set[Checkpoint] = activeCheckpointsByPullRequest.values.flatten.toSet
 
   lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, Future[CheckpointSnapshot]] =
     activeCheckpoints.map { c => c -> takeCheckpointSnapshot(c) }.toMap
@@ -196,7 +199,7 @@ case class RepoSnapshot(
   lazy val activeSnapshotsF = Future.sequence(activeCheckpoints.map(snapshotsOfActiveCheckpointsF))
 
   def checkpointSnapshotsFor(pr: PullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =
-    Future.sequence(activeConfigByPullRequest(pr).filter(!oldState.hasSeen(_)).map(snapshotsOfActiveCheckpointsF))
+    Future.sequence(activeCheckpointsByPullRequest(pr).filter(!oldState.hasSeen(_)).map(snapshotsOfActiveCheckpointsF))
 
   val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsStateChangeSummary] with LazyLogging {
     val repo = self.repo
@@ -225,6 +228,38 @@ case class RepoSnapshot(
     override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary) {
       val pr = snapshot.prCheckpointDetails.pr
       val now = Instant.now()
+
+
+      val sentryProjects = for {
+        configs <- activeConfByPullRequest.get(pr).toSeq
+        config <- configs
+        sentryConf <- config.sentry.toSeq
+        sentryProject <- sentryConf.projects
+      } yield sentryProject
+
+      if (snapshot.newlyMerged) {
+        activeCheckpointsByPullRequest
+        logger.info(s"action taking: ${pr.prId} is newly merged")
+
+        for {
+          sentry <- SentryApiClient.instanceOpt.toSeq if sentryProjects.nonEmpty
+          mergeCommit <- pr.merge_commit_sha
+        } {
+          val mergeRef = lib.sentry.model.Ref(
+            repo.repoId,
+            mergeCommit,
+            Some(pr.base.sha))
+
+          sentry.createRelease(CreateRelease(
+            mergeCommit.name,
+            Some(mergeCommit.name),
+            Some(pr.html_url),
+            sentryProjects.toSeq,
+            refs=Seq(mergeRef)
+          ))
+        }
+      }
+
 
       val newlySeenSnapshots = snapshot.changedByState.get(Seen).toSeq.flatten
 
@@ -276,7 +311,13 @@ case class RepoSnapshot(
           slack.DeployReporter.report(snapshot, hooks)
         }
 
-        commentOn(Seen, "Please check your changes!")
+        val sentryDetails: Option[String] = for {
+          sentry <- SentryApiClient.instanceOpt if sentryProjects.nonEmpty
+        } yield {
+          "Sentry Release information:" + sentryProjects.map(project => s"* ${sentry.releasePageMarkdownFor(project)}").mkString("\n")
+        }
+
+        commentOn(Seen, (Seq("Please check your changes!") ++ sentryDetails).mkString("\n\n"))
         commentOn(Overdue, "What's gone wrong?")
       }
     }
