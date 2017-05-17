@@ -2,5 +2,7 @@
   "checkpoints": {
     "PROD": { "url": "https://prout-bot.herokuapp.com/", "overdue": "10M" }
   },
-  "sentry": ["prout"]
+  "sentry": {
+    "projects": ["prout"]
+  }
 }
