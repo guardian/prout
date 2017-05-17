@@ -29,6 +29,8 @@ case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpoi
   def changeFrom(oldState: PRCheckpointState) =
     (statusByCheckpoint.toSet -- oldState.statusByCheckpoint.toSet).toMap
 
+  val isEmpty = statusByCheckpoint.isEmpty
+
 }
 
 case class PRCommitVisibility(seen: Set[RevCommit], unseen: Set[RevCommit])
@@ -81,9 +83,12 @@ case class PullRequestCheckpointsStateChangeSummary(
 
   override val newPersistableState = checkpointStatuses
 
+  val newlyMerged = oldState.isEmpty && !newPersistableState.isEmpty
+
   val changed: Set[EverythingYouWantToKnowAboutACheckpoint] =
     checkpointStatuses.changeFrom(oldState).keySet.map(prCheckpointDetails.everythingByCheckpointName)
 
   val changedByState: Map[PullRequestCheckpointStatus, Set[EverythingYouWantToKnowAboutACheckpoint]] =
     changed.groupBy(_.checkpointStatus)
+
 }
