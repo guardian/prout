@@ -250,17 +250,18 @@ case class RepoSnapshot(
           sentry <- SentryApiClient.instanceOpt.toSeq
           sentryRelease <- sentryReleaseOpt()
         } {
-          val mergeRef = lib.sentry.model.Ref(
+          val ref = lib.sentry.model.Ref(
             repo.repoId,
             sentryRelease.mergeCommit,
             sentryRelease.mergeCommit.asRevCommit(new RevWalk(repoThreadLocal.reader())).getParents.headOption)
+          logger.info(s"${pr.prId.slug} : ref=$ref")
 
           sentry.createRelease(CreateRelease(
             sentryRelease.version,
             Some(sentryRelease.version),
             Some(pr.html_url),
             sentryRelease.projects,
-            refs=Seq(mergeRef)
+            refs=Seq(ref)
           ))
         }
       }
