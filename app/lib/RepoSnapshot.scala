@@ -242,8 +242,6 @@ case class RepoSnapshot(
         } yield PRSentryRelease(mergeCommit, sentryProjects)
       }
 
-      // sentry <- SentryApiClient.instanceOpt.toSeq
-
       if (snapshot.newlyMerged) {
         activeCheckpointsByPullRequest
         logger.info(s"action taking: ${pr.prId} is newly merged")
@@ -321,9 +319,7 @@ case class RepoSnapshot(
         val sentryDetails: Option[String] = for {
           sentry <- SentryApiClient.instanceOpt
           sentryRelease <- sentryReleaseOpt()
-        } yield {
-          "Sentry Release:\n\n" + sentryRelease.projects.map(project => s"* ${sentry.releasePageMarkdownFor(project, sentryRelease.version)}").mkString("\n")
-        }
+        } yield sentryRelease.detailsMarkdown(sentry.org)
 
         commentOn(Seen, (Seq("Please check your changes!") ++ sentryDetails).mkString("\n\n"))
         commentOn(Overdue, "What's gone wrong?")

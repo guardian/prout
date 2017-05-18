@@ -11,7 +11,7 @@ import play.api.libs.json.Json.{stringify, toJson}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SentryApiClient(token: String , org: String) extends LazyLogging {
+class SentryApiClient(token: String , val org: String) extends LazyLogging {
 
   val okHttpClient = new OkHttpClient
 
@@ -32,16 +32,6 @@ class SentryApiClient(token: String , org: String) extends LazyLogging {
     }
     responseF
   }
-
-  def releasesPageUrlFor(project: String)= s"https://sentry.io/$org/$project/releases/"
-
-  def releasePageUrlFor(project: String, release: String)= s"https://sentry.io/$org/$project/releases/$release/"
-
-  def releasePageMarkdownFor(project: String, release: String)= s"[$project](${releasePageUrlFor(project, release)})"
-
-
-
-
 
 }
 
