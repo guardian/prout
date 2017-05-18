@@ -253,7 +253,7 @@ case class RepoSnapshot(
           val mergeRef = lib.sentry.model.Ref(
             repo.repoId,
             sentryRelease.mergeCommit,
-            Some(pr.base.sha))
+            sentryRelease.mergeCommit.asRevCommit(new RevWalk(repoThreadLocal.reader())).getParents.headOption)
 
           sentry.createRelease(CreateRelease(
             sentryRelease.version,
