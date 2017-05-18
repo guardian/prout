@@ -33,9 +33,12 @@ class SentryApiClient(token: String , org: String) extends LazyLogging {
     responseF
   }
 
-  def releasePageUrlFor(project: String)= s"https://sentry.io/$org/$project/releases/"
+  def releasesPageUrlFor(project: String)= s"https://sentry.io/$org/$project/releases/"
 
-  def releasePageMarkdownFor(project: String)= s"[$project](${releasePageUrlFor(project)})"
+  def releasePageUrlFor(project: String, release: String)= s"https://sentry.io/$org/$project/releases/$release/"
+
+  def releasePageMarkdownFor(project: String, release: String)= s"[$project](${releasePageUrlFor(project, release)})"
+
 
 
 

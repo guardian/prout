@@ -36,7 +36,7 @@ import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
 import lib.librato.LibratoApiClient
 import lib.librato.model.{Annotation, Link}
-import lib.sentry.SentryApiClient
+import lib.sentry.{PRSentryRelease, SentryApiClient}
 import lib.sentry.model.CreateRelease
 import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.{ObjectId, Repository}
@@ -229,32 +229,39 @@ case class RepoSnapshot(
       val pr = snapshot.prCheckpointDetails.pr
       val now = Instant.now()
 
+      def sentryReleaseOpt(): Option[PRSentryRelease] = {
+        val sentryProjects = for {
+          configs <- activeConfByPullRequest.get(pr).toSeq
+          config <- configs
+          sentryConf <- config.sentry.toSeq
+          sentryProject <- sentryConf.projects
+        } yield sentryProject
 
-      val sentryProjects = for {
-        configs <- activeConfByPullRequest.get(pr).toSeq
-        config <- configs
-        sentryConf <- config.sentry.toSeq
-        sentryProject <- sentryConf.projects
-      } yield sentryProject
+        for {
+          mergeCommit <- pr.merge_commit_sha if sentryProjects.nonEmpty
+        } yield PRSentryRelease(mergeCommit, sentryProjects)
+      }
+
+      // sentry <- SentryApiClient.instanceOpt.toSeq
 
       if (snapshot.newlyMerged) {
         activeCheckpointsByPullRequest
         logger.info(s"action taking: ${pr.prId} is newly merged")
 
         for {
-          sentry <- SentryApiClient.instanceOpt.toSeq if sentryProjects.nonEmpty
-          mergeCommit <- pr.merge_commit_sha
+          sentry <- SentryApiClient.instanceOpt.toSeq
+          sentryRelease <- sentryReleaseOpt()
         } {
           val mergeRef = lib.sentry.model.Ref(
             repo.repoId,
-            mergeCommit,
+            sentryRelease.mergeCommit,
             Some(pr.base.sha))
 
           sentry.createRelease(CreateRelease(
-            mergeCommit.name,
-            Some(mergeCommit.name),
+            sentryRelease.version,
+            Some(sentryRelease.version),
             Some(pr.html_url),
-            sentryProjects.toSeq,
+            sentryRelease.projects,
             refs=Seq(mergeRef)
           ))
         }
@@ -312,9 +319,10 @@ case class RepoSnapshot(
         }
 
         val sentryDetails: Option[String] = for {
-          sentry <- SentryApiClient.instanceOpt if sentryProjects.nonEmpty
+          sentry <- SentryApiClient.instanceOpt
+          sentryRelease <- sentryReleaseOpt()
         } yield {
-          "Sentry Release information:\n\n" + sentryProjects.map(project => s"* ${sentry.releasePageMarkdownFor(project)}").mkString("\n")
+          "Sentry Release:\n\n" + sentryRelease.projects.map(project => s"* ${sentry.releasePageMarkdownFor(project, sentryRelease.version)}").mkString("\n")
         }
 
         commentOn(Seen, (Seq("Please check your changes!") ++ sentryDetails).mkString("\n\n"))
