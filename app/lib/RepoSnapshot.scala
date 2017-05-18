@@ -314,7 +314,7 @@ case class RepoSnapshot(
         val sentryDetails: Option[String] = for {
           sentry <- SentryApiClient.instanceOpt if sentryProjects.nonEmpty
         } yield {
-          "Sentry Release information:" + sentryProjects.map(project => s"* ${sentry.releasePageMarkdownFor(project)}").mkString("\n")
+          "Sentry Release information:\n\n" + sentryProjects.map(project => s"* ${sentry.releasePageMarkdownFor(project)}").mkString("\n")
         }
 
         commentOn(Seen, (Seq("Please check your changes!") ++ sentryDetails).mkString("\n\n"))
