@@ -48,8 +48,8 @@ object PRCheckpointDetails {
            ): PRCheckpointDetails = {
 
     val everythingByCheckpoint: Map[Checkpoint, EverythingYouWantToKnowAboutACheckpoint] =
-      (for (snapsot <- snapshots) yield {
-        snapsot.checkpoint -> EverythingYouWantToKnowAboutACheckpoint(pr,snapsot,gitRepo)
+      (for (snapshot <- snapshots) yield {
+        snapshot.checkpoint -> EverythingYouWantToKnowAboutACheckpoint(pr,snapshot,gitRepo)
       }).toMap
 
     PRCheckpointDetails(pr,everythingByCheckpoint)
