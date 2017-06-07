@@ -38,6 +38,17 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
   def labelsOn(pr: PullRequest): Set[String] =
     pr.labels.list().all().futureValue.map(_.name).toSet
 
+  def lastCommentOn(pr: PullRequest): String =
+    pr
+      .comments2
+      .list()
+      .all()
+      .futureValue
+      .lastOption
+      .map(_.body)
+      .getOrElse("")
+
+
   case class RepoPR(pr: PullRequest) {
     val githubRepo = pr.baseRepo
 
