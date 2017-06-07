@@ -35,8 +35,9 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointTo "master"
 
-      scan(shouldAddComment = true) {
-        labelsOn(_) must contain only "Seen-on-PROD"
+      scan(shouldAddComment = true) { pr =>
+        labelsOn(pr) must contain only "Seen-on-PROD"
+        lastCommentOn(pr) must include("Please check your changes!")
       }
 
       scanShouldNotChangeAnything()
@@ -81,8 +82,9 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
         labelsOn(_) must contain only "Pending-on-PROD"
       }
 
-      waitUntil(shouldAddComment = true) {
-        labelsOn(_) must contain only "Overdue-on-PROD"
+      waitUntil(shouldAddComment = true) { pr =>
+        labelsOn(pr) must contain only "Overdue-on-PROD"
+        lastCommentOn(pr) must include("What's gone wrong?")
       }
 
       scanShouldNotChangeAnything()
@@ -114,6 +116,25 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       scan(shouldAddComment = true) {
         labelsOn(_) must contain only "Seen-on-PROD"
       }
+    }
+
+    "use custom messages in comments when set in the config" in {
+      implicit val repoPR = mergePullRequestIn(createTestRepo("/simple-with-messages.git.zip"), "feature-elephant")
+
+      repoPR setCheckpointTo zeroId
+
+      scan(shouldAddComment = false) {
+        labelsOn(_) must contain only "Pending-on-PROD"
+      }
+
+      repoPR setCheckpointTo "master"
+
+      scan(shouldAddComment = true) { pr =>
+        labelsOn(pr) must contain only "Seen-on-PROD"
+        lastCommentOn(pr) must include("This is a custom message for the `Seen` status")
+      }
+
+      scanShouldNotChangeAnything()
     }
 
     "trigger a post-deploy travis build" in {
