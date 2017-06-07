@@ -28,7 +28,7 @@ import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
-import lib.Config.Checkpoint
+import lib.Config.{Checkpoint, CheckpointMessages}
 import lib.RepoSnapshot._
 import lib.Responsibility.{createdByAndMergedByFor, responsibilityAndRecencyFor}
 import lib.TestingInProduction.TriggerdByProutMsg
@@ -305,9 +305,22 @@ case class RepoSnapshot(
       if (previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
         logger.trace(s"changedSnapshotsByState : ${snapshot.changedByState}")
 
-        def commentOn(status: PullRequestCheckpointStatus, advice: String) = {
+        def commentOn(status: PullRequestCheckpointStatus, additionalAdvice: Option[String] = None) = {
+
+          lazy val fileFinder = new FileFinder(masterCommit)
+
           for (changedSnapshots <- snapshot.changedByState.get(status)) {
+
             val checkpoints = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
+
+            val customAdvices = for {
+              s <- changedSnapshots
+              messages <- s.snapshot.checkpoint.details.messages
+              path <- messages.filePathforStatus(status)
+              message <- fileFinder.read(path)
+            } yield message
+            val advices = if(customAdvices.nonEmpty) customAdvices else CheckpointMessages.defaults.get(status).toSet
+            val advice = (advices ++ additionalAdvice).mkString("\n\n")
 
             pr.comments2.create(CreateComment(s"${status.name} on $checkpoints (${responsibilityAndRecencyFor(pr)}) $advice"))
           }
@@ -322,8 +335,8 @@ case class RepoSnapshot(
           sentryRelease <- sentryReleaseOpt()
         } yield sentryRelease.detailsMarkdown(sentry.org)
 
-        commentOn(Seen, (Seq("Please check your changes!") ++ sentryDetails).mkString("\n\n"))
-        commentOn(Overdue, "What's gone wrong?")
+        commentOn(Seen, sentryDetails)
+        commentOn(Overdue)
       }
     }
 
