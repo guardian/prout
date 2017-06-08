@@ -1,0 +1,8 @@
+{
+  "url": "https://www.theguardian.com",
+  "overdue": "20M",
+  "messages": {
+    "seen": "prout/seen.md",
+    "overdue": "prout/overdue.md"
+  }
+}
