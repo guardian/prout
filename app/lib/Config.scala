@@ -50,7 +50,7 @@ object Config {
 
   case class Sentry(projects: Seq[String])
 
-  case class CheckpointMessages(private val filePaths: Map[PullRequestCheckpointStatus, String]) {
+  case class CheckpointMessages(filePaths: Map[PullRequestCheckpointStatus, String]) {
     def filePathforStatus(status: PullRequestCheckpointStatus): Option[String] = filePaths.get(status)
   }
 
