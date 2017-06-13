@@ -7,12 +7,14 @@ import com.madgag.scalagithub.model.PullRequest
 import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
+import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import lib.travis.TravisCI
 import org.eclipse.jgit.lib.ObjectId
 import org.joda
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
+import play.api.libs.functional.syntax._
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails],
   sentry: Option[Sentry] = None) {
@@ -48,12 +50,34 @@ object Config {
 
   case class Sentry(projects: Seq[String])
 
+  case class CheckpointMessages(filePaths: Map[PullRequestCheckpointStatus, String]) {
+    def filePathforStatus(status: PullRequestCheckpointStatus): Option[String] = filePaths.get(status)
+  }
+
   object Sentry {
     implicit val readsSentry = Json.reads[Sentry]
   }
 
   object AfterSeen {
     implicit val readsAfterSeen = Json.reads[AfterSeen]
+  }
+
+  object CheckpointMessages {
+
+    def apply(messages: (PullRequestCheckpointStatus, String)*): CheckpointMessages = CheckpointMessages(messages.toMap)
+
+    implicit val readsMessages: Reads[CheckpointMessages] = (
+      (JsPath \ "seen").readNullable[String].map(_.map(Seen -> _)) and
+        (JsPath \ "overdue").readNullable[String].map(_.map(Overdue -> _))
+      ) { (seen, overdue) =>
+        val messages = Map.empty[PullRequestCheckpointStatus, String] ++ seen.toMap ++ overdue.toMap
+        CheckpointMessages(messages)
+    }
+
+    val defaults: Map[PullRequestCheckpointStatus, String] = Map(
+        Seen -> "Please check your changes!",
+        Overdue -> "What's gone wrong?"
+    )
   }
 
   implicit val readsCheckpointDetails = Json.reads[CheckpointDetails]
@@ -70,7 +94,8 @@ object Config {
     url: Uri,
     overdue: joda.time.Period,
     disableSSLVerification: Option[Boolean] = None,
-    afterSeen: Option[AfterSeen] = None
+    afterSeen: Option[AfterSeen] = None,
+    messages: Option[CheckpointMessages] = None
   ) {
     val sslVerification = !disableSSLVerification.contains(true)
 
