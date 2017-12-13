@@ -167,7 +167,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
             val status = combinedStatus.statuses.find(_.context.startsWith("continuous-integration/travis-ci")).get
 
             val buildId = Uri.parse(status.target_url).pathParts.last.part
-            whenReady(t.build(buildId)) {
+            whenReady(t.build(githubRepo, buildId)) {
               buildResponse => inside(buildResponse) {
                 case JsSuccess(b, _) =>
                   inside (b.build.config \ "script") { case JsDefined(script) =>

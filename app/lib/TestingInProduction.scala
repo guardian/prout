@@ -18,16 +18,17 @@ object TestingInProduction extends LazyLogging {
 
   val TriggerdByProutMsg = "Triggered by Prout"
 
-  def updateFor(masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] =
-    buildTriggeredByProut(masterStatus).map { proutBuildStatusOpt =>
+  def updateFor(repo: Repo, masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] = {
+    buildTriggeredByProut(repo, masterStatus).map { proutBuildStatusOpt =>
       proutBuildStatusOpt.foreach(status => setTestResult(seenPr, checkpoint, status))
     }
+  }
 
 
   val CompletedTravisBuildStates = Set("passed", "failed")
 
-  def completedProutBuild(buildId: String): Future[Boolean] =
-    RepoSnapshot.travisApiClient.build(buildId).map {_ match {
+  def completedProutBuild(repo: Repo, buildId: String): Future[Boolean] =
+    RepoSnapshot.travisApiClient.build(repo, buildId).map {_ match {
       case JsSuccess(buildResponse, _) =>
         buildResponse.commit.message == TriggerdByProutMsg && CompletedTravisBuildStates.contains(buildResponse.build.state)
       case _ =>
@@ -36,11 +37,11 @@ object TestingInProduction extends LazyLogging {
       }
     }
 
-  private def buildTriggeredByProut(masterStatus: CombinedStatus): Future[Option[CombinedStatus.Status]] =
+  private def buildTriggeredByProut(repo: Repo, masterStatus: CombinedStatus): Future[Option[CombinedStatus.Status]] =
     completedTravisBuildStatus(masterStatus) match {
       case Some(buildStatus) =>
         val buildId = Uri.parse(buildStatus.target_url).pathParts.last.part
-        completedProutBuild(buildId).map { proutBuild =>
+        completedProutBuild(repo, buildId).map { proutBuild =>
           if (proutBuild) Some(buildStatus) else None
         }
 

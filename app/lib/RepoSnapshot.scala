@@ -42,7 +42,6 @@ import lib.travis.TravisApiClient
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -295,8 +294,7 @@ case class RepoSnapshot(
           travis <- afterSeen.travis
         } {
           logger.info(s"${pr.prId} going to do $travis")
-
-          travisApiClient.requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
+          travisApiClient.requestBuild(repo, travis, TriggerdByProutMsg)
         }
       }
 
@@ -376,7 +374,7 @@ case class RepoSnapshot(
       if (activeCheckpointsWithAfterSeenInstructions.size == 1) {
         prByMasterCommitOpt.foreach { masterPr =>
           repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
-            TestingInProduction.updateFor(masterStatus, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
+            TestingInProduction.updateFor(repo, masterStatus, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
           }
         }
       }
