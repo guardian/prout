@@ -36,7 +36,7 @@ class TravisApiClient(githubToken: String) extends LazyLogging {
   }
 
   case object TravisProClient extends TravisApi {
-    override val baseEndpoint = Uri.parse("https://api.travis-ci.org")
+    override val baseEndpoint = Uri.parse("https://api.travis-ci.com")
     override val authTokenSupplier = new AuthTokenSupplier[String](auth(githubToken).map(_.get.access_token))
   }
 
