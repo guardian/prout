@@ -18,12 +18,10 @@ object TestingInProduction extends LazyLogging {
 
   val TriggerdByProutMsg = "Triggered by Prout"
 
-  def updateFor(repo: Repo, masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] = {
+  def updateFor(repo: Repo, masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] =
     buildTriggeredByProut(repo, masterStatus).map { proutBuildStatusOpt =>
       proutBuildStatusOpt.foreach(status => setTestResult(seenPr, checkpoint, status))
     }
-  }
-
 
   val CompletedTravisBuildStates = Set("passed", "failed")
 
