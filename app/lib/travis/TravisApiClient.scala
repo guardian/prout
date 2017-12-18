@@ -32,9 +32,9 @@ sealed trait TravisApi extends LazyLogging {
 
   def getJson[Resp](path: String, extraHeaders: Seq[(String, String)])(implicit rResp: Reads[Resp]): Future[JsResult[Resp]] = readResponseFrom(
     new Builder().url(baseEndpoint + path)
-      .headers(headersContainer(DefaultJsonApiHeaders))
-      .get()
-      .build())
+    .headers(headersContainer(DefaultJsonApiHeaders))
+    .get()
+    .build())
 
   def postJson[Req, Resp](path: String, reqBody: Req, extraHeaders: Seq[(String, String)] = Seq.empty)(implicit wReq: Writes[Req], rResp: Reads[Resp]): Future[JsResult[Resp]] = {
     readResponseFrom(new Builder().url(baseEndpoint + path)
@@ -127,7 +127,7 @@ case object TravisProEnvironment extends TravisApi {
   override val baseEndpoint = Uri.parse("https://api.travis-ci.com")
 }
 
-class TravisApiClient(githubToken: String) extends LazyLogging {
+class TravisApiClient(githubToken: String) {
 
   val ciAuth = TravisCiEnvironment.authSupplier(githubToken)
   val proAuth = TravisProEnvironment.authSupplier(githubToken)
