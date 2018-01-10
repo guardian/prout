@@ -15,14 +15,6 @@
         </encoder>
     </appender>
 
-    <appender name="ASYNCFILE" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="FILE" />
-    </appender>
-
-    <appender name="ASYNCSTDOUT" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="STDOUT" />
-    </appender>
-
     <logger name="play" level="INFO" />
     <logger name="application" level="DEBUG" />
 
@@ -33,7 +25,8 @@
     <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
 
     <root level="INFO">
-        <appender-ref ref="ASYNCSTDOUT" />
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
     </root>
 
 </configuration>

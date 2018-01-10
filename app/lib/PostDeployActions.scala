@@ -3,55 +3,53 @@ package lib
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.CreateComment
 import com.madgag.scalagithub.model._
-import com.netaporter.uri.Uri
 import com.typesafe.scalalogging.LazyLogging
 import lib.labels.{Fail, Pass}
+import lib.travis.TravisCI.{buildIdFrom, extractStatusesOfCompletedTravisBuildsFrom}
+import lib.travis.{TravisApi, TravisCI}
 import play.api.libs.json.JsSuccess
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.Success
 
-object TestingInProduction extends LazyLogging {
+object PostDeployActions extends LazyLogging {
   implicit val github = Bot.github
-
 
   val TriggerdByProutMsg = "Triggered by Prout"
 
-  def updateFor(repo: Repo, masterStatus: CombinedStatus, seenPr: PullRequest, checkpoint: String): Future[Unit] =
-    buildTriggeredByProut(repo, masterStatus).map { proutBuildStatusOpt =>
+  def updateFor(repo: Repo, statuses: Seq[Status], seenPr: PullRequest, checkpoint: String): Future[Unit] =
+    githubStatusForLatestCompletedBuildTriggeredByProut(repo, statuses).map { proutBuildStatusOpt =>
       proutBuildStatusOpt.foreach(status => setTestResult(seenPr, checkpoint, status))
     }
 
-  val CompletedTravisBuildStates = Set("passed", "failed")
-
-  def completedProutBuild(repo: Repo, buildId: String): Future[Boolean] =
-    RepoSnapshot.travisApiClient.build(repo, buildId).map {_ match {
+  def isCompletedProutBuild(repo: Repo, buildId: String): Future[Boolean] = TravisApi.clientFor(repo).build(buildId).map {
+    _ match {
       case JsSuccess(buildResponse, _) =>
-        buildResponse.commit.message == TriggerdByProutMsg && CompletedTravisBuildStates.contains(buildResponse.build.state)
+        buildResponse.commit.message == TriggerdByProutMsg && buildResponse.isCompleted
       case _ =>
         logger.error("Could not get build info from Travis")
         false // assume false for now
-      }
     }
+  }
 
-  private def buildTriggeredByProut(repo: Repo, masterStatus: CombinedStatus): Future[Option[CombinedStatus.Status]] =
-    completedTravisBuildStatus(masterStatus) match {
-      case Some(buildStatus) =>
-        val buildId = Uri.parse(buildStatus.target_url).pathParts.last.part
-        completedProutBuild(repo, buildId).map { proutBuild =>
-          if (proutBuild) Some(buildStatus) else None
+  def githubStatusForLatestCompletedBuildTriggeredByProut(repo: Repo, allStatuses: Seq[Status]): Future[Option[Status]] = {
+    val githubStatusesOfCompletedTravisBuilds = extractStatusesOfCompletedTravisBuildsFrom(allStatuses)
+    (Future.traverse(githubStatusesOfCompletedTravisBuilds) {
+      githubStatus =>
+        isCompletedProutBuild(repo, buildIdFrom(githubStatus)).map { proutBuild =>
+          if (proutBuild) Some(githubStatus) else None
         }
-
-      case None => Future.successful(None)
+    }).map { statusesFromCompletedBuildsTriggeredByProut =>
+      val latestStatusForACompletedProutBuildOpt = statusesFromCompletedBuildsTriggeredByProut.flatten.sortBy(_.updated_at.toInstant).lastOption
+      logger.info(s"repo=${repo.repoId.fullName} latest-completed-prout-triggered-build=${latestStatusForACompletedProutBuildOpt.map(_.target_url)} (${statusesFromCompletedBuildsTriggeredByProut.length}/${githubStatusesOfCompletedTravisBuilds.length}/${allStatuses.length})")
+      latestStatusForACompletedProutBuildOpt
     }
+  }
 
   val GitHubCompletionStates = Set("success", "failure")
 
-  private def completedTravisBuildStatus(masterStatus: CombinedStatus) =
-    masterStatus.statuses.find(status => status.context.startsWith("continuous-integration/travis-ci") && GitHubCompletionStates.contains(status.state))
-
-  private def setTestResult(pr: PullRequest, checkpoint: String, status: CombinedStatus.Status) = {
+  private def setTestResult(pr: PullRequest, checkpoint: String, status: Status) = {
     val (labelToSet, labelToRemove) =
       if (status.state == "success")
         (Pass.labelFor(checkpoint), Fail.labelFor(checkpoint))

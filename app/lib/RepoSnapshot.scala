@@ -31,17 +31,18 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.{Checkpoint, CheckpointMessages}
 import lib.RepoSnapshot._
 import lib.Responsibility.{createdByAndMergedByFor, responsibilityAndRecencyFor}
-import lib.TestingInProduction.TriggerdByProutMsg
+import lib.PostDeployActions.TriggerdByProutMsg
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
 import lib.librato.LibratoApiClient
 import lib.librato.model.{Annotation, Link}
 import lib.sentry.{PRSentryRelease, SentryApiClient}
 import lib.sentry.model.CreateRelease
-import lib.travis.TravisApiClient
+import lib.travis.{TravisApi, TravisApiClient, TravisCIOffering}
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -57,8 +58,6 @@ object RepoSnapshot {
   val WorthyOfScanWindow: java.time.Duration = 14.days
 
   val WorthyOfCommentWindow: java.time.Duration = 12.hours
-
-  val travisApiClient = new TravisApiClient(Bot.accessToken)
 
   val ClosedPRsMostlyRecentlyUpdated = Map(
     "state" -> "closed",
@@ -131,8 +130,6 @@ case class RepoSnapshot(
   implicit val github = Bot.github
 
   implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
-
-
 
   lazy val masterCommit:RevCommit = gitRepo.resolve(repo.default_branch).asRevCommit(new RevWalk(repoThreadLocal.reader()))
 
@@ -294,7 +291,7 @@ case class RepoSnapshot(
           travis <- afterSeen.travis
         } {
           logger.info(s"${pr.prId} going to do $travis")
-          travisApiClient.requestBuild(repo, travis, TriggerdByProutMsg)
+          TravisApi.clientFor(repo).requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
         }
       }
 
@@ -373,8 +370,8 @@ case class RepoSnapshot(
 
       if (activeCheckpointsWithAfterSeenInstructions.size == 1) {
         prByMasterCommitOpt.foreach { masterPr =>
-          repo.combinedStatusFor(repo.default_branch).map { masterStatus =>
-            TestingInProduction.updateFor(repo, masterStatus, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
+          repo.statusesFor(repo.default_branch).map { statuses =>
+            PostDeployActions.updateFor(repo, statuses, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
           }
         }
       }
