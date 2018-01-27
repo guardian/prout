@@ -1,6 +1,6 @@
 language: scala
 scala:
-- 2.11.8
+- 2.11.12
 jdk:
 - oraclejdk8
 sudo: false
@@ -11,7 +11,4 @@ cache:
 before_cache:
   - find $HOME/.sbt -name "*.lock" -type f -delete
   - find $HOME/.ivy2/cache -name "*[\[\]\(\)]*.properties" -type f -delete
-env:
-  global:
-  - secure: ay2NiHHNKZ+RvVe/IafJNkJHIDAPB9DKHrbZKJaGc913xdSXvD2K/0JU7RXGgrP0M3mhsztuR3sNlEDm7qDWFIa760YAmAT9yi/QQ25CLyQ7z0xUl5GdT5X6LqoAkQhVlkxYVW4AFGjLMOQaXGLM0Tck0JggMGjE0YhoXMlca20=
 
