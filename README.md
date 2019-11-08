@@ -120,6 +120,15 @@ https://github.com/my-org/my-repo/settings/hooks/new
 events to the hook - this is just a place to store the private url where Prout can find it.
 **Note that Prout needs repo-admin access in order to read the hook data!**
 
+# Status
+
+Prout has a status page per repository available at
+https://prout-bot.herokuapp.com/view/{organisation}/{repository}. This lists useful information
+like if it was able to find `.prout.json`, which commit it thinks is currently deployed in
+production, etc.
+
+Prout also logs lots of useful information which is available in the heroku backend.
+
 
 # Run your own instance of Prout
 
