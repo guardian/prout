@@ -1,8 +1,10 @@
+import scala.util.Try
+
 name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.12"
+scalaVersion := "2.13.1"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -10,9 +12,7 @@ resolvers += Resolver.sonatypeRepo("releases")
 
 buildInfoKeys := Seq[BuildInfoKey](
   name,
-  BuildInfoKey.constant("gitCommitId", Option(System.getenv("SOURCE_VERSION")) getOrElse(try {
-    "git rev-parse HEAD".!!.trim
-  } catch { case e: Exception => "unknown" }))
+  BuildInfoKey.constant("gitCommitId", Option(System.getenv("SOURCE_VERSION")).getOrElse("unknown"))
 )
 
 buildInfoPackage := "app"
@@ -23,17 +23,17 @@ libraryDependencies ++= Seq(
   cache,
   filters,
   ws,
-  "com.typesafe.akka" %% "akka-agent" % "2.3.2",
+  "com.typesafe.akka" %% "akka-agent" % "2.5.26",
   "org.webjars" % "bootstrap" % "3.3.2-1",
   "com.getsentry.raven" % "raven-logback" % "8.0.2",
-  "com.github.nscala-time" %% "nscala-time" % "2.16.0",
-  "com.netaporter" %% "scala-uri" % "0.4.16",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
+  "com.github.nscala-time" %% "nscala-time" % "2.22.0",
+  "io.lemonlabs" %% "scala-uri" % "1.5.1",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.webjars.bower" % "octicons" % "3.1.0",
   "com.madgag" %% "play-git-hub" % "4.5",
   "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
-  "org.scalatestplus" %% "play" % "1.4.0" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % "test"
 )
 
 routesImport ++= Seq("com.madgag.scalagithub.model._","com.madgag.playgithub.Binders._")
