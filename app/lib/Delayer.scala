@@ -17,7 +17,7 @@ object Delayer {
   }
 
   def delayTheFuture[T](f: => Future[T]): Future[T] = {
-    val p = Promise[T]
+    val p = Promise[T]()
     doAfterSmallDelay(p.completeWith(f))
     p.future
   }

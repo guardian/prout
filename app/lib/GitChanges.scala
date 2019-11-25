@@ -8,7 +8,7 @@ import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, PathFilterGroup, TreeFilter}
 
-import scala.collection.convert.wrapAll._
+import scala.jdk.CollectionConverters._
 
 object GitChanges {
 
@@ -45,7 +45,7 @@ object GitChanges {
     val affectedRootPaths = rootPaths.filter(_ => mergeBase.getTree != head.getTree)
     val affectedSubFolderPaths = if (subFolderPaths.isEmpty) Set.empty
     else {
-      val treeFilter = AndTreeFilter.create(PathFilterGroup.createFromStrings(subFolderPaths.map(_.stripPrefix("/"))), treeDiffFilter)
+      val treeFilter = AndTreeFilter.create(PathFilterGroup.createFromStrings(subFolderPaths.map(_.stripPrefix("/")).asJava), treeDiffFilter)
       walk(mergeBase.getTree, head.getTree)(treeFilter, postOrderTraversal = true).map(_.slashPrefixedPath + "/").toSet.filter(subFolderPaths)
     }
 

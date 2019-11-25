@@ -2,15 +2,12 @@ package controllers
 
 import java.util.concurrent.atomic.AtomicReference
 
+import akka.actor.Scheduler
 import com.madgag.github.Implicits._
-import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.model.{Repo, RepoId}
-import com.typesafe.scalalogging.LazyLogging
 import lib.Bot
 import lib.ConfigFinder.ProutConfigFileName
-import play.api.Logger
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
+import play.api.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -18,7 +15,10 @@ import scala.concurrent.duration._
 
 case class RepoWhitelist(allKnownRepos: Set[RepoId], publicRepos: Set[RepoId])
 
-object RepoWhitelistService extends LazyLogging {
+class RepoWhitelistService(
+  // configuration: Configuration,
+  scheduler: Scheduler
+) extends Logging {
   implicit val github = Bot.github
 
   lazy val repoWhitelist = new AtomicReference[Future[RepoWhitelist]](getAllKnownRepos)
@@ -37,9 +37,9 @@ object RepoWhitelistService extends LazyLogging {
   } yield RepoWhitelist(proutRepos.map(_.repoId), proutRepos.filterNot(_.`private`).map(_.repoId))
 
 
-  def start() {
-    Logger.info("Starting background repo fetch")
-    Akka.system.scheduler.schedule(1.second, 60.seconds) {
+  def start(): Unit = {
+    logger.info("Starting background repo fetch")
+    scheduler.schedule(1.second, 60.seconds) {
       repoWhitelist.set(getAllKnownRepos)
       github.checkRateLimit().foreach(status => logger.info(status.summary))
     }

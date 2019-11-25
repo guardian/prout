@@ -32,7 +32,7 @@ trait IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: State
 
   def snapshot(oldState: PersistableState, issue: IssueType): Future[Snapshot]
 
-  def actionTaker(snapshot: Snapshot)
+  def actionTaker(snapshot: Snapshot): Unit
 
   def process(issueLike: IssueType): Future[Option[Snapshot]] = {
     logger.trace(s"handling ${issueLike.prId.slug}")

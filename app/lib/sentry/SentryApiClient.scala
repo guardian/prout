@@ -3,15 +3,17 @@ package lib.sentry
 import com.madgag.okhttpscala._
 import io.lemonlabs.uri.Url
 import com.typesafe.scalalogging.LazyLogging
+import io.lemonlabs.uri.Url
 import lib.sentry.model.CreateRelease
 import okhttp3.Request.Builder
 import okhttp3._
+import play.api.Configuration
 import play.api.libs.json.Json.{stringify, toJson}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SentryApiClient(token: String , val org: String) extends LazyLogging {
+class SentryApiClient(credentials: SentryApiClient.Credentials) extends LazyLogging {
 
   val okHttpClient = new OkHttpClient
 
@@ -21,8 +23,8 @@ class SentryApiClient(token: String , val org: String) extends LazyLogging {
 
   def createRelease(createReleaseCommand: CreateRelease): Future[_] = {
 
-    val request = new Builder().url(s"$baseEndpoint/organizations/$org/releases/")
-      .header("Authorization", s"Bearer $token")
+    val request = new Builder().url(s"$baseEndpoint/organizations/${credentials.org}/releases/")
+      .header("Authorization", s"Bearer ${credentials.token}")
       .post(RequestBody.create(JsonMediaType, stringify(toJson(createReleaseCommand))))
       .build()
 
@@ -38,12 +40,11 @@ class SentryApiClient(token: String , val org: String) extends LazyLogging {
 
 object SentryApiClient {
 
-  import play.api.Play.current
-  val config = play.api.Play.configuration
+  case class Credentials(token: String, org: String)
 
-  lazy val instanceOpt = for {
-    org <- config.getString("sentry.org")
-    token <- config.getString("sentry.token")
-  } yield new SentryApiClient(token,org)
+  def credentialsFor(config: Configuration): Option[Credentials] = for {
+    org <- config.getOptional[String]("sentry.org")
+    token <- config.getOptional[String]("sentry.token")
+  } yield new Credentials(token,org)
 
 }

@@ -14,6 +14,7 @@ import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
 import play.api.libs.functional.syntax._
+import com.madgag.scala.collection.decorators._
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails],
   sentry: Option[Sentry] = None) {
@@ -112,13 +113,13 @@ object Config {
     val foldersWithValidConfig: Set[String] = validConfigByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- validConfigByFolder.view.mapValues(_.checkpoints.keySet).toSeq
+      (folder, checkpointNames) <- validConfigByFolder.mapV(_.checkpoints.keySet).toSeq
       checkpointName <- checkpointNames
-    } yield checkpointName -> folder).groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+    } yield checkpointName -> folder).groupMap(_._1)(_._2)
 
     val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
 
-    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: ${checkpointsNamedInMultipleFolders.mapValues(_.mkString("(",", ",")"))}")
+    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: ${checkpointsNamedInMultipleFolders.mapV(_.mkString("(",", ",")"))}")
 
     val checkpointsByName: Map[String, Checkpoint] = validConfigByFolder.values.map(_.checkpointsByName).fold(Map.empty)(_ ++ _)
   }

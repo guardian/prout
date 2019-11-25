@@ -7,20 +7,18 @@ import com.getsentry.raven.dsn.Dsn
 import com.getsentry.raven.logback.SentryAppender
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory
-import play.api
-import play.api.Play.configuration
+import play.api.{Configuration, Logging}
 
-object SentryLogging {
-  import play.api.Play.current
+class SentryLogging(configuration: Configuration) extends Logging {
 
-  val dsnOpt = configuration.getString("sentry.dsn").map(new Dsn(_))
+  val dsnOpt = configuration.getOptional[String]("sentry.dsn").map(new Dsn(_))
 
-  def init() {
+  def init(): Unit = {
     dsnOpt match {
       case None =>
-        api.Logger.warn("No Sentry logging configured (OK for dev)")
+        logger.warn("No Sentry logging configured (OK for dev)")
       case Some(dsn) =>
-        api.Logger.info(s"Initialising Sentry logging for ${dsn.getHost}")
+        logger.info(s"Initialising Sentry logging for ${dsn.getHost}")
         val tags = Map("gitCommitId" -> app.BuildInfo.gitCommitId)
         val tagsString = tags.map { case (key, value) => s"$key:$value" }.mkString(",")
 

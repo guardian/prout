@@ -18,6 +18,7 @@ package lib
 
 import java.time.{Instant, ZonedDateTime}
 
+import com.madgag.scala.collection.decorators._
 import com.madgag.git._
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
@@ -45,7 +46,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.Success
-import scalax.file.ImplicitConversions._
 
 object RepoSnapshot {
 
@@ -89,14 +89,9 @@ object RepoSnapshot {
 
     val repoId = githubRepo.repoId
 
-    val hooksF: Future[Seq[Uri]] = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all() else {
-      log(s"No admin rights to check hooks")
-      Future.successful(Seq.empty)
-    }
-
     val gitRepoF = Future {
       RepoUtil.getGitRepo(
-        Bot.parentWorkDir / repoId.owner / repoId.name,
+        Bot.parentWorkDir.resolve(repoId.fullName).toFile,
         githubRepo.clone_url,
         Some(Bot.githubCredentials.git))
     } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
@@ -104,7 +99,7 @@ object RepoSnapshot {
     for {
       mergedPullRequests <- mergedPullRequestsFor(githubRepo)
       gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
+    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, checkpointSnapshoter)
 
   }
 }
@@ -121,7 +116,6 @@ case class RepoSnapshot(
   repo: Repo,
   gitRepo: Repository,
   mergedPullRequests: Seq[PullRequest],
-  hooksF: Future[Seq[Uri]]  ,
   checkpointSnapshoter: CheckpointSnapshoter) {
   self =>
 
@@ -151,13 +145,13 @@ case class RepoSnapshot(
     folder => folder -> mergedPullRequests.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
   }.toMap
 
-  Logger.info(s"${repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapValues(_.map(_.number))}")
+  Logger.info(s"${repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapV(_.map(_.number))}")
 
-  lazy val activeConfByPullRequest: Map[PullRequest, Set[ConfigFile]] = affectedFoldersByPullRequest.mapValues {
+  lazy val activeConfByPullRequest: Map[PullRequest, Set[ConfigFile]] = affectedFoldersByPullRequest.mapV {
     _.map(config.validConfigByFolder(_))
   }
 
-  lazy val activeCheckpointsByPullRequest: Map[PullRequest, Set[Checkpoint]] = activeConfByPullRequest.mapValues {
+  lazy val activeCheckpointsByPullRequest: Map[PullRequest, Set[Checkpoint]] = activeConfByPullRequest.mapV {
     _.flatMap(_.checkpointSet)
   }
 
@@ -224,7 +218,7 @@ case class RepoSnapshot(
         PullRequestCheckpointsStateChangeSummary(details, oldState)
       }
 
-    override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary) {
+    override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary): Unit = {
       val pr = snapshot.prCheckpointDetails.pr
       val now = Instant.now()
 
@@ -314,10 +308,6 @@ case class RepoSnapshot(
 
             pr.comments2.create(CreateComment(s"${status.name} on $checkpoints (${responsibilityAndRecencyFor(pr)}) $advice"))
           }
-        }
-
-        for (hooks <- hooksF) {
-          slack.DeployReporter.report(snapshot, hooks)
         }
 
         val sentryDetails: Option[String] = for {

@@ -1,15 +1,13 @@
 package lib
 
 import com.madgag.playgithub.auth.Client
+import play.api.Configuration
 
-object GithubAppConfig {
-
-  import play.api.Play.current
-  val config = play.api.Play.configuration
+class GithubAppConfig(config: Configuration) {
 
   val authClient = {
-    val clientId = config.getString("github.clientId").getOrElse("blah")
-    val clientSecret = config.getString("github.clientSecret").getOrElse("blah")
+    val clientId = config.get[String]("github.clientId")
+    val clientSecret = config.get[String]("github.clientSecret")
 
     Client(clientId, clientSecret)
   }

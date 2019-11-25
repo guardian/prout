@@ -19,8 +19,7 @@ package controllers
 import com.madgag.scalagithub.model.RepoId
 import lib._
 import lib.actions.Parsers.parseGitHubHookJson
-import play.api.Logger
-import play.api.Play.current
+import play.api.{Logger, Logging}
 import play.api.cache.Cache
 import play.api.libs.json.{JsArray, JsNumber}
 import play.api.mvc._
@@ -28,30 +27,30 @@ import play.api.mvc._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object Api extends Controller {
-
-  val logger = Logger(getClass)
+class Api(
+  repoWhitelistService: RepoWhitelistService
+) extends BaseController with Logging {
 
   val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshot(_)
 
   def githubHook() = Action.async(parse.json.map(parseGitHubHookJson)) { implicit request =>
     val repoId = request.body
     val githubDeliveryGuid = request.headers.get("X-GitHub-Delivery")
-    Logger.info(s"githubHook repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
+    logger.info(s"githubHook repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
     updateFor(repoId)
   }
 
   def updateRepo(repoId: RepoId) = Action.async { implicit request =>
-    Logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
+    logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
     updateFor(repoId)
   }
 
   def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
 
   def updateFor(repoId: RepoId): Future[Result] = {
-    Logger.debug(s"update requested for $repoId")
+    logger.debug(s"update requested for $repoId")
     for {
-      whiteList <- RepoWhitelistService.whitelist()
+      whiteList <- repoWhitelistService.whitelist()
       update <- updateFor(repoId, whiteList)
     } yield update
   }

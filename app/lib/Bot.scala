@@ -1,52 +1,51 @@
 package lib
 
+import java.io.File
+import java.nio.file.Paths
+
 import com.madgag.scalagithub.model.User
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import okhttp3.OkHttpClient
-import play.api.Logger
+import play.api.{Logger, Logging}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
 
-trait Bot {
+trait Bot extends Logging {
 
   val accessToken: String
 
-  val parentWorkDir = Path.fromString("/tmp") / "bot" / "working-dir"
+  val parentWorkDir = Paths.get("/tmp/bot/working-dir")
 
-  parentWorkDir.mkdirs()
+  parentWorkDir.toFile.mkdirs()
 
   lazy val okHttpClient = {
     val clientBuilder = new OkHttpClient.Builder()
 
-    val responseCacheDir = parentWorkDir / "http-cache"
+    val responseCacheDir = parentWorkDir.resolve("http-cache").toFile
     responseCacheDir.mkdirs()
     if (responseCacheDir.exists) {
       clientBuilder.cache(new okhttp3.Cache(responseCacheDir, 5 * 1024 * 1024))
-    } else Logger.warn(s"Couldn't create HttpResponseCache dir ${responseCacheDir.path}")
+    } else logger.warn(s"Couldn't create HttpResponseCache dir ${responseCacheDir.getAbsolutePath}")
 
     clientBuilder.build()
   }
 
-  lazy val githubCredentials = GitHubCredentials.forAccessKey(accessToken, (parentWorkDir / "http-cache").toPath).get
+  lazy val githubCredentials = GitHubCredentials.forAccessKey(accessToken, parentWorkDir.resolve("http-cache")).get
 
   lazy val github = new GitHub(githubCredentials)
 
   lazy val user: User = {
     val myself = Await.result(github.getUser(), 3 seconds)
-    Logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.atLogin}")
+    logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.atLogin}")
     myself
   }
 
 }
 
 object Bot extends Bot {
-  import play.api.Play.current
-  val config = play.api.Play.configuration.underlying
 
-  val accessToken: String = config.getString("github.access.token")
+  val accessToken: String = config.get[String]("github.access.token")
 
 }

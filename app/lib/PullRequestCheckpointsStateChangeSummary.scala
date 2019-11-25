@@ -2,6 +2,7 @@ package lib
 
 
 import com.github.nscala_time.time.Imports._
+import com.madgag.scala.collection.decorators._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
@@ -11,7 +12,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
 
-  val checkpointsByStatus = statusByCheckpoint.groupBy(_._2).mapValues(_.keySet).withDefaultValue(Set.empty)
+  val checkpointsByStatus = statusByCheckpoint.groupBy(_._2).mapV(_.keySet).withDefaultValue(Set.empty)
 
   def hasSeen(checkpoint: Checkpoint) = checkpointsByStatus(Seen).contains(checkpoint.name)
 
@@ -64,7 +65,7 @@ case class PRCheckpointDetails(
   val everythingByCheckpointName = for ((c, e) <- everythingByCheckpoint) yield c.name -> e
 
   val checkpointsByState: Map[PullRequestCheckpointStatus, Set[Checkpoint]] =
-    everythingByCheckpoint.values.groupBy(_.checkpointStatus).mapValues(_.map(_.snapshot.checkpoint).toSet)
+    everythingByCheckpoint.values.groupUp(_.checkpointStatus)(_.map(_.snapshot.checkpoint).toSet)
 
   val soonestPendingCheckpointOverdueTime: Option[java.time.Instant] = {
     implicit val periodOrdering = Ordering.by[Period, Duration](_.toStandardDuration)

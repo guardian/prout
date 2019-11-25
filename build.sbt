@@ -4,7 +4,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.1"
+scalaVersion := "2.13.3"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -23,6 +23,8 @@ libraryDependencies ++= Seq(
   ehcache,
   filters,
   ws,
+  "com.softwaremill.macwire" %% "macros" % "2.3.7",
+  "com.madgag" %% "scala-collection-plus" % "0.5",
   "com.typesafe.akka" %% "akka-agent" % "2.5.26",
   "org.webjars" % "bootstrap" % "3.3.2-1",
   "com.getsentry.raven" % "raven-logback" % "8.0.2",
