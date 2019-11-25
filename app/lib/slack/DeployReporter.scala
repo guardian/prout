@@ -1,6 +1,6 @@
 package lib.slack
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import com.netaporter.uri.dsl._
 import lib.PullRequestCheckpointsStateChangeSummary
 import lib.labels.Seen
@@ -12,7 +12,7 @@ import play.api.libs.ws.WS
 
 object DeployReporter {
 
-  def report(snapshot: PullRequestCheckpointsStateChangeSummary, hooks: Seq[Uri]) {
+  def report(snapshot: PullRequestCheckpointsStateChangeSummary, hooks: Seq[Url]) {
     val slackHooks = hooks.filter(_.host.contains("hooks.slack.com"))
     if (slackHooks.nonEmpty) {
       for (changedSnapshots <- snapshot.changedByState.get(Seen)) {

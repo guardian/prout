@@ -2,7 +2,7 @@ package lib.sentry.model
 
 import java.time.Instant
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import org.eclipse.jgit.lib.ObjectId
 import play.api.libs.json.{JsString, Json, Writes}
 import Sentry._
@@ -60,7 +60,7 @@ refs (array) – an optional way to indicate the start and end commits for each 
 case class CreateRelease(
   version: String,
   ref: Option[String] = None,
-  url: Option[Uri] = None,
+  url: Option[Url] = None,
   projects: Seq[String],
   dateReleased: Option[Instant] = None,
   commits: Seq[Commit] = Seq.empty,
@@ -68,8 +68,8 @@ case class CreateRelease(
 )
 
 object CreateRelease {
-  implicit val writesUri = new Writes[Uri] {
-    def writes(uri: Uri) = JsString(uri.toString)
+  implicit val writesUri = new Writes[Url] {
+    def writes(uri: Url) = JsString(uri.toString)
   }
 
   implicit val writesCreateRelease = Json.writes[CreateRelease]

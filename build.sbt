@@ -20,7 +20,7 @@ buildInfoPackage := "app"
 lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 
 libraryDependencies ++= Seq(
-  cache,
+  ehcache,
   filters,
   ws,
   "com.typesafe.akka" %% "akka-agent" % "2.5.26",
@@ -29,10 +29,9 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.22.0",
   "io.lemonlabs" %% "scala-uri" % "1.5.1",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-  "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "4.5",
-  "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
+  "com.madgag" %% "play-git-hub" % "4.7-SNAPSHOT",
+  "com.madgag.scala-git" %% "scala-git-test" % "4.3" % "test",
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % "test"
 )
 

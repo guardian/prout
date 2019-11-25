@@ -1,6 +1,6 @@
 package lib
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import lib.Config.{CheckpointDetails, CheckpointMessages}
 import lib.labels.{Overdue, Seen}
 import org.joda.time.Period.minutes

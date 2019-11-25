@@ -5,7 +5,7 @@ import java.time.Instant
 import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import com.madgag.time.Implicits._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.ObjectId
@@ -43,7 +43,7 @@ object Config {
 
   implicit val readsPeriod: Reads[Period] = readsParseableString(input => Period.parse("PT"+input))
 
-  implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.parse(input))
+  implicit val readsUri: Reads[Url] = readsParseableString(input => Url.parse(input))
 
   case class Sentry(projects: Seq[String])
 
@@ -84,7 +84,7 @@ object Config {
   }
 
   case class CheckpointDetails(
-    url: Uri,
+    url: Url,
     overdue: joda.time.Period,
     disableSSLVerification: Option[Boolean] = None,
     messages: Option[CheckpointMessages] = None
@@ -112,9 +112,9 @@ object Config {
     val foldersWithValidConfig: Set[String] = validConfigByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- validConfigByFolder.mapValues(_.checkpoints.keySet).toSeq
+      (folder, checkpointNames) <- validConfigByFolder.view.mapValues(_.checkpoints.keySet).toSeq
       checkpointName <- checkpointNames
-    } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
+    } yield checkpointName -> folder).groupBy(_._1).view.mapValues(_.map(_._2)).toMap
 
     val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
 

@@ -1,7 +1,7 @@
 package lib.librato
 
 import com.madgag.okhttpscala._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import com.typesafe.scalalogging.LazyLogging
 import lib.librato.model.Annotation
 import okhttp3.Request.Builder
@@ -15,7 +15,7 @@ class LibratoApiClient(username: String, token: String) extends LazyLogging {
 
   val okHttpClient = new OkHttpClient
 
-  val baseEndpoint = Uri.parse("https://metrics-api.librato.com/v1")
+  val baseEndpoint = Url.parse("https://metrics-api.librato.com/v1")
 
   val JsonMediaType = MediaType.parse("application/json")
 

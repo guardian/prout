@@ -2,12 +2,12 @@ package lib.librato.model
 
 import java.time.Instant
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import play.api.libs.json.{JsNumber, JsString, Json, Writes}
 
 case class Link(
   rel: String,
-  href: Uri,
+  href: Url,
   label: Option[String] = None
 )
 
@@ -21,8 +21,8 @@ case class Annotation(
 )
 
 object Annotation {
-  implicit val writesUri = new Writes[Uri] {
-    def writes(uri: Uri) = JsString(uri.toString)
+  implicit val writesUri = new Writes[Url] {
+    def writes(uri: Url) = JsString(uri.toString)
   }
 
   implicit val writesLink = Json.writes[Link]

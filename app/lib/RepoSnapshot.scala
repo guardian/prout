@@ -25,7 +25,7 @@ import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreateComment, CreateLabel}
 import com.madgag.scalagithub.model.{PullRequest, Repo}
 import com.madgag.time.Implicits._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Url
 import com.netaporter.uri.dsl._
 import com.typesafe.scalalogging.LazyLogging
 import lib.Config.{Checkpoint, CheckpointMessages}
