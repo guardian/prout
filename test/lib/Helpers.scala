@@ -1,13 +1,12 @@
 package lib
 
 import java.net.URL
-
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
-import org.scalatest.Inspectors
+import org.scalatest.{Inside, Inspectors}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatestplus.play._
@@ -20,7 +19,7 @@ import scalax.file.Path
 
 case class PRText(title: String, desc: String)
 
-trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFutures with Eventually {
+trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFutures with Eventually with Inside {
 
   val logger = Logger(getClass)
 
@@ -78,15 +77,19 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
 
     val scheduler = new ScanScheduler(githubRepo.repoId, checkpointSnapshoter, github)
+
+    override val toString: String = pr.html_url
   }
 
   def scan[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR) {
     val commentsBeforeScan = repoPR.listComments()
     whenReady(repoPR.scheduler.scan()) { s =>
       eventually {
-        val commentsAfterScan = repoPR.listComments()
-        commentsAfterScan must have size (commentsBeforeScan.size+(if (shouldAddComment) 1 else 0))
-        issueFun(repoPR.currentPR())
+        inside(repoPR) { case _ =>
+          val commentsAfterScan = repoPR.listComments()
+          commentsAfterScan must have size (commentsBeforeScan.size+(if (shouldAddComment) 1 else 0))
+          issueFun(repoPR.currentPR())
+        }
       }
     }
   }
