@@ -131,7 +131,11 @@ case class RepoSnapshot(
 
   implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
 
-  lazy val masterCommit:RevCommit = gitRepo.resolve(repo.default_branch).asRevCommit(new RevWalk(repoThreadLocal.reader()))
+  lazy val masterCommit:RevCommit = {
+    val id: ObjectId = gitRepo.resolve(repo.default_branch)
+    Logger.info(s"Need to look at ${repo.full_name}, commit $id")
+    id.asRevCommit(new RevWalk(repoThreadLocal.reader()))
+  }
 
   lazy val config = ConfigFinder.config(masterCommit)
 
