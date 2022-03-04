@@ -19,4 +19,6 @@ jobs:
         with:
           java-version: adopt@1.11
       - name: Build and Test
+        env:
+          PROUT_GITHUB_ACCESS_TOKEN: ${{ secrets.PROUT_GITHUB_ACCESS_TOKEN }}
         run: sbt test
