@@ -44,6 +44,10 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
     config.save()
 
     val defaultBranchName = testGithubRepo.default_branch
+    if (Option(localGitRepo.getRef(defaultBranchName)).isEmpty) {
+      println(s"Going to create a '$defaultBranchName' branch")
+      localGitRepo.git.branchCreate().setName(defaultBranchName).setStartPoint("HEAD").call()
+    }
 
     val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
 
