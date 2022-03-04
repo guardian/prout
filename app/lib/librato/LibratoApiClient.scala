@@ -1,11 +1,12 @@
 package lib.librato
 
 import com.madgag.okhttpscala._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import com.typesafe.scalalogging.LazyLogging
 import lib.librato.model.Annotation
 import okhttp3.Request.Builder
 import okhttp3._
+import play.api.Configuration
 import play.api.libs.json.Json.{stringify, toJson}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,12 +39,9 @@ class LibratoApiClient(username: String, token: String) extends LazyLogging {
 
 object LibratoApiClient {
 
-  import play.api.Play.current
-  val config = play.api.Play.configuration
-
-  val instanceOpt = for {
-    userId <- config.getString("librato.userId")
-    token <- config.getString("librato.token")
+  def instanceOptFrom(config: Configuration): Option[LibratoApiClient] = for {
+    userId <- config.getOptional[String]("librato.userId")
+    token <- config.getOptional[String]("librato.token")
   } yield new LibratoApiClient(userId,token)
 
 }

@@ -16,30 +16,35 @@
 
 package controllers
 
+import akka.actor.ActorSystem
 import com.madgag.scalagithub.model.RepoId
-import lib.actions.Actions
 import lib.{Bot, RepoSnapshot}
-import play.api.mvc._
+import play.api.Logging
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-object Application extends Controller {
+class Application(
+  repoAcceptListService: RepoAcceptListService,
+  repoSnapshotFactory: RepoSnapshot.Factory,
+  sentryApiClientOpt: Option[lib.sentry.SentryApiClient],
+  cc: ControllerAppComponents
+)(implicit
+  ec: ExecutionContext,
+  bot: Bot
+) extends AbstractAppController(cc) with Logging {
 
   def index = Action { implicit req =>
     Ok(views.html.userPages.index())
   }
 
-  def zoomba(repoId: RepoId) = Actions.repoAuthenticated(repoId).async { implicit req =>
-    implicit val checkpointSnapshoter = Api.checkpointSnapshoter
+  def configDiagnostic(repoId: RepoId) = repoAuthenticated(repoId).async { implicit req =>
     for {
-      wl <- RepoWhitelistService.repoWhitelist.get()
-      repoFetchedByProut <- Bot.github.getRepo(repoId)
-      proutPresenceQuickCheck <- RepoWhitelistService.hasProutConfigFile(repoFetchedByProut)
-      repoSnapshot <- RepoSnapshot(repoFetchedByProut)
+      repoFetchedByProut <- bot.github.getRepo(repoId)
+      proutPresenceQuickCheck <- repoAcceptListService.hasProutConfigFile(repoFetchedByProut)
+      repoSnapshot <- repoSnapshotFactory.snapshot(repoFetchedByProut.repoId)
       diagnostic <- repoSnapshot.diagnostic()
     } yield {
-      val known = wl.allKnownRepos(repoId)
-      Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic))
+      Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic, sentryApiClientOpt))
     }
   }
 

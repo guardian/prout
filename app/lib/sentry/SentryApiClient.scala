@@ -1,11 +1,13 @@
 package lib.sentry
 
 import com.madgag.okhttpscala._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import com.typesafe.scalalogging.LazyLogging
+import lib.librato.LibratoApiClient
 import lib.sentry.model.CreateRelease
 import okhttp3.Request.Builder
 import okhttp3._
+import play.api.Configuration
 import play.api.libs.json.Json.{stringify, toJson}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,15 +37,9 @@ class SentryApiClient(token: String , val org: String) extends LazyLogging {
 
 }
 
-
 object SentryApiClient {
-
-  import play.api.Play.current
-  val config = play.api.Play.configuration
-
-  lazy val instanceOpt = for {
-    org <- config.getString("sentry.org")
-    token <- config.getString("sentry.token")
+  def instanceOptFrom(config: Configuration): Option[SentryApiClient] = for {
+    org <- config.getOptional[String]("sentry.org")
+    token <- config.getOptional[String]("sentry.token")
   } yield new SentryApiClient(token,org)
-
 }

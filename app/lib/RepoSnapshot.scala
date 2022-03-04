@@ -16,165 +16,176 @@
 
 package lib
 
-import java.time.{Instant, ZonedDateTime}
-
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Keep, Sink}
 import com.madgag.git._
 import com.madgag.github.Implicits._
+import com.madgag.scala.collection.decorators._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.GitHub._
-import com.madgag.scalagithub.commands.{CreateComment, CreateLabel}
-import com.madgag.scalagithub.model.{PullRequest, Repo}
+import com.madgag.scalagithub.model.{PullRequest, Repo, RepoId}
 import com.madgag.time.Implicits._
-import com.netaporter.uri.Uri
-import com.netaporter.uri.dsl._
-import com.typesafe.scalalogging.LazyLogging
-import lib.Config.{Checkpoint, CheckpointMessages}
-import lib.RepoSnapshot._
-import lib.Responsibility.{createdByAndMergedByFor, responsibilityAndRecencyFor}
-import lib.gitgithub.{IssueUpdater, LabelMapping}
+import io.lemonlabs.uri.Url
+import lib.Config.Checkpoint
+import lib.gitgithub.{LabelMapping, RichSource}
 import lib.labels._
-import lib.librato.LibratoApiClient
-import lib.librato.model.{Annotation, Link}
-import lib.sentry.{PRSentryRelease, SentryApiClient}
-import lib.sentry.model.CreateRelease
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
-import play.api.Logger
+import play.api.Logging
 
+import java.time.ZonedDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.Success
-import scalax.file.ImplicitConversions._
 
 object RepoSnapshot {
 
-  val logger = Logger(getClass)
-
   val MaxPRsToScanPerRepo = 30
-
   val WorthyOfScanWindow: java.time.Duration = 14.days
-
   val WorthyOfCommentWindow: java.time.Duration = 12.hours
 
-  val ClosedPRsMostlyRecentlyUpdated = Map(
-    "state" -> "closed",
-    "sort" -> "updated",
-    "direction" -> "desc"
-  )
+  val ClosedPRsMostlyRecentlyUpdated: Map[String, String] =
+    Map("state" -> "closed", "sort" -> "updated", "direction" -> "desc")
 
-  def log(message: String)(implicit repo: Repo) = logger.info(s"${repo.full_name} - $message")
+  class Factory(
+    bot: Bot
+  )(implicit
+    mat: Materializer,
+    checkpointSnapshoter: CheckpointSnapshoter
+  ) {
+    implicit val github: GitHub = bot.github
 
-  def isMergedToMaster(pr: PullRequest)(implicit repo: Repo): Boolean = pr.merged_at.isDefined && pr.base.ref == repo.default_branch
+    def log(message: String)(implicit repo: Repo): Unit = logger.info(s"${repo.full_name} - $message")
 
-  def mergedPullRequestsFor(repo: Repo)(implicit g: GitHub): Future[Seq[PullRequest]] = {
-    val now = ZonedDateTime.now()
-    val timeThresholdForScan = now.minus(WorthyOfScanWindow)
-    def isNewEnoughToBeWorthScanning(pr: PullRequest) = pr.merged_at.exists(_.isAfter(timeThresholdForScan))
+    def isMergedToMain(pr: PullRequest)(implicit repo: Repo): Boolean =
+      pr.merged_at.isDefined && pr.base.ref == repo.default_branch
 
-    implicit val r = repo
-    (for {
-      litePullRequests <- repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).takeUpTo(2)
-      pullRequests <- Future.traverse(litePullRequests.filter(isMergedToMaster).filter(isNewEnoughToBeWorthScanning).take(MaxPRsToScanPerRepo))(pr => repo.pullRequests.get(pr.number).map(_.result))
-    } yield {
-      log(s"PRs merged to master size=${pullRequests.size}")
-      pullRequests
-    }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.number).sorted.reverse)}") }
-  }
+    def snapshot(repoId: RepoId): Future[RepoSnapshot] = for {
+      githubRepo <- github.getRepo(repoId)
+      mergedPullRequests <- mergedPullRequestsFor(githubRepo)
+      hooksF = snapshotHooks(githubRepo)
+      gitRepoF = fetchLatestCopyOfGitRepo(githubRepo)
+      gitRepo <- gitRepoF
+      hooks <- hooksF
+    } yield RepoSnapshot(
+      RepoLevelDetails(githubRepo, gitRepo, hooks),
+      mergedPullRequests, checkpointSnapshoter
+    )
 
-  def apply(githubRepo: Repo)(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[RepoSnapshot] = {
+    def prSnapshot(prNumber: Int)(implicit repo: Repo): Future[PRSnapshot] = for {
+      prResponse <- repo.pullRequests.get(prNumber)
+      pr = prResponse.result
+      labelsResponse <- pr.labels.list().all()
+    } yield PRSnapshot(pr, labelsResponse)
 
-    implicit val ir: Repo = githubRepo
-    implicit val github = Bot.github
+    def mergedPullRequestsFor(implicit repo: Repo): Future[Seq[PRSnapshot]] = {
+      val now = ZonedDateTime.now()
+      val timeThresholdForScan = now.minus(WorthyOfScanWindow)
 
-    val repoId = githubRepo.repoId
+      def isNewEnoughToBeWorthScanning(pr: PullRequest) = pr.merged_at.exists(_.isAfter(timeThresholdForScan))
 
-    val hooksF: Future[Seq[Uri]] = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(_.uri))).all() else {
+      (for {
+        litePullRequests: Seq[PullRequest] <-
+          repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).take(2).all(): Future[Seq[PullRequest]]
+        pullRequests <-
+          Future.traverse(litePullRequests.filter(isMergedToMain).filter(isNewEnoughToBeWorthScanning).take(MaxPRsToScanPerRepo))(pr => prSnapshot(pr.number))
+      } yield {
+        log(s"PRs merged to master size=${pullRequests.size}")
+        pullRequests
+      }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.pr.number).sorted.reverse)}") }
+    }
+
+    private def fetchLatestCopyOfGitRepo(implicit githubRepo: Repo): Future[Repository] = {
+      Future {
+        val repoId = githubRepo.repoId
+        RepoUtil.getGitRepo(
+          bot.workingDir.resolve(s"${repoId.owner}/${repoId.name}").toFile,
+          githubRepo.clone_url,
+          Some(bot.git))
+      } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
+    }
+
+    private def snapshotHooks(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
       log(s"No admin rights to check hooks")
       Future.successful(Seq.empty)
     }
-
-    val gitRepoF = Future {
-      RepoUtil.getGitRepo(
-        Bot.parentWorkDir / repoId.owner / repoId.name,
-        githubRepo.clone_url,
-        Some(Bot.githubCredentials.git))
-    } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
-
-    for {
-      mergedPullRequests <- mergedPullRequestsFor(githubRepo)
-      gitRepo <- gitRepoF
-    } yield RepoSnapshot(githubRepo, gitRepo, mergedPullRequests, hooksF, checkpointSnapshoter)
-
   }
 }
 
 case class Diagnostic(
-                       snapshots: Set[CheckpointSnapshot],
-                       prDetails: Seq[PRCheckpointDetails]
-                     ) {
-
+ snapshots: Set[CheckpointSnapshot],
+ prDetails: Seq[PRCheckpointDetails]
+) {
   val snapshotsByCheckpoint: Map[Checkpoint, CheckpointSnapshot] = snapshots.map(s => s.checkpoint -> s).toMap
 }
 
-case class RepoSnapshot(
+
+case class RepoLevelDetails(
   repo: Repo,
   gitRepo: Repository,
-  mergedPullRequests: Seq[PullRequest],
-  hooksF: Future[Seq[Uri]]  ,
-  checkpointSnapshoter: CheckpointSnapshoter) {
-  self =>
+  hooks: Seq[Url]
+) extends Logging {
+  implicit val repoThreadLocal: ThreadLocalObjectDatabaseResources = gitRepo.getObjectDatabase.threadLocalResources
 
-  implicit val github = Bot.github
-
-  implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
-
-  lazy val masterCommit:RevCommit = {
+  lazy val mainCommit:RevCommit = {
     val id: ObjectId = gitRepo.resolve(repo.default_branch)
-    Logger.info(s"Need to look at ${repo.full_name}, branch:${repo.default_branch} commit $id")
+    logger.info(s"Need to look at ${repo.full_name}, branch:${repo.default_branch} commit $id")
     assert(id != null)
     id.asRevCommit(new RevWalk(repoThreadLocal.reader()))
   }
 
-  lazy val config = ConfigFinder.config(masterCommit)
+  lazy val config: Config.RepoConfig = ConfigFinder.config(mainCommit)
+
+  def createFileFinder(): FileFinder = new FileFinder(mainCommit)
+}
+
+case class RepoSnapshot(
+  repoLevelDetails: RepoLevelDetails,
+  mergedPullRequestSnapshots: Seq[PRSnapshot],
+  checkpointSnapshoter: CheckpointSnapshoter
+) extends Logging {
+
+  val repo: Repo = repoLevelDetails.repo
+  val config: Config.RepoConfig = repoLevelDetails.config
+
+  val mergedPRs: Seq[PullRequest] = mergedPullRequestSnapshots.map(_.pr)
+
+  val updateReporters: Seq[UpdateReporter] = Seq.empty
 
   lazy val affectedFoldersByPullRequest: Map[PullRequest, Set[String]] = {
-    implicit val revWalk = new RevWalk(repoThreadLocal.reader())
-    println(s"getting affectedFoldersByPullRequest on ${gitRepo.getDirectory.getAbsolutePath}")
+    implicit val revWalk = new RevWalk(repoLevelDetails.repoThreadLocal.reader())
     (for {
-      pr <- mergedPullRequests
-    } yield pr -> GitChanges.affects(pr, config.foldersWithValidConfig)).toMap
+      pr <- mergedPRs
+    } yield pr -> GitChanges.affects(pr, repoLevelDetails.config.foldersWithValidConfig)).toMap
   }
 
-
-  lazy val pullRequestsByAffectedFolder : Map[String, Set[PullRequest]] = config.foldersWithValidConfig.map {
-    folder => folder -> mergedPullRequests.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
+  lazy val pullRequestsByAffectedFolder : Map[String, Set[PullRequest]] = repoLevelDetails.config.foldersWithValidConfig.map {
+    folder => folder -> mergedPRs.filter(pr => affectedFoldersByPullRequest(pr).contains(folder)).toSet
   }.toMap
 
-  Logger.info(s"${repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapValues(_.map(_.number))}")
+  logger.info(s"${repoLevelDetails.repo.full_name} pullRequestsByAffectedFolder : ${pullRequestsByAffectedFolder.mapV(_.map(_.number))}")
 
-  lazy val activeConfByPullRequest: Map[PullRequest, Set[ConfigFile]] = affectedFoldersByPullRequest.mapValues {
-    _.map(config.validConfigByFolder(_))
+  lazy val activeConfByPullRequest: Map[PullRequest, Set[ConfigFile]] = affectedFoldersByPullRequest.mapV {
+    _.map(repoLevelDetails.config.validConfigByFolder(_))
   }
 
-  lazy val activeCheckpointsByPullRequest: Map[PullRequest, Set[Checkpoint]] = activeConfByPullRequest.mapValues {
+  lazy val activeCheckpointsByPullRequest: Map[PullRequest, Set[Checkpoint]] = activeConfByPullRequest.mapV {
     _.flatMap(_.checkpointSet)
   }
 
-  val allAvailableCheckpoints: Set[Checkpoint] = config.checkpointsByName.values.toSet
+  val allAvailableCheckpoints: Set[Checkpoint] = repoLevelDetails.config.checkpointsByName.values.toSet
 
   val allPossibleCheckpointPRLabels: Set[String] = for {
     prLabel <- PullRequestLabel.all
     checkpoint <- allAvailableCheckpoints
   } yield prLabel.labelFor(checkpoint.name)
 
-  def diagnostic(): Future[Diagnostic] = {
-    for {
-      snapshots <- snapshotOfAllAvailableCheckpoints()
-    } yield {
-      Diagnostic(snapshots, mergedPullRequests.map(pr => PRCheckpointDetails(pr, snapshots.filter(s => activeCheckpointsByPullRequest(pr).contains(s.checkpoint)), gitRepo)))
-    }
-  }
+  def diagnostic(): Future[Diagnostic] = for {
+    snapshots <- snapshotOfAllAvailableCheckpoints()
+  } yield Diagnostic(snapshots, mergedPRs.map { pr =>
+    PRCheckpointDetails(pr, snapshots.filter(s => activeCheckpointsByPullRequest(pr).contains(s.checkpoint)), repoLevelDetails.gitRepo)
+  })
 
   def snapshotOfAllAvailableCheckpoints(): Future[Set[CheckpointSnapshot]] =
     Future.sequence(allAvailableCheckpoints.map(takeCheckpointSnapshot))
@@ -184,183 +195,31 @@ case class RepoSnapshot(
   lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, Future[CheckpointSnapshot]] =
     activeCheckpoints.map { c => c -> takeCheckpointSnapshot(c) }.toMap
 
-  def takeCheckpointSnapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = {
-    for (possibleIdsTry <- checkpointSnapshoter(checkpoint).trying) yield {
-      val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
-        possibleIds.map(repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
-          case Success(objectId) => objectId
-        }
+  def takeCheckpointSnapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = for (
+    possibleIdsTry <- checkpointSnapshoter.snapshot(checkpoint).trying
+  ) yield {
+    val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
+      possibleIds.map(repoLevelDetails.repoThreadLocal.reader().resolveExistingUniqueId).collectFirst {
+        case Success(objectId) => objectId
       }
-      CheckpointSnapshot(checkpoint, objectIdTry)
     }
+    CheckpointSnapshot(checkpoint, objectIdTry)
   }
 
-  lazy val activeSnapshotsF = Future.sequence(activeCheckpoints.map(snapshotsOfActiveCheckpointsF))
+  lazy val activeSnapshotsF: Future[Set[CheckpointSnapshot]] =
+    Future.sequence(activeCheckpoints.map(snapshotsOfActiveCheckpointsF))
 
   def checkpointSnapshotsFor(pr: PullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =
     Future.sequence(activeCheckpointsByPullRequest(pr).filter(!oldState.hasSeen(_)).map(snapshotsOfActiveCheckpointsF))
 
-  val issueUpdater = new IssueUpdater[PullRequest, PRCheckpointState, PullRequestCheckpointsStateChangeSummary] with LazyLogging {
-    val repo = self.repo
+  val labelToStateMapping: LabelMapping[PRCheckpointState] = new LabelMapping[PRCheckpointState] {
+    def labelsFor(s: PRCheckpointState): Set[String] = s.statusByCheckpoint.map {
+      case (checkpointName, cs) => cs.labelFor(checkpointName)
+    }.toSet
 
-    val repoSnapshot: RepoSnapshot = self
-
-    val labelToStateMapping = new LabelMapping[PRCheckpointState] {
-      def labelsFor(s: PRCheckpointState): Set[String] = s.statusByCheckpoint.map {
-        case (checkpointName, cs) => cs.labelFor(checkpointName)
-      }.toSet
-
-      def stateFrom(labels: Set[String]): PRCheckpointState = PRCheckpointState(activeCheckpoints.flatMap { checkpoint =>
-        PullRequestCheckpointStatus.fromLabels(labels, checkpoint).map(checkpoint.name -> _)
-      }.toMap)
-    }
-
-    def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean =
-      existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
-
-    def snapshot(oldState: PRCheckpointState, pr: PullRequest) =
-      for (cs <- checkpointSnapshotsFor(pr, oldState)) yield {
-        val details = PRCheckpointDetails(pr, cs, gitRepo)
-        PullRequestCheckpointsStateChangeSummary(details, oldState)
-      }
-
-    override def actionTaker(snapshot: PullRequestCheckpointsStateChangeSummary) {
-      val pr = snapshot.prCheckpointDetails.pr
-      val now = Instant.now()
-
-      def sentryReleaseOpt(): Option[PRSentryRelease] = {
-        val sentryProjects = for {
-          configs <- activeConfByPullRequest.get(pr).toSeq
-          config <- configs
-          sentryConf <- config.sentry.toSeq
-          sentryProject <- sentryConf.projects
-        } yield sentryProject
-
-        for {
-          mergeCommit <- pr.merge_commit_sha if sentryProjects.nonEmpty
-        } yield PRSentryRelease(mergeCommit, sentryProjects)
-      }
-
-      if (snapshot.newlyMerged) {
-        activeCheckpointsByPullRequest
-        logger.info(s"action taking: ${pr.prId} is newly merged")
-
-        for {
-          sentry <- SentryApiClient.instanceOpt.toSeq
-          sentryRelease <- sentryReleaseOpt()
-        } {
-          val ref = lib.sentry.model.Ref(
-            repo.repoId,
-            sentryRelease.mergeCommit,
-            sentryRelease.mergeCommit.asRevCommit(new RevWalk(repoThreadLocal.reader())).getParents.headOption)
-          logger.info(s"${pr.prId.slug} : ref=$ref")
-
-          sentry.createRelease(CreateRelease(
-            sentryRelease.version,
-            Some(sentryRelease.version),
-            Some(pr.html_url),
-            sentryRelease.projects,
-            refs=Seq(ref)
-          ))
-        }
-      }
-
-
-      val newlySeenSnapshots = snapshot.changedByState.get(Seen).toSeq.flatten
-
-      logger.info(s"action taking: ${pr.prId} newlySeenSnapshots = $newlySeenSnapshots")
-
-      for {
-        newlySeenSnapshot <- newlySeenSnapshots
-      } {
-        val checkpoint = newlySeenSnapshot.snapshot.checkpoint
-        for { librato <- LibratoApiClient.instanceOpt } {
-          librato.createAnnotation(s"${pr.baseRepo.name}.prout", Annotation(
-            title = s"PR #${pr.number} : '${pr.title}' deployed",
-            description = Some(createdByAndMergedByFor(pr).capitalize),
-            start_time = pr.merged_at.map(_.toInstant),
-            end_time = Some(now),
-            source = Some(checkpoint.name),
-            links = Seq(Link(
-              rel = "github",
-              label = Some(s"PR #${pr.number}"),
-              href = Uri.parse(pr.html_url)
-            ))
-          ))
-        }
-      }
-
-      val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
-      val previouslyTouchedByProut = snapshot.oldState.statusByCheckpoint.nonEmpty
-      if (previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
-        logger.trace(s"changedSnapshotsByState : ${snapshot.changedByState}")
-
-        def commentOn(status: PullRequestCheckpointStatus, additionalAdvice: Option[String] = None) = {
-
-          lazy val fileFinder = new FileFinder(masterCommit)
-
-          for (changedSnapshots <- snapshot.changedByState.get(status)) {
-
-            val checkpoints = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
-
-            val customAdvices = for {
-              s <- changedSnapshots
-              messages <- s.snapshot.checkpoint.details.messages
-              path <- messages.filePathforStatus(status)
-              message <- fileFinder.read(path)
-            } yield message
-            val advices = if(customAdvices.nonEmpty) customAdvices else CheckpointMessages.defaults.get(status).toSet
-            val advice = (advices ++ additionalAdvice).mkString("\n\n")
-
-            pr.comments2.create(CreateComment(s"${status.name} on $checkpoints (${responsibilityAndRecencyFor(pr)}) $advice"))
-          }
-        }
-
-        for (hooks <- hooksF) {
-          slack.DeployReporter.report(snapshot, hooks)
-        }
-
-        val sentryDetails: Option[String] = for {
-          sentry <- SentryApiClient.instanceOpt
-          sentryRelease <- sentryReleaseOpt()
-        } yield sentryRelease.detailsMarkdown(sentry.org)
-
-        commentOn(Seen, sentryDetails)
-        commentOn(Overdue)
-      }
-    }
-
-
-  }
-
-  def processMergedPullRequests(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
-    _ <- attemptToCreateMissingLabels()
-    summaryOpts <- Future.traverse(mergedPullRequests)(issueUpdater.process)
-  } yield summaryOpts.flatten
-
-  def missingLabelsGiven(existingLabelNames: Set[String]): Set[CreateLabel] = for {
-    prcs <- (PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all)
-    checkpointName <- config.checkpointsByName.keySet
-    label = prcs.labelFor(checkpointName)
-    if !existingLabelNames(label)
-  } yield CreateLabel(label, prcs.defaultColour)
-
-  def attemptToCreateMissingLabels(): Future[_] = {
-    for {
-      existingLabels <- repo.labels.list().all()
-      createdLabels <- Future.traverse(missingLabelsGiven(existingLabels.map(_.name).toSet)) {
-        missingLabel => repo.labels.create(missingLabel)
-      }
-    } yield createdLabels
-  }.trying
-
-  def prByMasterCommitOpt = mergedPullRequests.find(_.merge_commit_sha.contains(masterCommit.toObjectId))
-
-  def checkForResultsOfPostDeployTesting() = {
-    // TiP currently works only when there is a single checkpoint with after seen instructions
-    activeSnapshotsF.map { activeSnapshots =>
-      ()
-    }
+    def stateFrom(labels: Set[String]): PRCheckpointState = PRCheckpointState(activeCheckpoints.flatMap { checkpoint =>
+      PullRequestCheckpointStatus.fromLabels(labels, checkpoint).map(checkpoint.name -> _)
+    }.toMap)
   }
 }
 

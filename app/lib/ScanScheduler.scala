@@ -1,43 +1,62 @@
 package lib
 
+import akka.actor.ActorSystem
+
 import java.time.Instant
 import java.time.Instant.now
 import java.time.temporal.ChronoUnit.MINUTES
-
-import akka.agent.Agent
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.RepoId
 import com.madgag.time.Implicits._
 import lib.labels.Seen
-import play.api.Logger
-import play.api.Play.current
+import play.api.Logging
 import play.api.libs.concurrent.Akka
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class ScanScheduler(repoId: RepoId,
-                    checkpointSnapshoter: CheckpointSnapshoter,
-                    conn: GitHub) { selfScanScheduler =>
+object ScanScheduler {
+  class Factory(
+    droid: Droid,
+    conn: GitHub,
+    actorSystem: ActorSystem,
+    delayer: Delayer
+  ) extends Logging {
+    def createFor(repoId: RepoId): ScanScheduler = {
+      logger.info(s"Creating scheduler for $repoId")
+      new ScanScheduler(
+        repoId,
+        droid,
+        actorSystem,
+        delayer
+      )
+    }
+  }
+}
 
-  val droid = new Droid
+class ScanScheduler(
+  repoId: RepoId,
+  droid: Droid,
+  actorSystem: ActorSystem,
+  delayer: Delayer
+) extends Logging { selfScanScheduler =>
 
-  val earliestFollowUpScanTime = Agent(now)
+  val earliestFollowUpScanTime: AtomicReference[Instant] = new AtomicReference(Instant.now())
 
-  private val dogpile = new Dogpile(Delayer.delayTheFuture {
-    Logger.debug(s"In the dogpile for $repoId...")
+  private val dogpile = new Dogpile(delayer.delayTheFuture {
+    logger.debug(s"In the dogpile for $repoId...")
+    val summariesF = droid.scan(repoId)
     for {
-      repo <- conn.getRepo(repoId)
-      summariesF = droid.scan(repo)(checkpointSnapshoter)
       summariesTry <- summariesF.trying
     } yield {
       summariesTry match {
         case Failure(e) =>
-          Logger.error(s"Scanning $repoId failed", e)
+          logger.error(s"Scanning $repoId failed", e)
         case Success(summaries) =>
-          Logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoId.fullName}:\n${summaries.map(s => s"#${s.prCheckpointDetails.pr.prId.slug} changed=${s.changed.map(_.snapshot.checkpoint.name)}").mkString("\n")}")
+          logger.info(s"$selfScanScheduler : ${summaries.size} summaries for ${repoId.fullName}:\n${summaries.map(s => s"#${s.prCheckpointDetails.pr.prId.slug} changed=${s.changed.map(_.snapshot.checkpoint.name)}").mkString("\n")}")
 
           val scanTimeForUnseenOpt = summaries.find(!_.checkpointStatuses.all(Seen)).map(_ => now.plus(1L, MINUTES))
 
@@ -49,10 +68,10 @@ class ScanScheduler(repoId: RepoId,
 
           if (candidateFollowUpScanTimes.nonEmpty) {
             val earliestCandidateScanTime: Instant = candidateFollowUpScanTimes.min
-            earliestFollowUpScanTime.send {
+            earliestFollowUpScanTime.updateAndGet {
               oldFollowupTime =>
                 if (now.isAfter(oldFollowupTime) || earliestCandidateScanTime.isBefore(oldFollowupTime)) {
-                  Akka.system.scheduler.scheduleOnce(java.time.Duration.between(now, earliestCandidateScanTime)) {
+                  actorSystem.scheduler.scheduleOnce(java.time.Duration.between(now, earliestCandidateScanTime)) {
                     scan()
                   }
                   earliestCandidateScanTime

@@ -1,52 +1,37 @@
 package lib
 
-import com.madgag.scalagithub.model.User
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
-import okhttp3.OkHttpClient
-import play.api.Logger
+import com.madgag.scalagithub.model.User
+import org.eclipse.jgit.transport.CredentialsProvider
+import play.api.Logging
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.nio.file.Path
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
 
-trait Bot {
+case class Bot(
+  workingDir: Path,
+  github: GitHub,
+  git: CredentialsProvider,
+  user: User
+)
 
-  val accessToken: String
+object Bot extends Logging {
+  def forAccessToken(accessToken: String)(implicit ec: ExecutionContext): Bot = {
+    val workingDir = Path.of("/tmp", "bot", "working-dir")
 
-  val parentWorkDir = Path.fromString("/tmp") / "bot" / "working-dir"
+    val credentials: GitHubCredentials =
+      GitHubCredentials.forAccessKey(accessToken, workingDir).get
 
-  parentWorkDir.mkdirs()
+    val github: GitHub = new GitHub(credentials)
+    val user: User = Await.result(github.getUser().map(_.result), 3.seconds)
+    logger.info(s"Token gives GitHub user ${user.atLogin}")
 
-  lazy val okHttpClient = {
-    val clientBuilder = new OkHttpClient.Builder()
-
-    val responseCacheDir = parentWorkDir / "http-cache"
-    responseCacheDir.mkdirs()
-    if (responseCacheDir.exists) {
-      clientBuilder.cache(new okhttp3.Cache(responseCacheDir, 5 * 1024 * 1024))
-    } else Logger.warn(s"Couldn't create HttpResponseCache dir ${responseCacheDir.path}")
-
-    clientBuilder.build()
+    Bot(
+      workingDir,
+      github,
+      credentials.git,
+      user
+    )
   }
-
-  lazy val githubCredentials = GitHubCredentials.forAccessKey(accessToken, (parentWorkDir / "http-cache").toPath).get
-
-  lazy val github = new GitHub(githubCredentials)
-
-  lazy val user: User = {
-    val myself = Await.result(github.getUser(), 3 seconds)
-    Logger.info(s"Token '${accessToken.take(2)}...' gives GitHub user ${myself.atLogin}")
-    myself
-  }
-
-}
-
-object Bot extends Bot {
-  import play.api.Play.current
-  val config = play.api.Play.configuration.underlying
-
-  val accessToken: String = config.getString("github.access.token")
-
 }

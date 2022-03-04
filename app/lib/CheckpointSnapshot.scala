@@ -19,7 +19,6 @@ package lib
 import java.time.Instant
 import java.time.Instant.now
 import javax.net.ssl.{HostnameVerifier, SSLSession}
-
 import com.madgag.okhttpscala._
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
@@ -30,19 +29,22 @@ import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.util.Try
+import scala.util.matching.Regex
 
-object CheckpointSnapshot {
+trait CheckpointSnapshoter {
+  def snapshot(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]]
+}
+
+object CheckpointSnapshoter extends CheckpointSnapshoter {
 
   val client = new OkHttpClient()
-  val insecureClient = new OkHttpClient.Builder()
+  val insecureClient: OkHttpClient = new OkHttpClient.Builder()
     .sslSocketFactory(InsecureSocketFactory, SSL.TrustEveryoneTrustManager)
-    .hostnameVerifier(new HostnameVerifier {
-      override def verify(hostname: String, sslSession: SSLSession): Boolean = true
-    }).build()
+    .hostnameVerifier((_, _) => true).build()
 
-  val hexRegex = """\b\p{XDigit}{40}\b""".r
+  val hexRegex: Regex = """\b\p{XDigit}{40}\b""".r
 
-  def apply(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
+  def snapshot(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
 
     val clientForCheckpoint = if (checkpoint.sslVerification) client else insecureClient
 

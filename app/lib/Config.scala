@@ -5,7 +5,7 @@ import java.time.Instant
 import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
 import com.madgag.time.Implicits._
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.ObjectId
@@ -14,6 +14,7 @@ import org.joda.time.Period
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{Json, _}
 import play.api.libs.functional.syntax._
+import com.madgag.scala.collection.decorators._
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails],
   sentry: Option[Sentry] = None) {
@@ -31,9 +32,9 @@ object Config {
     def reads(json: JsValue): JsResult[T] = json match {
       case JsString(s) => parse(s) match {
         case Some(d) => JsSuccess(d)
-        case None => JsError(Seq(JsPath() -> Seq(ValidationError("Error parsing string"))))
+        case None => JsError(Seq(JsPath() -> Seq(JsonValidationError("Error parsing string"))))
       }
-      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("Expected string"))))
+      case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("Expected string"))))
     }
 
     private def parse(input: String): Option[T] =
@@ -112,13 +113,13 @@ object Config {
     val foldersWithValidConfig: Set[String] = validConfigByFolder.keySet
 
     val foldersByCheckpointName: Map[String, Seq[String]] = (for {
-      (folder, checkpointNames) <- validConfigByFolder.mapValues(_.checkpoints.keySet).toSeq
+      (folder, checkpointNames) <- validConfigByFolder.mapV(_.checkpoints.keySet).toSeq
       checkpointName <- checkpointNames
-    } yield checkpointName -> folder).groupBy(_._1).mapValues(_.map(_._2))
+    } yield checkpointName -> folder).groupBy(_._1).mapV(_.map(_._2))
 
     val checkpointsNamedInMultipleFolders: Map[String, Seq[String]] = foldersByCheckpointName.filter(_._2.size > 1)
 
-    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: ${checkpointsNamedInMultipleFolders.mapValues(_.mkString("(",", ",")"))}")
+    require(checkpointsNamedInMultipleFolders.isEmpty, s"Duplicate checkpoints defined in multiple config files: ${checkpointsNamedInMultipleFolders.mapV(_.mkString("(",", ",")"))}")
 
     val checkpointsByName: Map[String, Checkpoint] = validConfigByFolder.values.map(_.checkpointsByName).fold(Map.empty)(_ ++ _)
   }
