@@ -1,6 +1,8 @@
 package lib
 
 import java.net.URL
+import java.nio.file.{Files, Path, Paths}
+
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
@@ -14,8 +16,6 @@ import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
 
 case class PRText(title: String, desc: String)
 
@@ -28,7 +28,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
   val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
 
-  val githubCredentials = GitHubCredentials.forAccessKey(githubToken, Path.createTempDirectory().toPath).get
+  val githubCredentials = GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("prout-test")).get
 
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 

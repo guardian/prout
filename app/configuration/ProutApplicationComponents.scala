@@ -6,6 +6,8 @@ import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.routing.Router
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext}
 import com.softwaremill.macwire._
+import lib.Delayer
+import lib.travis.{TravisApi, TravisApiClient, TravisCIOffering}
 import monitoring.SentryLogging
 
 
@@ -27,6 +29,10 @@ class ProutApplicationComponents(context: ApplicationLoader.Context)
     executionContext
   )
 
+  val travisApiClientsByOffering: Map[TravisCIOffering, TravisApiClient] =
+    TravisApi.travisApiClientsByOfferingGiven(configuration)
+
+  val delayer: Delayer = wire[Delayer]
   val repoWhitelistService = wire[RepoWhitelistService]
   val sentryLogging: SentryLogging = ???
 

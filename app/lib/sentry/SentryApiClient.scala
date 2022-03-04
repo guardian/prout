@@ -45,6 +45,6 @@ object SentryApiClient {
   def credentialsFor(config: Configuration): Option[Credentials] = for {
     org <- config.getOptional[String]("sentry.org")
     token <- config.getOptional[String]("sentry.token")
-  } yield new Credentials(token,org)
+  } yield Credentials(token,org)
 
 }

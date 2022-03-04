@@ -3,14 +3,10 @@ package lib.gitgithub
 import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.model.{PullRequest, Repo}
 import lib.{Bot, Delayer, LabelledState, RepoSnapshot}
-import play.api.Logger
+import play.api.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
-object IssueUpdater {
-  val logger = Logger(getClass)
-}
 
 /**
  *
@@ -18,9 +14,11 @@ object IssueUpdater {
  * @tparam PersistableState State that can be converted to and from GitHub issue labels, ie a set of Strings
  * @tparam Snapshot A present-state snapshot that can yield a PersistableState
  */
-trait IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: StateSnapshot[PersistableState]] {
-
-  implicit val github = Bot.github
+class IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: StateSnapshot[PersistableState]](
+  delayer: Delayer
+) (
+  implicit github: com.madgag.scalagithub.GitHub
+) extends Logging {
 
   val repo: Repo
 
@@ -56,7 +54,7 @@ trait IssueUpdater[IssueType <: PullRequest, PersistableState, Snapshot <: State
           val newLabels: Set[String] = labelToStateMapping.labelsFor(newPersistableState)
           assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
           issueLike.labels.replace(newLabels.toSeq)
-          Delayer.doAfterSmallDelay {
+          delayer.doAfterSmallDelay {
             actionTaker(currentSnapshot)
           }
         }

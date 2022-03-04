@@ -3,15 +3,15 @@ package lib
 import java.time.Instant
 import java.time.Instant.now
 import java.time.temporal.ChronoUnit.MINUTES
+import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.Scheduler
-import akka.agent.Agent
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.RepoId
 import com.madgag.time.Implicits._
 import lib.labels.Seen
-import play.api.{Logger, Logging}
+import play.api.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,13 +19,13 @@ import scala.util.{Failure, Success}
 
 class ScanScheduler(repoId: RepoId,
                     checkpointSnapshoter: CheckpointSnapshoter,
-                    conn: GitHub, scheduler: Scheduler) extends Logging { selfScanScheduler =>
+                    conn: GitHub, scheduler: Scheduler, delayer: Delayer) extends Logging { selfScanScheduler =>
 
   val droid = new Droid
 
-  val earliestFollowUpScanTime = Agent(now)
+  val earliestFollowUpScanTime: AtomicReference[Instant] = new AtomicReference[Instant](Instant.now())
 
-  private val dogpile = new Dogpile(Delayer.delayTheFuture {
+  private val dogpile = new Dogpile(delayer.delayTheFuture {
     logger.debug(s"In the dogpile for $repoId...")
     for {
       repo <- conn.getRepo(repoId)
@@ -48,7 +48,7 @@ class ScanScheduler(repoId: RepoId,
 
           if (candidateFollowUpScanTimes.nonEmpty) {
             val earliestCandidateScanTime: Instant = candidateFollowUpScanTimes.min
-            earliestFollowUpScanTime.send {
+            earliestFollowUpScanTime.updateAndGet {
               oldFollowupTime =>
                 if (now.isAfter(oldFollowupTime) || earliestCandidateScanTime.isBefore(oldFollowupTime)) {
                   scheduler.scheduleOnce(java.time.Duration.between(now, earliestCandidateScanTime)) {

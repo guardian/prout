@@ -2,18 +2,17 @@ package lib
 
 import java.util.concurrent.TimeUnit
 
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
+import akka.actor.Scheduler
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
-object Delayer {
-
-  private implicit val system = Akka.system
+class Delayer(
+  scheduler: Scheduler
+) {
 
   def doAfterSmallDelay(f: => Unit): Unit = {
-    system.scheduler.scheduleOnce(concurrent.duration.Duration(1, TimeUnit.SECONDS))(f)
+    scheduler.scheduleOnce(concurrent.duration.Duration(1, TimeUnit.SECONDS))(f)
   }
 
   def delayTheFuture[T](f: => Future[T]): Future[T] = {
