@@ -43,6 +43,8 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
     config.setString("remote", "origin", "url", testGithubRepo.clone_url)
     config.save()
 
+    val defaultBranchName = testGithubRepo.default_branch
+
     val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
 
     forAll (pushResults.toSeq) { pushResult =>
@@ -53,9 +55,10 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
       whenReady(testGithubRepo.refs.list().all()) { _ must not be empty }
     }
 
-    eventually {
-      Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url).setDirectory(createTempDir()).call()
+    val clonedRepo = eventually {
+       Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url).setDirectory(createTempDir()).call()
     }
+    require(clonedRepo.getRepository.getRef(defaultBranchName).getObjectId == localGitRepo.resolve("HEAD"))
 
     testGithubRepo
   }
