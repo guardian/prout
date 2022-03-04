@@ -133,7 +133,8 @@ case class RepoSnapshot(
 
   lazy val masterCommit:RevCommit = {
     val id: ObjectId = gitRepo.resolve(repo.default_branch)
-    Logger.info(s"Need to look at ${repo.full_name}, commit $id")
+    Logger.info(s"Need to look at ${repo.full_name}, branch:${repo.default_branch} commit $id")
+    assert(id != null)
     id.asRevCommit(new RevWalk(repoThreadLocal.reader()))
   }
 
