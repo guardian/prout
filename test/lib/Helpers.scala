@@ -70,6 +70,8 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
       logger.info(s"Set checkpoint to '$branchName' (${objectId.name.take(8)})")
     }
 
+    def setCheckpointToMatchDefaultBranch = setCheckpointTo(githubRepo.default_branch)
+
     def setCheckpointFailureTo(exception: Exception) {
       checkpointCommitFuture = Future.failed(exception)
     }

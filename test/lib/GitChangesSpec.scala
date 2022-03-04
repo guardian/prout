@@ -45,9 +45,9 @@ class GitChangesSpec extends PlaySpec {
 
       def commitAt(revstr: String) = localGitRepo.resolve(revstr).asRevCommit
 
-      affectedFolders(commitAt("master"), commitAt("food-feature"), Set("/food/")) mustEqual(Set("/food/"))
+      affectedFolders(commitAt("main"), commitAt("food-feature"), Set("/food/")) mustEqual(Set("/food/"))
 
-      affectedFolders(commitAt("master"), commitAt("bard-feature"), Set("/food/")) mustBe empty
+      affectedFolders(commitAt("main"), commitAt("bard-feature"), Set("/food/")) mustBe empty
     }
   }
 }

@@ -35,7 +35,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
         labelsOn(_) must contain only "Pending-on-PROD"
       }
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) { pr =>
         labelsOn(pr) must contain only "Seen-on-PROD"
@@ -52,7 +52,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       scanShouldNotChangeAnything()
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scanShouldNotChangeAnything()
     }
@@ -66,7 +66,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
         labelsOn(_) must contain only "Pending-on-PROD"
       }
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) {
         labelsOn(_) must contain only "Seen-on-PROD"
@@ -91,7 +91,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       scanShouldNotChangeAnything()
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) {
         labelsOn(_) must contain only "Seen-on-PROD"
@@ -113,7 +113,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       scanShouldNotChangeAnything()
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) {
         labelsOn(_) must contain only "Seen-on-PROD"
@@ -129,7 +129,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
         labelsOn(_) must contain only "Pending-on-PROD"
       }
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) { pr =>
         labelsOn(pr) must contain only "Seen-on-PROD"
@@ -145,7 +145,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       implicit val repoPR: RepoPR = mergeNewBranchIntoMasterFor(githubRepo)
 
-      repoPR setCheckpointTo "master"
+      repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) {
         labelsOn(_) must contain only "Seen-on-PROD"
