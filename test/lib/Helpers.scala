@@ -134,7 +134,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     val createPullRequest = CreatePullRequest(
       title = prText.title,
       head = merging,
-      base = "master"
+      base = repo.default_branch
     )
 
     val pr = repo.pullRequests.create(createPullRequest).futureValue
