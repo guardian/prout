@@ -47,19 +47,6 @@ class ConfigSpec extends PlaySpec with OptionValues with Inside {
      "parse insecure config" in {
        checkpointDetailsFrom("/sample.insecure.checkpoint.json").get.sslVerification mustBe false
      }
-
-     "parse afterSeen (post-deploy) config" in {
-       inside (checkpointDetailsFrom("/sample.travis.checkpoint.json")) {
-         case JsSuccess(checkpoint, _) =>
-           val afterSeen = checkpoint.afterSeen.value
-
-           val travis = afterSeen.travis.value
-
-           inside (travis.config \ "script") { case JsDefined(script) =>
-             script mustEqual JsString("sbt ++$TRAVIS_SCALA_VERSION acceptance-test")
-           }
-       }
-     }
    }
 
   def checkpointDetailsFrom(resourcePath: String): JsResult[CheckpointDetails] = {

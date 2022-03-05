@@ -8,7 +8,6 @@ import com.madgag.time.Implicits._
 import com.netaporter.uri.Uri
 import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
-import lib.travis.TravisCI
 import org.eclipse.jgit.lib.ObjectId
 import org.joda
 import org.joda.time.Period
@@ -46,8 +45,6 @@ object Config {
 
   implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.parse(input))
 
-  case class AfterSeen(travis: Option[TravisCI])
-
   case class Sentry(projects: Seq[String])
 
   case class CheckpointMessages(filePaths: Map[PullRequestCheckpointStatus, String]) {
@@ -56,10 +53,6 @@ object Config {
 
   object Sentry {
     implicit val readsSentry = Json.reads[Sentry]
-  }
-
-  object AfterSeen {
-    implicit val readsAfterSeen = Json.reads[AfterSeen]
   }
 
   object CheckpointMessages {
@@ -94,7 +87,6 @@ object Config {
     url: Uri,
     overdue: joda.time.Period,
     disableSSLVerification: Option[Boolean] = None,
-    afterSeen: Option[AfterSeen] = None,
     messages: Option[CheckpointMessages] = None
   ) {
     val sslVerification = !disableSSLVerification.contains(true)
