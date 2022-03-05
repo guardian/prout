@@ -31,14 +31,12 @@ import com.typesafe.scalalogging.LazyLogging
 import lib.Config.{Checkpoint, CheckpointMessages}
 import lib.RepoSnapshot._
 import lib.Responsibility.{createdByAndMergedByFor, responsibilityAndRecencyFor}
-import lib.PostDeployActions.TriggerdByProutMsg
 import lib.gitgithub.{IssueUpdater, LabelMapping}
 import lib.labels._
 import lib.librato.LibratoApiClient
 import lib.librato.model.{Annotation, Link}
 import lib.sentry.{PRSentryRelease, SentryApiClient}
 import lib.sentry.model.CreateRelease
-import lib.travis.{TravisApi, TravisApiClient, TravisCIOffering}
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logger
@@ -290,14 +288,6 @@ case class RepoSnapshot(
             ))
           ))
         }
-
-        for {
-          afterSeen <- checkpoint.details.afterSeen
-          travis <- afterSeen.travis
-        } {
-          logger.info(s"${pr.prId} going to do $travis")
-          TravisApi.clientFor(repo).requestBuild(repo.full_name, travis, TriggerdByProutMsg, repo.default_branch)
-        }
       }
 
       val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
@@ -369,17 +359,7 @@ case class RepoSnapshot(
   def checkForResultsOfPostDeployTesting() = {
     // TiP currently works only when there is a single checkpoint with after seen instructions
     activeSnapshotsF.map { activeSnapshots =>
-      val activeCheckpointsWithAfterSeenInstructions: Set[Checkpoint] = activeSnapshots.map(_.checkpoint).filter {
-        _.details.afterSeen.isDefined
-      }
-
-      if (activeCheckpointsWithAfterSeenInstructions.size == 1) {
-        prByMasterCommitOpt.foreach { masterPr =>
-          repo.statusesFor(repo.default_branch).map { statuses =>
-            PostDeployActions.updateFor(repo, statuses, masterPr, activeCheckpointsWithAfterSeenInstructions.head.name)
-          }
-        }
-      }
+      ()
     }
   }
 }
