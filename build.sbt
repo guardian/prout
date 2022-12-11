@@ -20,14 +20,14 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.5.7" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.softwaremill.macwire" %% "macros" % "2.5.8" % Provided, // slight finesse: 'provided' as only used for compile
   "com.madgag" %% "scala-collection-plus" % "0.11",
-  "org.typelevel" %% "cats-core" % "2.7.0",
-  "com.github.blemale" %% "scaffeine" % "5.2.0",
+  "org.typelevel" %% "cats-core" % "2.9.0",
+  "com.github.blemale" %% "scaffeine" % "5.2.1",
   "org.webjars" % "bootstrap" % "3.3.2-1",
   "com.getsentry.raven" % "raven-logback" % "8.0.3",
-  "com.github.nscala-time" %% "nscala-time" % "2.30.0",
-  "io.lemonlabs" %% "scala-uri" % "4.0.2",
+  "com.github.nscala-time" %% "nscala-time" % "2.32.0",
+  "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "org.webjars.bower" % "octicons" % "3.1.0",
   "com.madgag" %% "play-git-hub" % "5.0",
