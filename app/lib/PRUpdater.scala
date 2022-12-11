@@ -35,7 +35,8 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
     sentryApiClientOpt: Option[SentryApiClient]
   ): Future[Option[PullRequestCheckpointsStateChangeSummary]] = {
     val pr = prSnapshot.pr
-    val oldLabels = prSnapshot.labels.map(_.name).toSet
+    val (oldStateLabelsSeq, userLabels) = prSnapshot.labels.map(_.name).partition(repoSnapshot.allPossibleCheckpointPRLabels)
+    val oldLabels = oldStateLabelsSeq.toSet
     val existingPersistedState: PRCheckpointState = repoSnapshot.labelToStateMapping.stateFrom(oldLabels)
     if (!ignoreItemsWithExistingState(existingPersistedState)) {
       for (currentSnapshot <- findCheckpointStateChange(existingPersistedState, pr, repoSnapshot)) yield {
@@ -48,7 +49,7 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
           logger.info(s"#${pr.prId.slug} state-change: $existingPersistedState -> $newPersistableState")
           val newLabels: Set[String] = repoSnapshot.labelToStateMapping.labelsFor(newPersistableState)
           assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
-          pr.labels.replace(newLabels.toSeq)
+          pr.labels.replace(userLabels ++ newLabels)
           delayer.doAfterSmallDelay {
             actionTaker(currentSnapshot, repoSnapshot)
           }
