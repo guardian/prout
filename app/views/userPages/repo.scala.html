@@ -2,9 +2,15 @@
 @import org.eclipse.jgit.lib.ObjectId
 
 @import scala.util.{Failure, Success}
-@(proutPresenceQuickCheck: Boolean, repoSnapshot: lib.RepoSnapshot, diagnostic: lib.Diagnostic)(implicit req: Request[AnyContent])
+@import lib.sentry.SentryApiClient
+@(
+    proutPresenceQuickCheck: Boolean,
+    repoSnapshot: lib.RepoSnapshot,
+    diagnostic: lib.Diagnostic,
+    sentryApiClientOpt: Option[SentryApiClient]
+)(implicit req: Request[AnyContent], bot: lib.Bot)
     @showCommit(commitId: ObjectId) = {<a href="@repoSnapshot.repo.html_url/commit/@commitId.name"><code>@commitId.name.take(7)</code></a>}
-    @showCommits(commitIds: Traversable[ObjectId]) = {@for(commitId<-commitIds) {@showCommit(commitId) }}
+    @showCommits(commitIds: Iterable[ObjectId]) = {@for(commitId<-commitIds) {@showCommit(commitId) }}
     @configLink(folder: String) = {<a href="@repoSnapshot.repo.html_url/blob/@repoSnapshot.repo.default_branch@folder@ProutConfigFileName">@folder@ProutConfigFileName</a>}
 
     @main {
@@ -13,7 +19,7 @@
     <div class="row">
         <div class="col-md-6">
             @for(permissions <- repoSnapshot.repo.permissions) {
-                <h3>Permissions for @lib.Bot.user.atLogin</h3>
+                <h3>Permissions for @bot.user.atLogin</h3>
                 <ul>
                     <li><em>push</em> @if(permissions.push) {
                         <span class="octicon octicon-check"></span>
@@ -88,7 +94,7 @@
                                 <li>@sentryProject</li>
                             }
                             </ul>
-                            @if(lib.sentry.SentryApiClient.instanceOpt.isEmpty) {
+                            @if(sentryApiClientOpt.isEmpty) {
                                 ...but no Sentry credentials are available! <span class="octicon octicon-alert" title="No Sentry Creds"></span>
                             }
                         }

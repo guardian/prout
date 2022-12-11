@@ -1,38 +1,46 @@
 package lib
 
-import java.net.URL
-import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
+import lib.gitgithub.RichSource
+import lib.sentry.SentryApiClient
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
-import org.scalatest.{Inside, Inspectors}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.{Inside, Inspectors}
 import org.scalatestplus.play._
-import play.api.Logger
+import org.scalatestplus.play.components.OneAppPerSuiteWithComponents
+import play.api.routing.Router
+import play.api.{BuiltInComponents, BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
 
+import java.net.URL
+import java.nio.file.Files
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
 
 case class PRText(title: String, desc: String)
 
-trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFutures with Eventually with Inside {
+trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside {
 
   val logger = Logger(getClass)
+  override def components: BuiltInComponents = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
+
+    override lazy val router: Router = Router.empty
+  }
 
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(12, Seconds)), interval = scaled(Span(850, Millis)))
 
   val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
 
-  val githubCredentials = GitHubCredentials.forAccessKey(githubToken, Path.createTempDirectory().toPath).get
+  val githubCredentials =
+    GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
 
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
   implicit lazy val github = new GitHub(githubCredentials)
+  implicit lazy val mat = app.materializer
 
   def labelsOn(pr: PullRequest): Set[String] =
     pr.labels.list().all().futureValue.map(_.name).toSet
@@ -56,15 +64,15 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     var checkpointCommitFuture: Future[Iterator[AbbreviatedObjectId]] = Future.successful(Iterator.empty)
 
-    def setCheckpointTo(commitId: AbbreviatedObjectId) {
+    def setCheckpointTo(commitId: AbbreviatedObjectId): Unit = {
       checkpointCommitFuture = Future.successful(Iterator(commitId))
     }
 
-    def setCheckpointTo(objectId: ObjectId) {
+    def setCheckpointTo(objectId: ObjectId): Unit = {
       setCheckpointTo(AbbreviatedObjectId.fromObjectId(objectId))
     }
 
-    def setCheckpointTo(branchName: String) {
+    def setCheckpointTo(branchName: String): Unit = {
       val objectId = githubRepo.refs.get(s"heads/$branchName").futureValue.objectId
       setCheckpointTo(objectId)
       logger.info(s"Set checkpoint to '$branchName' (${objectId.name.take(8)})")
@@ -72,18 +80,31 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
 
     def setCheckpointToMatchDefaultBranch = setCheckpointTo(githubRepo.default_branch)
 
-    def setCheckpointFailureTo(exception: Exception) {
+    def setCheckpointFailureTo(exception: Exception): Unit = {
       checkpointCommitFuture = Future.failed(exception)
     }
 
-    val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
+    implicit val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
+    implicit val sentryApiClient: Option[SentryApiClient] = None
 
-    val scheduler = new ScanScheduler(githubRepo.repoId, checkpointSnapshoter, github)
+    val delayer = new Delayer(app.actorSystem)
+
+    val bot: Bot = Bot.forAccessToken(githubToken)
+
+    val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
+
+    val droid: Droid = new Droid(
+      repoSnapshotFactory,
+      new RepoUpdater(),
+      new PRUpdater(delayer)
+    )
+
+    val scheduler = new ScanScheduler(githubRepo.repoId, droid, actorSystem = app.actorSystem, delayer)
 
     override val toString: String = pr.html_url
   }
 
-  def scan[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR) {
+  def scan[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR): Unit = {
     val commentsBeforeScan = repoPR.listComments()
     whenReady(repoPR.scheduler.scan()) { s =>
       eventually {
@@ -96,18 +117,7 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
-  def scanUntil[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR) {
-    val commentsBeforeScan = repoPR.listComments()
-    eventually {
-      whenReady(repoPR.scheduler.scan()) { s =>
-        val commentsAfterScan = repoPR.listComments()
-        commentsAfterScan must have size (commentsBeforeScan.size + (if (shouldAddComment) 1 else 0))
-        issueFun(repoPR.currentPR())
-      }
-    }
-  }
-
-  def waitUntil[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR) {
+  def waitUntil[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR): Unit = {
     val commentsBeforeScan = repoPR.listComments()
     eventually {
       val commentsAfterScan = repoPR.listComments()
@@ -116,11 +126,11 @@ trait Helpers extends PlaySpec with OneAppPerSuite with Inspectors with ScalaFut
     }
   }
 
-  def scanShouldNotChangeAnything[T,S]()(implicit meat: RepoPR) {
+  def scanShouldNotChangeAnything()(implicit meat: RepoPR): Unit = {
     scanShouldNotChange { pr => (pr.labels.list().all().futureValue, pr.comments) }
   }
 
-  def scanShouldNotChange[T,S](issueState: PullRequest => S)(implicit repoPR: RepoPR) {
+  def scanShouldNotChange[S](issueState: PullRequest => S)(implicit repoPR: RepoPR): Unit = {
     val issueBeforeScan = repoPR.currentPR()
     val beforeState = issueState(issueBeforeScan)
 

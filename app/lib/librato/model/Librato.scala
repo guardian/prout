@@ -2,7 +2,7 @@ package lib.librato.model
 
 import java.time.Instant
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import play.api.libs.json.{JsNumber, JsString, Json, Writes}
 
 case class Link(

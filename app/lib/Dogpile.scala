@@ -1,7 +1,6 @@
 package lib
 
-import akka.agent.Agent
-
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 
@@ -31,7 +30,7 @@ class Dogpile[R](thing: => Future[R]) {
   * Can run scan immediately
   * Must wait (future already generated or not?)
 
-  Should agent store futures? We never want the result of the *currently running* future - but we DO
+  Should stateRef store futures? We never want the result of the *currently running* future - but we DO
   want a reference to the future of the *upcoming* scan, so that we can share it among requesters.
 */
 
@@ -41,13 +40,13 @@ class Dogpile[R](thing: => Future[R]) {
   case class ScanRun(scanFuture: Future[R]) extends State
   case class ScanQueued(scanFuture: Future[R]) extends State
 
-  private val agent: Agent[State] = Agent(ScanRun(Future.failed(new IllegalStateException())))
+  private val stateRef: AtomicReference[State] = new AtomicReference(ScanRun(Future.failed(new IllegalStateException())))
 
   /**
    *
    * @return a future for a run which has been initiated at or after this call
    */
-  def doAtLeastOneMore(): Future[R] = agent.alter { previousState =>
+  def doAtLeastOneMore(): Future[R] = stateRef.updateAndGet { previousState =>
     if (previousState.scanFuture.isCompleted) ScanRun(thing) else {
       previousState match {
         case ScanQueued(_) => previousState
@@ -58,6 +57,6 @@ class Dogpile[R](thing: => Future[R]) {
         }
       }
     }
-  }.flatMap(_.scanFuture)
+  }.scanFuture
 }
 

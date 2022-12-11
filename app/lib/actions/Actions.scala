@@ -2,27 +2,33 @@ package lib.actions
 
 import com.madgag.github.Implicits._
 import com.madgag.playgithub.auth.AuthenticatedSessions.AccessToken
-import com.madgag.playgithub.auth.{Client, GHRequest}
+import com.madgag.playgithub.auth.AuthenticatedSessions.AccessToken.Provider
+import com.madgag.playgithub.auth.GHRequest
 import com.madgag.scalagithub.model.RepoId
-import controllers.Application._
-import controllers.{Auth, routes}
+import controllers.routes
 import lib._
-import play.api.mvc.{ActionFilter, Result}
+import play.api.mvc.Results.Redirect
+import play.api.mvc._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scalax.file.ImplicitConversions._
+import scala.concurrent.{ExecutionContext, Future}
 
-object Actions {
+class Actions(
+  bot: Bot,
+  bodyParser: BodyParser[AnyContent]
+)(implicit
+  authClient: com.madgag.playgithub.auth.Client,
+  ec: ExecutionContext
+) {
   private val authScopes = Seq("repo")
 
-  implicit val authClient: Client = Auth.authClient
+  implicit val provider: Provider = AccessToken.FromSession
 
-  implicit val provider = AccessToken.FromSession
+  val GitHubAuthenticatedAction: ActionBuilder[GHRequest, AnyContent] =
+    com.madgag.playgithub.auth.Actions.gitHubAction(authScopes, bot.workingDir, bodyParser)
 
-  val GitHubAuthenticatedAction = com.madgag.playgithub.auth.Actions.gitHubAction(authScopes, Bot.parentWorkDir.toPath)
+  def repoAccessFilter(repoId: RepoId): ActionFilter[GHRequest] = new ActionFilter[GHRequest] {
+    def executionContext = ec
 
-  def repoAccessFilter(repoId: RepoId) = new ActionFilter[GHRequest] {
     override protected def filter[A](req: GHRequest[A]): Future[Option[Result]] = {
       for {
         user <- req.userF

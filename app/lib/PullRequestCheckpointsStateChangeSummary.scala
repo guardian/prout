@@ -1,7 +1,7 @@
 package lib
 
-
 import com.github.nscala_time.time.Imports._
+import com.madgag.scala.collection.decorators._
 import com.madgag.scalagithub.model.PullRequest
 import lib.Config.Checkpoint
 import lib.gitgithub.StateSnapshot
@@ -11,33 +11,26 @@ import org.eclipse.jgit.revwalk.RevCommit
 
 case class PRCheckpointState(statusByCheckpoint: Map[String, PullRequestCheckpointStatus]) {
 
-  val checkpointsByStatus = statusByCheckpoint.groupBy(_._2).mapValues(_.keySet).withDefaultValue(Set.empty)
+  val isEmpty: Boolean = statusByCheckpoint.isEmpty
 
-  def hasSeen(checkpoint: Checkpoint) = checkpointsByStatus(Seen).contains(checkpoint.name)
+  val checkpointsByStatus: Map[PullRequestCheckpointStatus, Set[String]] =
+    statusByCheckpoint.groupUp(_._2)(_.keySet).withDefaultValue(Set.empty)
+
+  val states: Set[PullRequestCheckpointStatus] = checkpointsByStatus.keySet
+  def all(s: PullRequestCheckpointStatus): Boolean = states.forall(_ == s)
+  def has(s: PullRequestCheckpointStatus) = states.contains(s)
+  val hasStateForCheckpointsWhichHaveAllBeenSeen: Boolean = states == Set(Seen)
+
+  def hasSeen(checkpoint: Checkpoint): Boolean = checkpointsByStatus(Seen).contains(checkpoint.name)
 
   def updateWith(newCheckpointStatus: Map[String, PullRequestCheckpointStatus]) =
-    PRCheckpointState(newCheckpointStatus ++ statusByCheckpoint.filterKeys(checkpointsByStatus(Seen)))
+    PRCheckpointState(newCheckpointStatus ++ statusByCheckpoint.view.filterKeys(checkpointsByStatus(Seen)))
 
-  val states = checkpointsByStatus.keySet
-
-  val hasStateForCheckpointsWhichHaveAllBeenSeen = states == Set(Seen)
-
-  def all(s: PullRequestCheckpointStatus) = states.forall(_ == s)
-
-  def has(s: PullRequestCheckpointStatus) = states.contains(s)
-
-  def changeFrom(oldState: PRCheckpointState) =
+  def changeFrom(oldState: PRCheckpointState): Map[String, PullRequestCheckpointStatus] =
     (statusByCheckpoint.toSet -- oldState.statusByCheckpoint.toSet).toMap
-
-  val isEmpty = statusByCheckpoint.isEmpty
-
 }
 
 case class PRCommitVisibility(seen: Set[RevCommit], unseen: Set[RevCommit])
-
-
-
-
 
 
 object PRCheckpointDetails {
@@ -52,7 +45,7 @@ object PRCheckpointDetails {
         snapshot.checkpoint -> EverythingYouWantToKnowAboutACheckpoint(pr,snapshot,gitRepo)
       }).toMap
 
-    PRCheckpointDetails(pr,everythingByCheckpoint)
+    PRCheckpointDetails(pr, everythingByCheckpoint)
   }
 }
 
@@ -60,11 +53,14 @@ case class PRCheckpointDetails(
   pr: PullRequest,
   everythingByCheckpoint: Map[Checkpoint, EverythingYouWantToKnowAboutACheckpoint]
 ) {
-  val checkpointStatusByName = for ((c, e) <- everythingByCheckpoint) yield c.name -> e.checkpointStatus
-  val everythingByCheckpointName = for ((c, e) <- everythingByCheckpoint) yield c.name -> e
+  val everythingByCheckpointName: Map[String, EverythingYouWantToKnowAboutACheckpoint] =
+    for ((c, e) <- everythingByCheckpoint) yield c.name -> e
+
+  val checkpointStatusByName: Map[String, PullRequestCheckpointStatus] =
+    everythingByCheckpointName.mapV(_.checkpointStatus)
 
   val checkpointsByState: Map[PullRequestCheckpointStatus, Set[Checkpoint]] =
-    everythingByCheckpoint.values.groupBy(_.checkpointStatus).mapValues(_.map(_.snapshot.checkpoint).toSet)
+    everythingByCheckpoint.values.groupBy(_.checkpointStatus).mapV(_.map(_.snapshot.checkpoint).toSet)
 
   val soonestPendingCheckpointOverdueTime: Option[java.time.Instant] = {
     implicit val periodOrdering = Ordering.by[Period, Duration](_.toStandardDuration)
@@ -81,9 +77,9 @@ case class PullRequestCheckpointsStateChangeSummary(
 
   val checkpointStatuses: PRCheckpointState = oldState.updateWith(prCheckpointDetails.checkpointStatusByName)
 
-  override val newPersistableState = checkpointStatuses
+  override val newPersistableState: PRCheckpointState = checkpointStatuses
 
-  val newlyMerged = oldState.isEmpty && !newPersistableState.isEmpty
+  val newlyMerged: Boolean = oldState.isEmpty && !newPersistableState.isEmpty
 
   val changed: Set[EverythingYouWantToKnowAboutACheckpoint] =
     checkpointStatuses.changeFrom(oldState).keySet.map(prCheckpointDetails.everythingByCheckpointName)

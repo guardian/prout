@@ -5,6 +5,7 @@ import lib.Config.RepoConfig
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.treewalk.TreeWalk
+import com.madgag.scala.collection.decorators._
 
 object ConfigFinder {
   
@@ -23,7 +24,7 @@ object ConfigFinder {
   }
 
   def config(c: RevCommit)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources): RepoConfig = {
-    val checkpointsByNameByFolder = configIdMapFrom(c).mapValues(Config.readConfigFrom)
+    val checkpointsByNameByFolder = configIdMapFrom(c).mapV(Config.readConfigFrom)
     RepoConfig(checkpointsByNameByFolder)
   }
 }

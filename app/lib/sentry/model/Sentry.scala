@@ -2,7 +2,7 @@ package lib.sentry.model
 
 import java.time.Instant
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import org.eclipse.jgit.lib.ObjectId
 import play.api.libs.json.{JsString, Json, Writes}
 import Sentry._

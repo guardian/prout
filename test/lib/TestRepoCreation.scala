@@ -1,20 +1,19 @@
 package lib
 
-import java.time.Duration.ofMinutes
-
-import com.google.common.io.Files.createTempDir
 import com.madgag.git._
-import com.madgag.scalagithub.GitHub._
 import com.madgag.scalagithub.commands.CreateRepo
 import com.madgag.scalagithub.model.Repo
 import com.madgag.time.Implicits._
+import lib.gitgithub._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.convert.wrapAll._
+import java.nio.file.Files.createTempDirectory
+import java.time.Duration.ofMinutes
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
 
@@ -23,7 +22,7 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
   def isTestRepo(repo: Repo) =
     repo.name.startsWith(testRepoNamePrefix) && repo.created_at.toInstant.age() > ofMinutes(10)
 
-  override def beforeAll {
+  override def beforeAll(): Unit = {
     val oldRepos = github.listRepos("updated", "desc").all().futureValue.filter(isTestRepo)
     Future.traverse(oldRepos)(_.delete())
   }
@@ -49,10 +48,11 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
       localGitRepo.git.branchCreate().setName(defaultBranchName).setStartPoint("HEAD").call()
     }
 
-    val pushResults = localGitRepo.git.push.setCredentialsProvider(Bot.githubCredentials.git).setPushTags().setPushAll().call()
+    val pushResults =
+      localGitRepo.git.push.setCredentialsProvider(githubCredentials.git).setPushTags().setPushAll().call()
 
-    forAll (pushResults.toSeq) { pushResult =>
-      all (pushResult.getRemoteUpdates.map(_.getStatus)) must be(RemoteRefUpdate.Status.OK)
+    forAll (pushResults.asScala) { pushResult =>
+      all (pushResult.getRemoteUpdates.asScala.map(_.getStatus)) must be(RemoteRefUpdate.Status.OK)
     }
 
     eventually {
@@ -60,7 +60,8 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
     }
 
     val clonedRepo = eventually {
-       Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url).setDirectory(createTempDir()).call()
+       Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url)
+         .setDirectory(createTempDirectory("prout-test-repo").toFile).call()
     }
     require(clonedRepo.getRepository.getRef(defaultBranchName).getObjectId == localGitRepo.resolve("HEAD"))
 

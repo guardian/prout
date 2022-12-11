@@ -2,17 +2,15 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.11.12"
+scalaVersion := "2.13.10"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers += Resolver.sonatypeRepo("releases")
+resolvers ++= Resolver.sonatypeOssRepos("releases")
 
 buildInfoKeys := Seq[BuildInfoKey](
   name,
-  BuildInfoKey.constant("gitCommitId", Option(System.getenv("SOURCE_VERSION")) getOrElse(try {
-    "git rev-parse HEAD".!!.trim
-  } catch { case e: Exception => "unknown" }))
+  "gitCommitId" -> Option(System.getenv("SOURCE_VERSION")).getOrElse("unknown")
 )
 
 buildInfoPackage := "app"
@@ -20,25 +18,24 @@ buildInfoPackage := "app"
 lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 
 libraryDependencies ++= Seq(
-  cache,
   filters,
   ws,
-  "com.typesafe.akka" %% "akka-agent" % "2.3.2",
+  "com.softwaremill.macwire" %% "macros" % "2.5.7" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.madgag" %% "scala-collection-plus" % "0.11",
+  "org.typelevel" %% "cats-core" % "2.7.0",
+  "com.github.blemale" %% "scaffeine" % "5.2.0",
   "org.webjars" % "bootstrap" % "3.3.2-1",
-  "com.getsentry.raven" % "raven-logback" % "8.0.2",
-  "com.github.nscala-time" %% "nscala-time" % "2.16.0",
-  "com.netaporter" %% "scala-uri" % "0.4.16",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
-  "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1",
+  "com.getsentry.raven" % "raven-logback" % "8.0.3",
+  "com.github.nscala-time" %% "nscala-time" % "2.30.0",
+  "io.lemonlabs" %% "scala-uri" % "4.0.2",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "4.5",
-  "com.madgag.scala-git" %% "scala-git-test" % "3.0" % "test",
-  "org.scalatestplus" %% "play" % "1.4.0" % "test"
+  "com.madgag" %% "play-git-hub" % "5.0",
+  "com.madgag.scala-git" %% "scala-git-test" % "4.3" % Test,
+  "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test
 )
 
 routesImport ++= Seq("com.madgag.scalagithub.model._","com.madgag.playgithub.Binders._")
 
-sources in (Compile,doc) := Seq.empty
-
-publishArtifact in (Compile, packageDoc) := false
-
+Compile/doc/sources := Seq.empty
+Compile/packageDoc/publishArtifact := false

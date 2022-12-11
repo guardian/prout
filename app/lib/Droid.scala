@@ -1,32 +1,44 @@
 package lib
 
+import akka.stream.Materializer
 import com.madgag.git._
-import com.madgag.scalagithub.model.Repo
+import com.madgag.scalagithub.GitHub
+import com.madgag.scalagithub.model.RepoId
+import lib.sentry.SentryApiClient
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class Droid {
+class Droid(
+  repoSnapshotFactory: RepoSnapshot.Factory,
+  repoUpdater: RepoUpdater,
+  prUpdater: PRUpdater
+)(implicit
+  g: GitHub,
+  mat: Materializer,
+  sentryApiClientOpt: Option[SentryApiClient]
+) {
 
   val logger = Logger(getClass)
 
-  def scan(
-    githubRepo: Repo
-  )(implicit checkpointSnapshoter: CheckpointSnapshoter): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = {
-    logger.info(s"Asked to audit ${githubRepo.repoId}")
-
-    val repoSnapshotF = RepoSnapshot(githubRepo)
+  def scan(repoId: RepoId): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = {
+    logger.info(s"Asked to audit $repoId")
 
     for {
-      repoSnapshot <- repoSnapshotF
-      pullRequestUpdates <- repoSnapshot.processMergedPullRequests()
+      repoSnapshot <- repoSnapshotFactory.snapshot(repoId)
+      pullRequestUpdates <- processMergedPullRequestsOn(repoSnapshot)
       activeSnapshots <- repoSnapshot.activeSnapshotsF
-      _ <- repoSnapshot.checkForResultsOfPostDeployTesting()
     } yield {
-      logger.info(s"${githubRepo.repoId} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
+      logger.info(s"$repoId has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
       pullRequestUpdates
     }
   }
+
+  def processMergedPullRequestsOn(repoSnapshot: RepoSnapshot): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
+    _ <- repoUpdater.attemptToCreateMissingLabels(repoSnapshot.repoLevelDetails)
+    summaryOpts <- Future.traverse(repoSnapshot.mergedPullRequestSnapshots)(prSnapshot => prUpdater.process(prSnapshot, repoSnapshot))
+  } yield summaryOpts.flatten
+
 
 }

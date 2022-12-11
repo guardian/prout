@@ -1,18 +1,11 @@
-import java.util.Base64
-
-import com.madgag.scalagithub.GitHub._
-import com.madgag.scalagithub.commands.{CreateFile, CreateRef}
-import com.madgag.scalagithub.model.{Repo, RepoId}
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
+import lib.gitgithub.RichSource
 import org.eclipse.jgit.lib.ObjectId.zeroId
 import org.scalatest.Inside
-import org.scalatest.concurrent.PatienceConfiguration.Timeout
-import play.api.libs.json.{JsDefined, JsString, JsSuccess}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.util.Random
+import scala.language.postfixOps
 
 class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 

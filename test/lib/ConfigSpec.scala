@@ -1,14 +1,12 @@
 package lib
 
-import com.netaporter.uri.Uri
+import io.lemonlabs.uri.Uri
 import lib.Config.{CheckpointDetails, CheckpointMessages}
 import lib.labels.{Overdue, Seen}
 import org.joda.time.Period.minutes
 import org.scalatest.{Inside, OptionValues}
 import org.scalatestplus.play._
 import play.api.libs.json._
-
-import scalax.io.JavaConverters._
 
 class ConfigSpec extends PlaySpec with OptionValues with Inside {
 
@@ -50,6 +48,6 @@ class ConfigSpec extends PlaySpec with OptionValues with Inside {
    }
 
   def checkpointDetailsFrom(resourcePath: String): JsResult[CheckpointDetails] = {
-    Json.parse(getClass.getResource(resourcePath).asInput.byteArray).validate[CheckpointDetails]
+    Json.parse(getClass.getResourceAsStream(resourcePath)).validate[CheckpointDetails]
   }
 }

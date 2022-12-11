@@ -5,9 +5,9 @@ import com.madgag.scalagithub.model.PullRequest
 import lib.labels.{Overdue, Pending, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevWalk
-import play.api.Logger
+import play.api.Logging
 
-object EverythingYouWantToKnowAboutACheckpoint {
+object EverythingYouWantToKnowAboutACheckpoint extends Logging {
   def apply(pr: PullRequest, snapshot: CheckpointSnapshot, gitRepo: Repository): EverythingYouWantToKnowAboutACheckpoint = {
     val timeBetweenMergeAndSnapshot = java.time.Duration.between(pr.merged_at.get.toInstant, snapshot.time)
 
@@ -18,7 +18,7 @@ object EverythingYouWantToKnowAboutACheckpoint {
 
       val (prCommitsSeenOnSite, prCommitsNotSeen) = pr.availableTipCommits.partition(prCommit => w.isMergedInto(prCommit.asRevCommit, siteCommit))
       if (prCommitsSeenOnSite.nonEmpty && prCommitsNotSeen.nonEmpty) {
-        Logger.info(s"prCommitsSeenOnSite=${prCommitsSeenOnSite.map(_.name)} prCommitsNotSeen=${prCommitsNotSeen.map(_.name)}")
+        logger.info(s"prCommitsSeenOnSite=${prCommitsSeenOnSite.map(_.name)} prCommitsNotSeen=${prCommitsNotSeen.map(_.name)}")
       }
       PRCommitVisibility(prCommitsSeenOnSite, prCommitsNotSeen)
     }
