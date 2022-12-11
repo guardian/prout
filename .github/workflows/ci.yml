@@ -25,3 +25,8 @@ jobs:
         env:
           PROUT_GITHUB_ACCESS_TOKEN: ${{ secrets.PROUT_GITHUB_ACCESS_TOKEN }}
         run: sbt -v test
+      - name: Test Summary
+        uses: test-summary/action@v2
+        if: always()
+        with:
+          paths: "test-results/**/TEST-*.xml"

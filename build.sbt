@@ -17,6 +17,9 @@ buildInfoPackage := "app"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 
+Test / testOptions +=
+  Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
+
 libraryDependencies ++= Seq(
   filters,
   ws,
