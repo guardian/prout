@@ -42,8 +42,9 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   implicit lazy val github = new GitHub(githubCredentials)
   implicit lazy val mat = app.materializer
 
-  def labelsOn(pr: PullRequest): Set[String] =
-    pr.labels.list().all().futureValue.map(_.name).toSet
+  def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
+
+  def labelsOn(pr: PullRequest): Set[String] = pr.labels.list().all().futureValue.map(_.name).toSet
 
   def lastCommentOn(pr: PullRequest): String =
     pr
@@ -141,7 +142,12 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     }
   }
 
-  def mergePullRequestIn(repo: Repo, merging: String, prText: PRText = PRText("title", "desc")) = {
+  def mergePullRequestIn(
+    repo: Repo,
+    merging: String,
+    prText: PRText = PRText("title", "desc"),
+    userLabels: Set[String] = Set.empty
+  ) = {
     eventually {
       whenReady(repo.refs.get(s"heads/$merging")) { _.ref must endWith(merging) }
     }
@@ -153,6 +159,13 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     )
 
     val pr = repo.pullRequests.create(createPullRequest).futureValue
+
+    if (userLabels.nonEmpty) {
+      // GitHub API doesn't seem to let us set PR labels on creation
+      whenReady(pr.labels.replace(userLabels.toSeq)) { _ =>
+        eventually { labelsOn(pr) must equal(userLabels) }
+      }
+    }
 
     eventually {
       whenReady(pr.merge(MergePullRequest())) { _.merged must be(true) }

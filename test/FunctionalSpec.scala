@@ -12,7 +12,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
   "Update repo" must {
 
     "not spam not spam not spam" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/feature-branches.top-level-config.git.zip"), "feature-1")
+      implicit val repoPR = mergeSamplePR()
 
       repoPR setCheckpointTo zeroId
 
@@ -53,14 +53,14 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointTo zeroId
 
-      scan(shouldAddComment = false) {
-        labelsOn(_) must contain only "Pending-on-PROD"
+      scan(shouldAddComment = false) { _ =>
+        labelsOnPR() must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointToMatchDefaultBranch
 
-      scan(shouldAddComment = true) {
-        labelsOn(_) must contain only "Seen-on-PROD"
+      scan(shouldAddComment = true) { _ =>
+        labelsOnPR() must contain only "Seen-on-PROD"
       }
 
       scanShouldNotChangeAnything()
@@ -71,12 +71,12 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointTo zeroId
 
-      scan(shouldAddComment = false) {
-        labelsOn(_) must contain only "Pending-on-PROD"
+      scan(shouldAddComment = false) { _ =>
+        labelsOnPR() must contain only "Pending-on-PROD"
       }
 
       waitUntil(shouldAddComment = true) { pr =>
-        labelsOn(pr) must contain only "Overdue-on-PROD"
+        labelsOnPR() must contain only "Overdue-on-PROD"
         lastCommentOn(pr) must include("What's gone wrong?")
       }
 
@@ -84,8 +84,8 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointToMatchDefaultBranch
 
-      scan(shouldAddComment = true) {
-        labelsOn(_) must contain only "Seen-on-PROD"
+      scan(shouldAddComment = true) { _ =>
+        labelsOnPR() must contain only "Seen-on-PROD"
       }
     }
 
@@ -94,20 +94,20 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointFailureTo new Exception("This website went Boom!")
 
-      scan(shouldAddComment = false) {
-        labelsOn(_) must contain only "Pending-on-PROD"
+      scan(shouldAddComment = false) { _ =>
+        labelsOnPR() must contain only "Pending-on-PROD"
       }
 
-      waitUntil(shouldAddComment = true) {
-        labelsOn(_) must contain only "Overdue-on-PROD"
+      waitUntil(shouldAddComment = true) { _ =>
+        labelsOnPR() must contain only "Overdue-on-PROD"
       }
 
       scanShouldNotChangeAnything()
 
       repoPR setCheckpointToMatchDefaultBranch
 
-      scan(shouldAddComment = true) {
-        labelsOn(_) must contain only "Seen-on-PROD"
+      scan(shouldAddComment = true) { _ =>
+        labelsOnPR() must contain only "Seen-on-PROD"
       }
     }
 
@@ -116,18 +116,24 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
 
       repoPR setCheckpointTo zeroId
 
-      scan(shouldAddComment = false) {
-        labelsOn(_) must contain only "Pending-on-PROD"
+      scan(shouldAddComment = false) { _ =>
+        labelsOnPR() must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) { pr =>
-        labelsOn(pr) must contain only "Seen-on-PROD"
+        labelsOnPR() must contain only "Seen-on-PROD"
         lastCommentOn(pr) must include("This is a custom message for the `Seen` status")
       }
 
       scanShouldNotChangeAnything()
     }
   }
+
+  private def mergeSamplePR(userLabels: Set[String] = Set.empty): RepoPR = mergePullRequestIn(
+    createTestRepo("/feature-branches.top-level-config.git.zip"),
+    "feature-1",
+    userLabels = userLabels
+  )
 }
