@@ -22,14 +22,14 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
         }
       }
 
-      scan(shouldAddComment = false) {
-        labelsOn(_) must contain only "Pending-on-PROD"
+      scan(shouldAddComment = false) { _ =>
+        labelsOnPR() must contain only "Pending-on-PROD"
       }
 
       repoPR setCheckpointToMatchDefaultBranch
 
       scan(shouldAddComment = true) { pr =>
-        labelsOn(pr) must contain only "Seen-on-PROD"
+        labelsOnPR() must contain only "Seen-on-PROD"
         lastCommentOn(pr) must include("Please check your changes!")
       }
 
