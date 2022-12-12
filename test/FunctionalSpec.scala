@@ -36,6 +36,24 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
       scanShouldNotChangeAnything()
     }
 
+    "not disturb other labels that users have set on PRs" in {
+      val userLabels = Set("user-bug", "fun-project")
+      implicit val repoPR = mergeSamplePR(userLabels)
+      eventually { labelsOnPR() mustEqual userLabels }
+
+      repoPR setCheckpointTo zeroId
+      repoPR.scheduler.scan()
+
+      eventually { labelsOnPR() must equal(userLabels + "Pending-on-PROD") }
+
+      repoPR.setCheckpointToMatchDefaultBranch
+      repoPR.scheduler.scan()
+
+      eventually { labelsOnPR() must equal(userLabels + "Seen-on-PROD") }
+
+      scanShouldNotChangeAnything()
+    }
+
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
       implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
 
