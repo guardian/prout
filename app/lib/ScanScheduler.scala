@@ -47,7 +47,7 @@ class ScanScheduler(
   val earliestFollowUpScanTime: AtomicReference[Instant] = new AtomicReference(Instant.now())
 
   private val dogpile = new Dogpile(delayer.delayTheFuture {
-    logger.debug(s"In the dogpile for $repoId...")
+    logger.info(s"In the dogpile for $repoId...")
     val summariesF = droid.scan(repoId)
     for {
       summariesTry <- summariesF.trying
@@ -83,6 +83,9 @@ class ScanScheduler(
     }
   })
 
-  def scan(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = dogpile.doAtLeastOneMore()
+  def scan(): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = {
+    logger.info(s"Asked for a scan on $repoId...")
+    dogpile.doAtLeastOneMore()
+  }
 
 }

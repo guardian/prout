@@ -62,7 +62,7 @@ class Api(
   def updateFor(repoId: RepoId, acceptList: RepoAcceptList): Future[Result] = {
     val scanGuardF = Future { // wrapped in a future to avoid timing attacks
       val knownRepo = acceptList.allKnownRepos(repoId)
-      logger.debug(s"$repoId known=$knownRepo")
+      logger.info(s"$repoId known=$knownRepo")
       require(knownRepo, s"${repoId.fullName} not on known-repo whitelist")
 
       val scanScheduler = repoScanSchedulerCache.get(repoId)
