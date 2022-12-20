@@ -18,7 +18,7 @@ package lib
 
 import java.time.Instant
 import java.time.Instant.now
-import javax.net.ssl.{HostnameVerifier, SSLSession}
+import scala.jdk.CollectionConverters._
 import com.madgag.okhttpscala._
 import lib.Config.Checkpoint
 import lib.SSL.InsecureSocketFactory
@@ -49,7 +49,13 @@ object CheckpointSnapshoter extends CheckpointSnapshoter {
     val clientForCheckpoint = if (checkpoint.sslVerification) client else insecureClient
 
     clientForCheckpoint.execute(new Builder().url(checkpoint.url.toString).build()) {
-      resp => hexRegex.findAllIn(resp.body().string).map(AbbreviatedObjectId.fromString)
+      resp =>
+        val responseHeaderValues = resp.headers().toMultimap.entrySet().asScala.toSeq.flatMap(_.getValue.asScala.toSeq)
+        val responseValues: Set[String] = responseHeaderValues.toSet + resp.body().string
+        for {
+          responseValue <- responseValues.iterator
+          commitText <- hexRegex.findAllIn(responseValue)
+        } yield AbbreviatedObjectId.fromString(commitText)
     }
   }
 }
