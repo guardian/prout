@@ -33,8 +33,8 @@ libraryDependencies ++= Seq(
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "org.webjars.bower" % "octicons" % "3.1.0",
-  "com.madgag" %% "play-git-hub" % "5.0",
-  "com.madgag.scala-git" %% "scala-git-test" % "4.3" % Test,
+  "com.madgag" %% "play-git-hub" % "5.3",
+  "com.madgag.scala-git" %% "scala-git-test" % "4.6" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test
 )
 
