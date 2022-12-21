@@ -43,7 +43,7 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
     config.save()
 
     val defaultBranchName = testGithubRepo.default_branch
-    if (Option(localGitRepo.getRef(defaultBranchName)).isEmpty) {
+    if (Option(localGitRepo.findRef(defaultBranchName)).isEmpty) {
       println(s"Going to create a '$defaultBranchName' branch")
       localGitRepo.git.branchCreate().setName(defaultBranchName).setStartPoint("HEAD").call()
     }
@@ -63,7 +63,7 @@ trait TestRepoCreation extends Helpers with BeforeAndAfterAll {
        Git.cloneRepository().setBare(true).setURI(testGithubRepo.clone_url)
          .setDirectory(createTempDirectory("prout-test-repo").toFile).call()
     }
-    require(clonedRepo.getRepository.getRef(defaultBranchName).getObjectId == localGitRepo.resolve("HEAD"))
+    require(clonedRepo.getRepository.findRef(defaultBranchName).getObjectId == localGitRepo.resolve("HEAD"))
 
     testGithubRepo
   }
