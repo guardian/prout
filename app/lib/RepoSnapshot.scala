@@ -103,7 +103,7 @@ object RepoSnapshot {
           bot.workingDir.resolve(s"${repoId.owner}/${repoId.name}").toFile,
           githubRepo.clone_url,
           Some(bot.git))
-      } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getAllRefs.size)}") }
+      } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getRefDatabase.getRefs.size)}") }
     }
 
     private def snapshotHooks(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
