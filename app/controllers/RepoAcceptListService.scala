@@ -43,7 +43,7 @@ class RepoAcceptListService(
     logger.info("Starting background repo fetch")
     actorSystem.scheduler.scheduleWithFixedDelay(1.second, 60.seconds) { () =>
       repoAcceptList.set(getAllKnownRepos)
-      github.checkRateLimit().foreach(status => logger.info(status.summary))
+      github.checkRateLimit().foreach(status => logger.info(status.map(_.summary).getOrElse("Couldn't get rate-limit status")))
     }
   }
 
