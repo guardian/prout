@@ -27,7 +27,7 @@ libraryDependencies ++= Seq(
   "com.madgag" %% "scala-collection-plus" % "0.11",
   "org.typelevel" %% "cats-core" % "2.9.0",
   "com.github.blemale" %% "scaffeine" % "5.2.1",
-  "org.webjars" % "bootstrap" % "3.3.2-1",
+  "org.webjars" % "bootstrap" % "3.3.2-2",
   "com.getsentry.raven" % "raven-logback" % "8.0.3",
   "com.github.nscala-time" %% "nscala-time" % "2.32.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
