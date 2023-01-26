@@ -30,7 +30,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   }
 
   implicit override val patienceConfig =
-    PatienceConfig(timeout = scaled(Span(12, Seconds)), interval = scaled(Span(850, Millis)))
+    PatienceConfig(timeout = scaled(Span(20, Seconds)), interval = scaled(Span(2, Seconds)))
 
   val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
 
@@ -164,6 +164,12 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
       // GitHub API doesn't seem to let us set PR labels on creation
       whenReady(pr.labels.replace(userLabels.toSeq)) { _ =>
         eventually { labelsOn(pr) must equal(userLabels) }
+      }
+    }
+
+    eventually {
+      whenReady(repo.pullRequests.get(pr.number)) {
+        _.mergeable.value mustBe true
       }
     }
 
