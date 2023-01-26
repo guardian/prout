@@ -34,7 +34,7 @@ object RepoUtil extends Logging {
   def getGitRepo(dataDirectory: File, uri: String, credentials: Option[CredentialsProvider] = None): Repository = {
 
     def invoke[C <: GitCommand[_], R](command: TransportCommand[C, R]): R = {
-      command.setTimeout(5)
+      command.setTimeout(15)
       credentials.foreach(command.setCredentialsProvider)
       command.call()
     }
