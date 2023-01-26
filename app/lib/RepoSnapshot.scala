@@ -57,21 +57,37 @@ object RepoSnapshot {
     implicit val github: GitHub = bot.github
 
     def log(message: String)(implicit repo: Repo): Unit = logger.info(s"${repo.full_name} - $message")
+    def logAround[T](desc: String)(thunk: => Future[T])(implicit repo: Repo): Future[T] = {
+      val start = System.currentTimeMillis()
+      thunk.onComplete { attempt =>
+        val elapsedMs = System.currentTimeMillis() - start
+        log(s"'$desc' $elapsedMs ms : success=${attempt.isSuccess}")
+      }
+      thunk
+    }
 
     def isMergedToMain(pr: PullRequest)(implicit repo: Repo): Boolean =
       pr.merged_at.isDefined && pr.base.ref == repo.default_branch
 
     def snapshot(repoId: RepoId): Future[RepoSnapshot] = for {
       githubRepo <- github.getRepo(repoId)
-      mergedPullRequests <- mergedPullRequestsFor(githubRepo)
-      hooksF = snapshotHooks(githubRepo)
-      gitRepoF = fetchLatestCopyOfGitRepo(githubRepo)
-      gitRepo <- gitRepoF
-      hooks <- hooksF
-    } yield RepoSnapshot(
-      RepoLevelDetails(githubRepo, gitRepo, hooks),
-      mergedPullRequests, checkpointSnapshoter
-    )
+      repoSnapshot <- snapshot(githubRepo)
+    } yield repoSnapshot
+
+    def snapshot(implicit githubRepo: Repo): Future[RepoSnapshot] = {
+      val mergedPullRequestsF = logAround("fetch PRs")(fetchMergedPullRequests())
+      val hooksF = logAround("fetch repo hooks")(fetchRepoHooks())
+      val gitRepoF = logAround("fetch git repo")(fetchLatestCopyOfGitRepo())
+
+      for {
+        mergedPullRequests <- mergedPullRequestsF
+        gitRepo <- gitRepoF
+        hooks <- hooksF
+      } yield RepoSnapshot(
+        RepoLevelDetails(githubRepo, gitRepo, hooks),
+        mergedPullRequests, checkpointSnapshoter
+      )
+    }
 
     def prSnapshot(prNumber: Int)(implicit repo: Repo): Future[PRSnapshot] = for {
       prResponse <- repo.pullRequests.get(prNumber)
@@ -79,7 +95,7 @@ object RepoSnapshot {
       labelsResponse <- pr.labels.list().all()
     } yield PRSnapshot(pr, labelsResponse)
 
-    def mergedPullRequestsFor(implicit repo: Repo): Future[Seq[PRSnapshot]] = {
+    def fetchMergedPullRequests()(implicit repo: Repo): Future[Seq[PRSnapshot]] = {
       val now = ZonedDateTime.now()
       val timeThresholdForScan = now.minus(WorthyOfScanWindow)
 
@@ -96,7 +112,7 @@ object RepoSnapshot {
       }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.pr.number).sorted.reverse)}") }
     }
 
-    private def fetchLatestCopyOfGitRepo(implicit githubRepo: Repo): Future[Repository] = {
+    private def fetchLatestCopyOfGitRepo()(implicit githubRepo: Repo): Future[Repository] = {
       Future {
         val repoId = githubRepo.repoId
         RepoUtil.getGitRepo(
@@ -106,7 +122,7 @@ object RepoSnapshot {
       } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getRefDatabase.getRefs.size)}") }
     }
 
-    private def snapshotHooks(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
+    private def fetchRepoHooks()(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
       log(s"No admin rights to check hooks")
       Future.successful(Seq.empty)
     }
