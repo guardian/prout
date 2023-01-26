@@ -7,6 +7,7 @@ import controllers.{Application, _}
 import lib.actions.Actions
 import lib.sentry.SentryApiClient
 import lib.{Bot, CheckpointSnapshoter, Delayer, Droid, PRSnapshot, PRUpdater, RepoSnapshot, RepoUpdater, ScanScheduler}
+import monitoring.SentryLogging
 import play.api.routing.Router
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext, Logging}
 import router.Routes
@@ -18,6 +19,8 @@ import scala.concurrent.duration._
 class ApplicationComponents(context: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters
     with AssetsComponents with Logging {
+  val sentryLogging: SentryLogging = wire[SentryLogging]
+  sentryLogging.init() // Is this the best place to start this?!
 
   implicit val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshoter
 
@@ -41,6 +44,7 @@ class ApplicationComponents(context: ApplicationLoader.Context)
   val droid: Droid = wire[Droid]
   val scanSchedulerFactory: ScanScheduler.Factory = wire[ScanScheduler.Factory]
   val repoAcceptListService: RepoAcceptListService = wire[RepoAcceptListService]
+  repoAcceptListService.start() // Is this the best place to start this?!
 
   val actions: Actions = wire[Actions]
   val controllerAppComponents: ControllerAppComponents = wire[ControllerAppComponents]
