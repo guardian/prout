@@ -1,5 +1,6 @@
 working-dir
 
+.DS_Store
 logs
 project/project
 project/target
