@@ -35,6 +35,12 @@ Follow the 4-step program:
 3. Add callbacks to prout - ie a GitHub webhook and ideally also a post-deploy hook
 4. Expose the commit id of your build on your deployed site
 
+## Give prout-bot write-access
+
+![Giving prout write-access by going to Settings -> Collaborators and team -> Add people and typing in 'prout-bot'](./artwork/prout-write.gif)
+
+Admin access to the repository is required to give prout-bot write-access. Please contact your team's Engineering Manager for this.
+
 ### Add config file
 
 Add a `.prout.json` file to any folder you want monitored in your repo:
@@ -69,6 +75,9 @@ with these settings:
 
 The hook should be set to activate on `Pull Request` events.
 
+![Adding a GitHub web hook by navigating to Settings -> Webhooks -> Add webhook](./artwork/prout-web-hook.gif)
+
+Note that this can be done _once_ at the [Organization Webhook](https://docs.github.com/en/rest/orgs/webhooks) level, which removes the need for doing it on each individual repo. Prout will check that any repository has a `.prout.json` config file present before attempting to take any action on it.
 ##### Post-deploy hooks
 
 Whatever deployment tool you use (RiffRaff, Heroku, etc) just set it to hit Prout
