@@ -46,7 +46,8 @@ class Dogpile[R](thing: => Future[R]) {
    *
    * @return a future for a run which has been initiated at or after this call
    */
-  def doAtLeastOneMore(): Future[R] = stateRef.updateAndGet { previousState =>
+  def doAtLeastOneMore(): Future[R] = stateRef.updateAndGet { // TODO updateAndGet shouldn't handle side-effects
+    previousState =>
     if (previousState.scanFuture.isCompleted) ScanRun(thing) else {
       previousState match {
         case ScanQueued(_) => previousState

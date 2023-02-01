@@ -59,11 +59,12 @@ object RepoSnapshot {
     def log(message: String)(implicit repo: Repo): Unit = logger.info(s"${repo.full_name} - $message")
     def logAround[T](desc: String)(thunk: => Future[T])(implicit repo: Repo): Future[T] = {
       val start = System.currentTimeMillis()
-      thunk.onComplete { attempt =>
+      val fut = thunk // evaluate thunk, evaluate only once!
+      fut.onComplete { attempt =>
         val elapsedMs = System.currentTimeMillis() - start
         log(s"'$desc' $elapsedMs ms : success=${attempt.isSuccess}")
       }
-      thunk
+      fut
     }
 
     def isMergedToMain(pr: PullRequest)(implicit repo: Repo): Boolean =
