@@ -77,6 +77,7 @@ The hook should be set to activate on `Pull Request` events.
 
 ![Adding a GitHub web hook by navigating to Settings -> Webhooks -> Add webhook](./artwork/prout-web-hook.gif)
 
+Note that this can be done _once_ at the [Organization Webhook](https://docs.github.com/en/rest/orgs/webhooks) level, which removes the need for doing it on each individual repo. Prout will check that any repository has a `.prout.json` config file present before attempting to take any action on it.
 ##### Post-deploy hooks
 
 Whatever deployment tool you use (RiffRaff, Heroku, etc) just set it to hit Prout
