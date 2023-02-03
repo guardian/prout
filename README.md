@@ -37,7 +37,7 @@ Follow the 4-step program:
 
 ## Give prout-bot write-access
 
-![Giving prout write-access by going to Settings -> Collaborators and team -> Add people and typing in 'prout-bot'](./artwork/prout-write.gif)
+![Giving prout write-access by going to Settings -> Collaborators and team -> Add teams and typing in 'prout'](./artwork/prout-team-write.gif)
 
 Admin access to the repository is required to give prout-bot write-access. Please contact your team's Engineering Manager for this.
 
