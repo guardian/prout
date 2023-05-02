@@ -1,12 +1,9 @@
 package lib
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Keep, Sink}
-import com.madgag.github.Implicits.RichFuture
+import com.madgag.github.Implicits.{RichFuture, RichSource}
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateLabel
-import com.madgag.scalagithub.model.{Label, Repo}
-import lib.gitgithub.RichSource
 import lib.labels.{CheckpointTestStatus, PullRequestCheckpointStatus}
 
 import scala.concurrent.{ExecutionContext, Future}

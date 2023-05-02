@@ -1,13 +1,13 @@
 package lib
 
+import com.madgag.github.Implicits.RichSource
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
-import lib.gitgithub.RichSource
 import lib.sentry.SentryApiClient
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inside, Inspectors}
 import org.scalatestplus.play._
 import org.scalatestplus.play.components.OneAppPerSuiteWithComponents
@@ -34,13 +34,13 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
   val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
 
-  val githubCredentials =
+  val githubCredentials: GitHubCredentials =
     GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
 
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
   implicit lazy val github = new GitHub(githubCredentials)
-  implicit lazy val mat = app.materializer
+  implicit lazy val materializer = app.materializer
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
