@@ -3,14 +3,15 @@ import com.madgag.playgithub.testkit.TestRepoCreation
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId
+import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.{BeforeAndAfterAll, Inside}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
-class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
+class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with IntegrationPatience {
 
-  val testRepoCreation = TestRepoCreation("prout",githubCredentials)
+  val testRepoCreation = TestRepoCreation("prout", githubCredentials)
 
   override def beforeAll(): Unit = {
     testRepoCreation.deleteTestRepos().futureValue
