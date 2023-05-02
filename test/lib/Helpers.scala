@@ -40,7 +40,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
   implicit lazy val github = new GitHub(githubCredentials)
-  implicit lazy val mat = app.materializer
+  implicit lazy val materializer = app.materializer
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
