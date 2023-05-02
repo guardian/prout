@@ -1,13 +1,20 @@
+import com.madgag.github.Implicits.RichSource
+import com.madgag.playgithub.testkit.TestRepoCreation
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
-import lib.gitgithub.RichSource
 import org.eclipse.jgit.lib.ObjectId.zeroId
-import org.scalatest.Inside
+import org.scalatest.{BeforeAndAfterAll, Inside}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
-class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
+class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with TestRepoCreation {
+
+  val testRepoNamePrefix: String = "prout-test"
+
+  override def beforeAll(): Unit = {
+    deleteTestRepos()
+  }
 
   "Update repo" must {
 

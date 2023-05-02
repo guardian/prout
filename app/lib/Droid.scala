@@ -23,14 +23,14 @@ class Droid(
   val logger = Logger(getClass)
 
   def scan(repoId: RepoId): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = {
-    logger.info(s"Asked to audit $repoId")
+    logger.info(s"Asked to audit ${repoId.fullName}")
 
     for {
       repoSnapshot <- repoSnapshotFactory.snapshot(repoId)
       pullRequestUpdates <- processMergedPullRequestsOn(repoSnapshot)
       activeSnapshots <- repoSnapshot.activeSnapshotsF
     } yield {
-      logger.info(s"$repoId has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
+      logger.info(s"${repoId.fullName} has ${activeSnapshots.size} active snapshots : ${activeSnapshots.map(s => s.checkpoint.name -> s.commitIdTry.map(_.map(_.shortName).getOrElse("None"))).toMap}")
       pullRequestUpdates
     }
   }

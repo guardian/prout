@@ -34,7 +34,7 @@ object RepoUtil extends Logging {
   def getGitRepo(dataDirectory: File, uri: String, credentials: Option[CredentialsProvider] = None): Repository = {
 
     def invoke[C <: GitCommand[_], R](command: TransportCommand[C, R]): R = {
-      command.setTimeout(5)
+      command.setTimeout(15)
       credentials.foreach(command.setCredentialsProvider)
       command.call()
     }
@@ -58,7 +58,10 @@ object RepoUtil extends Logging {
       } else {
         Files.createDirectories(gitdir.toPath.getParent)
         logger.info(s"Cloning new Git repo... $uri")
-        invoke(Git.cloneRepository().setBare(true).setDirectory(gitdir).setURI(uri)).getRepository
+        invoke(
+          Git.cloneRepository()
+            .setDepth(200) // the aim here is to reduce the memory load of big repos like guardian/frontend
+            .setBare(true).setDirectory(gitdir).setURI(uri)).getRepository
       }
     }
 
