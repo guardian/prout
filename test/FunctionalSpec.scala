@@ -1,13 +1,20 @@
+import com.madgag.github.Implicits.RichSource
+import com.madgag.playgithub.testkit.TestRepoCreation
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
-import lib.gitgithub.RichSource
 import org.eclipse.jgit.lib.ObjectId.zeroId
-import org.scalatest.Inside
+import org.scalatest.{BeforeAndAfterAll, Inside}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
-class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
+class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
+
+  val testRepoCreation = TestRepoCreation("prout",githubCredentials)
+
+  override def beforeAll(): Unit = {
+    testRepoCreation.deleteTestRepos().futureValue
+  }
 
   "Update repo" must {
 
@@ -55,7 +62,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
     }
 
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
+      implicit val repoPR = mergePullRequestIn(testRepoCreation.createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -67,7 +74,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
     }
 
     "act on a pull request if it touches a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "food-feature")
+      implicit val repoPR = mergePullRequestIn(testRepoCreation.createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "food-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -85,7 +92,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
     }
 
     "report an overdue merge without being called" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
+      implicit val repoPR = mergePullRequestIn(testRepoCreation.createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointTo zeroId
 
@@ -108,7 +115,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
     }
 
     "report a broken site as overdue" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
+      implicit val repoPR = mergePullRequestIn(testRepoCreation.createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointFailureTo new Exception("This website went Boom!")
 
@@ -130,7 +137,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
     }
 
     "use custom messages in comments when set in the config" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/simple-with-messages.git.zip"), "feature-elephant")
+      implicit val repoPR = mergePullRequestIn(testRepoCreation.createTestRepo("/simple-with-messages.git.zip"), "feature-elephant")
 
       repoPR setCheckpointTo zeroId
 
@@ -150,7 +157,7 @@ class FunctionalSpec extends Helpers with TestRepoCreation with Inside {
   }
 
   private def mergeSamplePR(userLabels: Set[String] = Set.empty): RepoPR = mergePullRequestIn(
-    createTestRepo("/feature-branches.top-level-config.git.zip"),
+    testRepoCreation.createTestRepo("/feature-branches.top-level-config.git.zip"),
     "feature-1",
     userLabels = userLabels
   )

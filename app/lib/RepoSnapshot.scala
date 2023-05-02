@@ -17,7 +17,6 @@
 package lib
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Keep, Sink}
 import com.madgag.git._
 import com.madgag.github.Implicits._
 import com.madgag.scala.collection.decorators._
@@ -27,7 +26,7 @@ import com.madgag.scalagithub.model.{PullRequest, Repo, RepoId}
 import com.madgag.time.Implicits._
 import io.lemonlabs.uri.Url
 import lib.Config.Checkpoint
-import lib.gitgithub.{LabelMapping, RichSource}
+import lib.gitgithub.LabelMapping
 import lib.labels._
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}

@@ -7,7 +7,6 @@ import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.{Repo, RepoId}
 import com.typesafe.scalalogging.LazyLogging
 import lib.ConfigFinder.ProutConfigFileName
-import lib.gitgithub._
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext.Implicits.global
