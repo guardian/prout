@@ -102,7 +102,7 @@ that value on the production site. The ugly-looking SBT config is:
 ```
 buildInfoKeys := Seq[BuildInfoKey](
       name,
-      BuildInfoKey.constant("gitCommitId", Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse(try {
+        "gitCommitId" -> (Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse (try {
         "git rev-parse HEAD".!!.trim
       } catch {
           case e: Exception => "unknown"
