@@ -59,7 +59,16 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   case class RepoPR(pr: PullRequest) {
     val githubRepo = pr.baseRepo
 
-    def currentPR(): PullRequest = githubRepo.pullRequests.get(pr.number).futureValue
+    def currentPR(): PullRequest = {
+      def fetchPR(): PullRequest = githubRepo.pullRequests.get(pr.number).futureValue
+
+      eventually {
+        val pr = fetchPR()
+        Thread.sleep(1000)
+        fetchPR() mustEqual pr
+        pr
+      }
+    }
 
     def listComments(): Seq[Comment] = pr.comments2.list().all().futureValue
 
@@ -132,12 +141,11 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   }
 
   def scanShouldNotChange[S](issueState: PullRequest => S)(implicit repoPR: RepoPR): Unit = {
-    val issueBeforeScan = repoPR.currentPR()
-    val beforeState = issueState(issueBeforeScan)
+    val beforeState = issueState(repoPR.currentPR())
 
-    for (check <- 1 to 3) {
-      whenReady(repoPR.scheduler.scan()) { s =>
-        issueState(repoPR.currentPR()) must equal(beforeState)
+    for (_ <- 1 to 3) { // Scan repo several times...
+      whenReady(repoPR.scheduler.scan()) { _ =>
+        issueState(repoPR.currentPR()) mustEqual beforeState // ... nothing should change
       }
     }
   }
