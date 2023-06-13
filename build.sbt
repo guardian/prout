@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.10"
+scalaVersion := "2.13.11"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -32,7 +32,6 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.32.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "org.webjars.bower" % "octicons" % "3.5.0",
   "com.madgag.play-git-hub" %% "core" % "5.10",
   "com.madgag.play-git-hub" %% "testkit" % "5.10" % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "4.6" % Test,
