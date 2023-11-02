@@ -38,6 +38,17 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test
 )
 
+// Overidden transient dependencies for Vulnerability fixes
+libraryDependencies ++= Seq(
+  // Introduced through com.typesafe.play:play_2.13:2.9.0
+  "com.typesafe.akka" %% "akka-actor" % "2.8.1",
+  // Introduced through org.webjars:bootstrap:3.4.1
+  "org.webjars" % "jquery" % "3.6.4",
+  // Introduced through com.madgag.play-git-hub:core:5.10
+  "org.eclipse.jgit" % "org.eclipse.jgit" % "6.6.1.202309021850-r",
+  "com.squareup.okhttp3" % "okhttp" % "4.12.0"
+)
+
 routesImport ++= Seq("com.madgag.scalagithub.model._","com.madgag.playgithub.Binders._")
 
 Compile/doc/sources := Seq.empty
