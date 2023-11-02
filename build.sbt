@@ -41,10 +41,13 @@ libraryDependencies ++= Seq(
 // Overidden transient dependencies for Vulnerability fixes
 libraryDependencies ++= Seq(
   // Introduced through com.typesafe.play:play_2.13:2.9.0
+  // No newer version of play available yet.
   "com.typesafe.akka" %% "akka-actor" % "2.8.1",
   // Introduced through org.webjars:bootstrap:3.4.1
+  // Fix available in next major bootstrap version - this will involve a lot of breaking changes however.
   "org.webjars" % "jquery" % "3.6.4",
   // Introduced through com.madgag.play-git-hub:core:5.10
+  // No newer version of play-git-hub available yet.
   "org.eclipse.jgit" % "org.eclipse.jgit" % "6.6.1.202309021850-r",
   "com.squareup.okhttp3" % "okhttp" % "4.12.0"
 )
