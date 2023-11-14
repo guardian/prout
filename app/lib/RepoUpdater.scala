@@ -1,6 +1,6 @@
 package lib
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import com.madgag.github.Implicits.{RichFuture, RichSource}
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateLabel

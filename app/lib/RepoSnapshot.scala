@@ -16,7 +16,7 @@
 
 package lib
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import com.madgag.git._
 import com.madgag.github.Implicits._
 import com.madgag.scala.collection.decorators._
