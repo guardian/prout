@@ -32,31 +32,23 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.32.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "com.madgag.play-git-hub" %% "core" % "5.10",
-  "com.madgag.play-git-hub" %% "testkit" % "5.10" % Test,
+  "com.madgag.play-git-hub" %% "core" % "5.12",
+  "com.madgag.play-git-hub" %% "testkit" % "5.12" % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "4.6" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test
 )
 
 // Overidden transient dependencies for Vulnerability fixes
 libraryDependencies ++= Seq(
-  // Introduced through com.typesafe.play:play_2.13:2.9.0
-  // No newer version of play available yet.
-  "com.typesafe.akka" %% "akka-actor" % "2.8.1",
-  "com.typesafe.akka" %% "akka-actor-typed" % "2.8.1",
-  "com.typesafe.akka" %% "akka-protobuf-v3" % "2.8.1",
-  "com.typesafe.akka" %% "akka-serialization-jackson" % "2.8.1",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.8.1",
-  "com.typesafe.akka" %% "akka-stream" % "2.8.1",
-
   // Introduced through org.webjars:bootstrap:3.4.1
   // Fix available in next major bootstrap version - this will involve a lot of breaking changes however.
   "org.webjars" % "jquery" % "3.6.4",
+)
 
-  // Introduced through com.madgag.play-git-hub:core:5.10
-  // No newer version of play-git-hub available yet.
-  "org.eclipse.jgit" % "org.eclipse.jgit" % "6.6.1.202309021850-r",
-  "com.squareup.okhttp3" % "okhttp" % "3.4.0"
+excludeDependencies ++= Seq(
+  // As of Play 3.0, groupId has changed to org.playframework; exclude transitive dependencies to the old artifacts
+  // play-git-hub still has Play 2.x
+  ExclusionRule(organization = "com.typesafe.play")
 )
 
 routesImport ++= Seq("com.madgag.scalagithub.model._","com.madgag.playgithub.Binders._")
