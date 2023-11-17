@@ -1,6 +1,6 @@
 package lib
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 import java.time.Instant
 import java.time.Instant.now
@@ -11,7 +11,7 @@ import com.madgag.scalagithub.model.RepoId
 import com.madgag.time.Implicits._
 import lib.labels.Seen
 import play.api.Logging
-import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Pekko
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext.Implicits.global

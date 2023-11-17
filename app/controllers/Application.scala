@@ -16,7 +16,7 @@
 
 package controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.madgag.scalagithub.model.RepoId
 import lib.{Bot, RepoSnapshot}
 import play.api.Logging
