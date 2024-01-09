@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
 libraryDependencies ++= Seq(
   // Introduced through org.webjars:bootstrap:3.4.1
   // Fix available in next major bootstrap version - this will involve a lot of breaking changes however.
-  "org.webjars" % "jquery" % "3.6.4",
+  "org.webjars" % "jquery" % "3.7.1",
 )
 
 routesImport ++= Seq("com.madgag.scalagithub.model._","com.madgag.playgithub.Binders._")
