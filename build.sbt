@@ -37,7 +37,7 @@ libraryDependencies ++= Seq(
   "com.madgag.play-git-hub" %% "core" % "6.0",
   "com.madgag.play-git-hub" %% "testkit" % "6.0" % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "4.8" % Test,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test
+  "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test
 )
 
 // Overidden transient dependencies for Vulnerability fixes
