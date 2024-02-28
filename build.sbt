@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.12"
+scalaVersion := "2.13.13"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "bootstrap" % "3.4.1",
   "com.getsentry.raven" % "raven-logback" % "8.0.3",
   // Transient dependency of raven-logback 8.0.3. No newer version of raven-logback available.
-  "ch.qos.logback" % "logback-classic" % "1.4.14",
+  "ch.qos.logback" % "logback-classic" % "1.5.1",
   "com.github.nscala-time" %% "nscala-time" % "2.32.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
