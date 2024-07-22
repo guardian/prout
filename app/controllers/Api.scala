@@ -19,7 +19,6 @@ package controllers
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import com.madgag.scalagithub.model.RepoId
 import lib._
-import lib.actions.Parsers.parseGitHubHookJson
 import play.api.libs.json.{JsArray, JsNumber}
 import play.api.mvc._
 
@@ -32,11 +31,22 @@ class Api(
   cc: ControllerAppComponents
 ) extends AbstractAppController(cc) {
 
-  def githubHook() = Action.async(parse.json.map(parseGitHubHookJson)) { implicit request =>
-    val repoId = request.body
+  def githubHook() = Action.async(parse.json) { implicit request =>
     val githubDeliveryGuid = request.headers.get("X-GitHub-Delivery")
-    logger.info(s"githubHook repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
-    updateFor(repoId)
+
+    request.headers.get("X-Github-Event") match {
+      case Some("ping") =>
+        // Always say hello! If you set up webhooks at the organisation level the initial ping will not have repository data
+        logger.info(s"githubHook event=ping githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
+        Future.successful(Ok("pong"))
+
+      case event =>
+        val repoId = (request.body \ "repository" \ "full_name").validate[String].map(RepoId.from).get
+        val githubDeliveryGuid = request.headers.get("X-GitHub-Delivery")
+
+        logger.info(s"githubHook event=${event.getOrElse("unknown")} repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
+        updateFor(repoId)
+    }
   }
 
   def updateRepo(repoId: RepoId) = Action.async { implicit request =>
