@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.14"
+scalaVersion := "2.13.15"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -23,15 +23,15 @@ Test / testOptions +=
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.5.9" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.softwaremill.macwire" %% "macros" % "2.6.4" % Provided, // slight finesse: 'provided' as only used for compile
   "com.madgag" %% "scala-collection-plus" % "0.11",
-  "org.typelevel" %% "cats-core" % "2.10.0",
-  "com.github.blemale" %% "scaffeine" % "5.2.1",
+  "org.typelevel" %% "cats-core" % "2.12.0",
+  "com.github.blemale" %% "scaffeine" % "5.3.0",
   "org.webjars" % "bootstrap" % "3.4.1",
   "com.getsentry.raven" % "raven-logback" % "8.0.3",
   // Transient dependency of raven-logback 8.0.3. No newer version of raven-logback available.
-  "ch.qos.logback" % "logback-classic" % "1.5.6",
-  "com.github.nscala-time" %% "nscala-time" % "2.32.0",
+  "ch.qos.logback" % "logback-classic" % "1.5.9",
+  "com.github.nscala-time" %% "nscala-time" % "2.34.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "com.madgag.play-git-hub" %% "core" % "6.0",
