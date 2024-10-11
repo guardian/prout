@@ -23,7 +23,7 @@ Test / testOptions +=
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.5.9" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.softwaremill.macwire" %% "macros" % "2.6.4" % Provided, // slight finesse: 'provided' as only used for compile
   "com.madgag" %% "scala-collection-plus" % "0.11",
   "org.typelevel" %% "cats-core" % "2.10.0",
   "com.github.blemale" %% "scaffeine" % "5.3.0",
