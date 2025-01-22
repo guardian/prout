@@ -32,21 +32,25 @@ class Api(
   cc: ControllerAppComponents
 ) extends AbstractAppController(cc) {
 
-  def githubHook() = Action.async(parse.json.map(parseGitHubHookJson)) { implicit request =>
-    val repoId = request.body
+  def githubHook() = Action.async(parse.json) { implicit request =>
     val githubDeliveryGuid = request.headers.get("X-GitHub-Delivery")
-    logger.info(s"githubHook repo=${repoId.fullName} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
-    updateFor(repoId)
+
+    val eventOpt: Option[String] = request.headers.get("X-Github-Event")
+    val repoIdOpt = Option.unless(eventOpt.contains("ping"))(parseGitHubHookJson(request.body))
+
+    logger.info(s"githubHook event=${eventOpt.getOrElse("unknown")} repo=${repoIdOpt.map(_.fullName)} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
+
+    repoIdOpt.fold(Future.successful(Ok("pong")))(updateForRepo)
   }
 
   def updateRepo(repoId: RepoId) = Action.async { implicit request =>
     logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
-    updateFor(repoId)
+    updateForRepo(repoId)
   }
 
   def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
 
-  def updateFor(repoId: RepoId): Future[Result] = {
+  def updateForRepo(repoId: RepoId): Future[Result] = {
     logger.debug(s"update requested for $repoId")
     for {
       acceptList <- repoAcceptListService.acceptList()
