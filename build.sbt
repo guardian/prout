@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.15"
+scalaVersion := "2.13.16"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -20,11 +20,13 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
+val playGitHubVersion = "7.0.0"
+
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.6.4" % Provided, // slight finesse: 'provided' as only used for compile
-  "com.madgag" %% "scala-collection-plus" % "0.11",
+  "com.softwaremill.macwire" %% "macros" % "2.6.5" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.madgag" %% "scala-collection-plus" % "1.0.0",
   "org.typelevel" %% "cats-core" % "2.12.0",
   "com.github.blemale" %% "scaffeine" % "5.3.0",
   "org.webjars" % "bootstrap" % "3.4.1",
@@ -34,8 +36,8 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.34.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "com.madgag.play-git-hub" %% "core" % "6.0",
-  "com.madgag.play-git-hub" %% "testkit" % "6.0" % Test,
+  "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
+  "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "4.8" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test
 )
