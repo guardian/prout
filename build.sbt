@@ -38,7 +38,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
-  "com.madgag.scala-git" %% "scala-git-test" % "4.8" % Test,
+  "com.madgag.scala-git" %% "scala-git-test" % "6.0.0" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test
 )
 
