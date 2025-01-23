@@ -32,8 +32,8 @@ libraryDependencies ++= Seq(
   "org.webjars" % "bootstrap" % "3.4.1",
   "com.getsentry.raven" % "raven-logback" % "8.0.3",
   // Transient dependency of raven-logback 8.0.3. No newer version of raven-logback available.
-  "ch.qos.logback" % "logback-classic" % "1.5.9",
-  "com.github.nscala-time" %% "nscala-time" % "2.34.0",
+  "ch.qos.logback" % "logback-classic" % "1.5.16",
+  "com.github.nscala-time" %% "nscala-time" % "3.0.0",
   "io.lemonlabs" %% "scala-uri" % "4.0.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
