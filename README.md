@@ -96,6 +96,8 @@ You must embed the commit id in your site - we do this on
 [membership.theguardian.com](https://membership.theguardian.com/)
 for instance.
 
+Prout [searches the response body and headers](app/lib/CheckpointSnapshot.scala#L45-L58) for any 40-character string of hexadecimal digits surrounded by word breaks, so adding the commit id almost anywhere should work. 
+
 I use the [`sbt-buildinfo`](https://github.com/sbt/sbt-buildinfo) plugin to store the Git commit id in my stored artifact, and then expose
 that value on the production site. The ugly-looking SBT config is:
 
