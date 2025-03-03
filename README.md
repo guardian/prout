@@ -41,7 +41,7 @@ Follow the 4-step program:
 
 Admin access to the repository is required to give prout-bot write-access. Please contact your team's Engineering Manager for this.
 
-### Add config file
+## Add config file
 
 Add a `.prout.json` file to any folder you want monitored in your repo:
 
@@ -60,12 +60,12 @@ and a comment as appropriate. The url you specify in the checkpoint will be fetc
 and the contents of the response will be read- so long as you embed the commit id
 that response, Prout will be able to work out whether or not the PR has been deployed.
 
-### Add callbacks
+## Add callbacks
 
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
 so that Prout can immediately check your site.
 
-##### GitHub
+### GitHub
 
 Add a [GitHub webhook](https://developer.github.com/webhooks/creating/#setting-up-a-webhook)
 with these settings:
@@ -78,7 +78,7 @@ The hook should be set to activate on `Pull Request` events.
 ![Adding a GitHub web hook by navigating to Settings -> Webhooks -> Add webhook](./artwork/prout-web-hook.gif)
 
 Note that this can be done _once_ at the [Organization Webhook](https://docs.github.com/en/rest/orgs/webhooks) level, which removes the need for doing it on each individual repo. Prout will check that any repository has a `.prout.json` config file present before attempting to take any action on it.
-##### Post-deploy hooks
+### Post-deploy hooks
 
 Whatever deployment tool you use (RiffRaff, Heroku, etc) just set it to hit Prout
 as a post-deploy hook (for your repo on _github.com/[owner]/[repo]_):
@@ -90,7 +90,7 @@ https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
 Hitting that url (`GET` or `POST`) will always prompt Prout to
 scan the repository for outstanding pull-requests.
 
-### Expose the commit id
+## Expose the commit id
 
 You must embed the commit id in your site - we do this on
 [membership.theguardian.com](https://membership.theguardian.com/)
@@ -112,7 +112,7 @@ buildInfoKeys := Seq[BuildInfoKey](
     )
 ```
 
-### Slack
+## Slack
 
 Users [can configure a Slack hook](https://github.com/guardian/prout/pull/11) for Prout
 by creating a new Slack 'Incoming Webhook':
