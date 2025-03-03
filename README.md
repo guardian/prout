@@ -30,12 +30,12 @@ in Production (a slightly stronger statement than simply saying it's been deploy
 
 Follow the 4-step program:
 
-1. Give [prout-bot](https://github.com/prout-bot) write-access to your repo (so it can set labels on your pull request)
-2. Add one or more `.prout.json` config files to your project
-3. Add callbacks to prout - ie a GitHub webhook and ideally also a post-deploy hook
-4. Expose the commit id of your build on your deployed site
+1. [Give prout-bot write-access](#give-prout-bot-write-access) to your repo (so it can set labels on your pull request)
+2. [Add one or more `.prout.json` config files to your project](#add-config-file)
+3. [Add callbacks to prout](#add-callbacks) - ie a GitHub webhook and ideally also a post-deploy hook
+4. [Expose the commit id](#expose-the-commit-id) of your build on your deployed site
 
-## Give prout-bot write-access
+## Give [prout-bot](https://github.com/prout-bot) write-access
 
 ![Giving prout write-access by going to Settings -> Collaborators and team -> Add teams and typing in 'prout'](./artwork/prout-team-write.gif)
 
