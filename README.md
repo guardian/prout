@@ -30,18 +30,18 @@ in Production (a slightly stronger statement than simply saying it's been deploy
 
 Follow the 4-step program:
 
-1. Give [prout-bot](https://github.com/prout-bot) write-access to your repo (so it can set labels on your pull request)
-2. Add one or more `.prout.json` config files to your project
-3. Add callbacks to prout - ie a GitHub webhook and ideally also a post-deploy hook
-4. Expose the commit id of your build on your deployed site
+1. [Give prout-bot write-access](#give-prout-bot-write-access) to your repo (so it can set labels on your pull request)
+2. [Add one or more `.prout.json` config files to your project](#add-config-file)
+3. [Add callbacks to prout](#add-callbacks) - ie a GitHub webhook and ideally also a post-deploy hook
+4. [Expose the commit id](#expose-the-commit-id) of your build on your deployed site
 
-## Give prout-bot write-access
+## Give [prout-bot](https://github.com/prout-bot) write-access
 
 ![Giving prout write-access by going to Settings -> Collaborators and team -> Add teams and typing in 'prout'](./artwork/prout-team-write.gif)
 
 Admin access to the repository is required to give prout-bot write-access. Please contact your team's Engineering Manager for this.
 
-### Add config file
+## Add config file
 
 Add a `.prout.json` file to any folder you want monitored in your repo:
 
@@ -60,12 +60,12 @@ and a comment as appropriate. The url you specify in the checkpoint will be fetc
 and the contents of the response will be read- so long as you embed the commit id
 that response, Prout will be able to work out whether or not the PR has been deployed.
 
-### Add callbacks
+## Add callbacks
 
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
 so that Prout can immediately check your site.
 
-##### GitHub
+### GitHub
 
 Add a [GitHub webhook](https://developer.github.com/webhooks/creating/#setting-up-a-webhook)
 with these settings:
@@ -78,7 +78,7 @@ The hook should be set to activate on `Pull Request` events.
 ![Adding a GitHub web hook by navigating to Settings -> Webhooks -> Add webhook](./artwork/prout-web-hook.gif)
 
 Note that this can be done _once_ at the [Organization Webhook](https://docs.github.com/en/rest/orgs/webhooks) level, which removes the need for doing it on each individual repo. Prout will check that any repository has a `.prout.json` config file present before attempting to take any action on it.
-##### Post-deploy hooks
+### Post-deploy hooks
 
 Whatever deployment tool you use (RiffRaff, Heroku, etc) just set it to hit Prout
 as a post-deploy hook (for your repo on _github.com/[owner]/[repo]_):
@@ -90,11 +90,13 @@ https://prout-bot.herokuapp.com/api/update/[owner]/[repo]
 Hitting that url (`GET` or `POST`) will always prompt Prout to
 scan the repository for outstanding pull-requests.
 
-### Expose the commit id
+## Expose the commit id
 
 You must embed the commit id in your site - we do this on
 [membership.theguardian.com](https://membership.theguardian.com/)
 for instance.
+
+Prout [searches the response body and headers](app/lib/CheckpointSnapshot.scala#L45-L58) for any 40-character string of hexadecimal digits surrounded by word breaks, so adding the commit id almost anywhere should work. 
 
 I use the [`sbt-buildinfo`](https://github.com/sbt/sbt-buildinfo) plugin to store the Git commit id in my stored artifact, and then expose
 that value on the production site. The ugly-looking SBT config is:
@@ -102,7 +104,7 @@ that value on the production site. The ugly-looking SBT config is:
 ```
 buildInfoKeys := Seq[BuildInfoKey](
       name,
-        "gitCommitId" -> (Option(System.getenv("BUILD_VCS_NUMBER")) getOrElse (try {
+        "gitCommitId" -> (Option(System.getenv("GITHUB_SHA")) getOrElse (try {
         "git rev-parse HEAD".!!.trim
       } catch {
           case e: Exception => "unknown"
@@ -110,7 +112,7 @@ buildInfoKeys := Seq[BuildInfoKey](
     )
 ```
 
-### Slack
+## Slack
 
 Users [can configure a Slack hook](https://github.com/guardian/prout/pull/11) for Prout
 by creating a new Slack 'Incoming Webhook':
