@@ -22,6 +22,28 @@ Test / testOptions +=
 
 val playGitHubVersion = "7.0.0"
 
+val jacksonVersion         = "2.19.0"
+val jacksonDatabindVersion = "2.19.0"
+
+val jacksonOverrides = Seq(
+  "com.fasterxml.jackson.core"     % "jackson-core",
+  "com.fasterxml.jackson.core"     % "jackson-annotations",
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8",
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310"
+).map(_ % jacksonVersion)
+
+val jacksonDatabindOverrides = Seq(
+  "com.fasterxml.jackson.core" % "jackson-databind" % jacksonDatabindVersion
+)
+
+val akkaSerializationJacksonOverrides = Seq(
+  "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor",
+  "com.fasterxml.jackson.module"     % "jackson-module-parameter-names",
+  "com.fasterxml.jackson.module"     %% "jackson-module-scala",
+).map(_ % jacksonVersion)
+
+libraryDependencies ++= jacksonDatabindOverrides ++ jacksonOverrides ++ akkaSerializationJacksonOverrides
+
 libraryDependencies ++= Seq(
   filters,
   ws,
