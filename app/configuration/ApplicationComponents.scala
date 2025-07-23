@@ -1,13 +1,13 @@
 package configuration
 
-import com.madgag.scalagithub.model.User
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
+import com.madgag.scalagithub.GitHub
 import com.softwaremill.macwire._
-import controllers.{Application, _}
+import controllers._
+import lib._
 import lib.actions.Actions
 import lib.sentry.SentryApiClient
-import lib.{Bot, CheckpointSnapshoter, Delayer, Droid, PRSnapshot, PRUpdater, RepoSnapshot, RepoUpdater, ScanScheduler}
 import monitoring.SentryLogging
+import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.routing.Router
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext, Logging}
 import router.Routes
@@ -15,10 +15,11 @@ import router.Routes
 import java.nio.file.Path
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.io.Source
 
 class ApplicationComponents(context: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters
-    with AssetsComponents with Logging {
+    with AssetsComponents with AhcWSComponents with Logging {
   val sentryLogging: SentryLogging = wire[SentryLogging]
   sentryLogging.init() // Is this the best place to start this?!
 
@@ -26,7 +27,15 @@ class ApplicationComponents(context: ApplicationLoader.Context)
 
   val workingDir: Path = Path.of("/tmp", "bot", "working-dir")
 
-  implicit val bot: Bot = Bot.forAccessToken(configuration.get[String]("github.botAccessToken"))
+  implicit val bot: Bot = Await.result(Bot.forGithubApp(
+      appClientId = configuration.get[String]("github.app.clientId"),
+      installationId = configuration.get[String]("github.app.installationId"),
+      privateKey = {
+        val file = configuration.get[String]("github.app.privateKeyFile")
+        Source.fromFile(file).toList.mkString
+      },
+      wsClient
+    ), 3.seconds)
 
   implicit val github: GitHub = bot.github
 

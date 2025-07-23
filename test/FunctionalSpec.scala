@@ -1,5 +1,6 @@
 import com.madgag.github.Implicits.RichSource
-import com.madgag.playgithub.testkit.{RepoLifecycle, TestRepoCreation, UserRepoLifecycle}
+import com.madgag.playgithub.testkit.{OrgRepoLifecycle, RepoLifecycle, TestRepoCreation}
+import com.madgag.scalagithub.model.Org
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId
@@ -12,7 +13,9 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with Tes
 
   val testRepoNamePrefix: String = "prout-test"
 
-  val repoLifecycle: RepoLifecycle = UserRepoLifecycle
+  val testOrg = sys.env("PROUT_TEST_ORG")
+
+  val repoLifecycle: RepoLifecycle = OrgRepoLifecycle(Org(testOrg, 0, "", "", "", None, None, None, ""))
 
   override def beforeAll(): Unit = {
     deleteTestRepos()
