@@ -37,8 +37,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
   val appClientId = sys.env("PROUT_GITHUB_APP_CLIENT_ID")
   val installationId = sys.env("PROUT_GITHUB_APP_INSTALLATION_ID")
-  val privateKeyFile = sys.env("PROUT_GITHUB_APP_PRIVATE_KEY_FILE")
-  val privateKey: String = Source.fromFile(privateKeyFile).toList.mkString
+  val privateKey = sys.env("PROUT_GITHUB_APP_PRIVATE_KEY")
 
   val githubToken = Await.result(
     GithubAppAuth.getInstallationAccessToken(appClientId, installationId, privateKey, components.wsClient),

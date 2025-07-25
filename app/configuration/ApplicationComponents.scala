@@ -30,10 +30,7 @@ class ApplicationComponents(context: ApplicationLoader.Context)
   implicit val bot: Bot = Await.result(Bot.forGithubApp(
       appClientId = configuration.get[String]("github.app.clientId"),
       installationId = configuration.get[String]("github.app.installationId"),
-      privateKey = {
-        val file = configuration.get[String]("github.app.privateKeyFile")
-        Source.fromFile(file).toList.mkString
-      },
+      privateKey = configuration.get[String]("github.app.privateKey"),
       wsClient
     ), 3.seconds)
 

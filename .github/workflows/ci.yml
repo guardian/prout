@@ -18,7 +18,9 @@ jobs:
       - uses: guardian/setup-scala@v1
       - name: Build and Test
         env:
-          PROUT_GITHUB_ACCESS_TOKEN: ${{ secrets.PROUT_GITHUB_ACCESS_TOKEN }}
+          PROUT_GITHUB_APP_CLIENT_ID: ${{ secrets.PROUT_GITHUB_APP_CLIENT_ID }}
+          PROUT_GITHUB_APP_INSTALLATION_ID: ${{ secrets.PROUT_GITHUB_APP_INSTALLATION_ID }}
+          PROUT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.PROUT_GITHUB_APP_PRIVATE_KEY }}
         run: sbt -v test
       - name: Test Summary
         uses: test-summary/action@v2

@@ -6,8 +6,6 @@ scalaVersion := "2.13.16"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers ++= Resolver.sonatypeOssRepos("releases")
-
 buildInfoKeys := Seq[BuildInfoKey](
   name,
   "gitCommitId" -> Option(System.getenv("SOURCE_VERSION")).getOrElse("unknown")
