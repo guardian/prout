@@ -39,13 +39,14 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   val installationId = sys.env("PROUT_GITHUB_APP_INSTALLATION_ID")
   val privateKey = sys.env("PROUT_GITHUB_APP_PRIVATE_KEY")
 
-  val githubToken = Await.result(
-    GithubAppAuth.getInstallationAccessToken(appClientId, installationId, privateKey, components.wsClient),
-    3.seconds
-  )
+  val gitHubAppJWTs = new GitHubAppJWTs(appClientId, GitHubAppJWTs.parsePrivateKeyFrom(privateKey).get)
+
+  val githubAppAuth = new GithubAppAuth(gitHubAppJWTs, components.wsClient)
+
+  val githubToken = Await.result(githubAppAuth.getInstallationAccessToken(installationId), 3.seconds)
 
   val githubCredentials: GitHubCredentials =
-    GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
+    GitHubCredentials.forAccessKey(githubToken.token, Files.createTempDirectory("tmpDirPrefix")).get
 
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
@@ -109,7 +110,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
     val delayer = new Delayer(app.actorSystem)
 
-    val bot: Bot = Await.result(Bot.forGithubApp(appClientId, installationId, privateKey, components.wsClient), 3.seconds)
+    val bot: Bot = Await.result(Bot.forGithubApp(installationId, githubAppAuth), 3.seconds)
 
     val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
 

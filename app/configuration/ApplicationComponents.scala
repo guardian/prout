@@ -27,11 +27,16 @@ class ApplicationComponents(context: ApplicationLoader.Context)
 
   val workingDir: Path = Path.of("/tmp", "bot", "working-dir")
 
+  val gitHubAppJWTs = new GitHubAppJWTs(
+    configuration.get[String]("github.app.clientId"),
+    GitHubAppJWTs.parsePrivateKeyFrom(configuration.get[String]("github.app.privateKey")).get
+  )
+
+  val githubAppAuth = new GithubAppAuth(gitHubAppJWTs, wsClient)
+
   implicit val bot: Bot = Await.result(Bot.forGithubApp(
-      appClientId = configuration.get[String]("github.app.clientId"),
       installationId = configuration.get[String]("github.app.installationId"),
-      privateKey = configuration.get[String]("github.app.privateKey"),
-      wsClient
+      githubAppAuth
     ), 3.seconds)
 
   implicit val github: GitHub = bot.github

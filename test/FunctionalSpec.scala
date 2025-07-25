@@ -13,7 +13,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with Tes
 
   val testRepoNamePrefix: String = "prout-test"
 
-  val testOrg = sys.env("PROUT_TEST_ORG")
+  val testOrg = "prout-test-ci-org"
 
   val repoLifecycle: RepoLifecycle = OrgRepoLifecycle(Org(testOrg, 0, "", "", "", None, None, None, ""))
 

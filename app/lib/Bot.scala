@@ -16,10 +16,10 @@ case class Identity(login: String, html_url: String) {
 }
 
 case class Bot(
-    workingDir: Path,
-    github: GitHub,
-    git: CredentialsProvider,
-    identity: Identity
+  workingDir: Path,
+  github: GitHub,
+  git: CredentialsProvider,
+  identity: Identity
 )
 
 class GithubAppGithub(ghCredentials: GitHubCredentials) extends GitHub(ghCredentials) {
@@ -48,35 +48,30 @@ object Bot extends Logging {
   }
 
   def forGithubApp(
-      appClientId: String,
-      installationId: String,
-      privateKey: String,
-      wsClient: WSClient
+    installationId: String,
+    githubAppAuth: GithubAppAuth
   )(implicit ec: ExecutionContext): Future[Bot] = {
     val workingDir = Path.of("/tmp", "bot", "working-dir")
 
-    GithubAppAuth
-      .getInstallationAccessToken(appClientId, installationId, privateKey, wsClient)
-      .map { accessToken =>
-        logger.info(s"Successfully obtained installation access token for GitHub app $appClientId")
+    val accessTokenResponseF = githubAppAuth.getInstallationAccessToken(installationId)
+    (for {
+      accessTokenResponse <- accessTokenResponseF
+      app <- githubAppAuth.getAuthenticatedApp()
+    } yield {
+      val credentials: GitHubCredentials =
+        GitHubCredentials.forAccessKey(accessTokenResponse.token, workingDir).get
 
-        val credentials: GitHubCredentials =
-          GitHubCredentials.forAccessKey(accessToken, workingDir).get
+      val github = new GithubAppGithub(credentials)
 
-        val github = new GithubAppGithub(credentials)
-        val app: GitHubApp =
-          Await.result(GithubAppAuth.getAuthenticatedApp(appClientId, privateKey, wsClient), 3.seconds)
-
-        Bot(
-          workingDir,
-          github,
-          credentials.git,
-          Identity(app.slug, app.html_url)
-        )
-      }
-      .recover { case ex =>
-        logger.error("Failed to authenticate with GitHub app", ex)
-        throw ex
-      }
+      Bot(
+        workingDir,
+        github,
+        credentials.git,
+        Identity(app.slug, app.html_url)
+      )
+    }).recover { case ex =>
+      logger.error("Failed to authenticate with GitHub app", ex)
+      throw ex
+    }
   }
 }
