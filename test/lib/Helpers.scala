@@ -11,20 +11,23 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inside, Inspectors}
 import org.scalatestplus.play._
 import org.scalatestplus.play.components.OneAppPerSuiteWithComponents
+import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.routing.Router
-import play.api.{BuiltInComponents, BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
+import play.api.{BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
 
 import java.net.URL
 import java.nio.file.Files
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
+import scala.io.Source
 
 case class PRText(title: String, desc: String)
 
 trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside {
 
   val logger = Logger(getClass)
-  override def components: BuiltInComponents = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
+  override def components = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents with AhcWSComponents {
 
     override lazy val router: Router = Router.empty
   }
@@ -32,10 +35,18 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(20, Seconds)), interval = scaled(Span(2, Seconds)))
 
-  val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
+  val appClientId = sys.env("PROUT_GITHUB_APP_CLIENT_ID")
+  val installationId = sys.env("PROUT_GITHUB_APP_INSTALLATION_ID")
+  val privateKey = sys.env("PROUT_GITHUB_APP_PRIVATE_KEY")
+
+  val gitHubAppJWTs = new GitHubAppJWTs(appClientId, GitHubAppJWTs.parsePrivateKeyFrom(privateKey).get)
+
+  val githubAppAuth = new GithubAppAuth(gitHubAppJWTs, components.wsClient)
+
+  val githubToken = Await.result(githubAppAuth.getInstallationAccessToken(installationId), 3.seconds)
 
   val githubCredentials: GitHubCredentials =
-    GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
+    GitHubCredentials.forAccessKey(githubToken.token, Files.createTempDirectory("tmpDirPrefix")).get
 
   val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
 
@@ -99,7 +110,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
     val delayer = new Delayer(app.actorSystem)
 
-    val bot: Bot = Bot.forAccessToken(githubToken)
+    val bot: Bot = Await.result(Bot.forGithubApp(installationId, githubAppAuth), 3.seconds)
 
     val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
 

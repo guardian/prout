@@ -19,7 +19,7 @@
     <div class="row">
         <div class="col-md-6">
             @for(permissions <- repoSnapshot.repo.permissions) {
-                <h3>Permissions for @bot.user.atLogin</h3>
+                <h3>Permissions for @bot.identity.atLogin</h3>
                 <ul>
                     <li><em>push</em> @if(permissions.push) {
                         ✅

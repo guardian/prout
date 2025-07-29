@@ -6,8 +6,6 @@ scalaVersion := "2.13.16"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers ++= Resolver.sonatypeOssRepos("releases")
-
 buildInfoKeys := Seq[BuildInfoKey](
   name,
   "gitCommitId" -> Option(System.getenv("SOURCE_VERSION")).getOrElse("unknown")
@@ -20,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "7.0.2"
+val playGitHubVersion = "7.0.3-PREVIEW.add-support-for-getting-authenticated-github-app.2025-07-25T1118.a6497ce8"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"
@@ -59,6 +57,7 @@ libraryDependencies ++= Seq(
   "com.indoorvivants" %% "scala-uri" % "4.2.0",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
+  "org.bouncycastle" % "bcpkix-jdk15on" % "1.70",
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "6.0.0" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test

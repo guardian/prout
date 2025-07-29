@@ -48,7 +48,7 @@ class DeployReporter(
     Json.toJson(
       Message(
         s"*Deployed to ${checkpointsWherePRIsNewlySeen.map(slackLinkFor).mkString(", ")}: ${pr.title}*",
-        Some(bot.user.login),
+        Some(bot.identity.login),
         pr.merged_by.map(_.avatar_url),
         attachments = Seq(Attachment(s"PR #${pr.number} deployed to ${checkpointsWherePRIsNewlySeen.map(_.name).mkString(", ")}", Seq(
           Attachment.Field("PR", s"<${pr.html_url}|#${pr.number}>", short = true),
