@@ -1,5 +1,6 @@
 package configuration
 
+import com.madgag.github.apps.{GitHubAppAuth, GitHubAppJWTs}
 import com.madgag.scalagithub.GitHub
 import com.softwaremill.macwire._
 import controllers._
@@ -7,7 +8,7 @@ import lib._
 import lib.actions.Actions
 import lib.sentry.SentryApiClient
 import monitoring.SentryLogging
-import play.api.libs.ws.ahc.AhcWSComponents
+import org.apache.pekko.actor.ActorSystem
 import play.api.routing.Router
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext, Logging}
 import router.Routes
@@ -15,13 +16,14 @@ import router.Routes
 import java.nio.file.Path
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.io.Source
 
 class ApplicationComponents(context: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters
-    with AssetsComponents with AhcWSComponents with Logging {
+    with AssetsComponents with Logging {
   val sentryLogging: SentryLogging = wire[SentryLogging]
   sentryLogging.init() // Is this the best place to start this?!
+
+  implicit val as: ActorSystem = actorSystem
 
   implicit val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshoter
 
@@ -32,12 +34,9 @@ class ApplicationComponents(context: ApplicationLoader.Context)
     GitHubAppJWTs.parsePrivateKeyFrom(configuration.get[String]("github.app.privateKey")).get
   )
 
-  val githubAppAuth = new GithubAppAuth(gitHubAppJWTs, wsClient)
+  val githubAppAuth = new GitHubAppAuth(gitHubAppJWTs)
 
-  implicit val bot: Bot = Await.result(Bot.forGithubApp(
-      installationId = configuration.get[String]("github.app.installationId"),
-      githubAppAuth
-    ), 3.seconds)
+  implicit val bot: Bot = Await.result(Bot.forGithubApp(githubAppAuth), 3.seconds)
 
   implicit val github: GitHub = bot.github
 

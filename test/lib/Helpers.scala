@@ -1,57 +1,45 @@
 package lib
 
-import com.madgag.github.Implicits.RichSource
+import com.madgag.github.Implicits._
+import com.madgag.github.apps.GitHubAppAuth
+import com.madgag.playgithub.testkit.TestRepoCreation
+import com.madgag.scalagithub.GitHubCredentials
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import lib.sentry.SentryApiClient
+import org.apache.pekko.actor.ActorSystem
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inside, Inspectors}
 import org.scalatestplus.play._
 import org.scalatestplus.play.components.OneAppPerSuiteWithComponents
-import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.routing.Router
-import play.api.{BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
+import play.api.{BuiltInComponents, BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
 
-import java.net.URL
-import java.nio.file.Files
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
-import scala.io.Source
 
 case class PRText(title: String, desc: String)
 
-trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside {
+trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside with TestRepoCreation {
 
   val logger = Logger(getClass)
-  override def components = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents with AhcWSComponents {
+  override def components: BuiltInComponents = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
 
     override lazy val router: Router = Router.empty
   }
 
-  implicit override val patienceConfig =
+  implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = scaled(Span(20, Seconds)), interval = scaled(Span(2, Seconds)))
 
-  val appClientId = sys.env("PROUT_GITHUB_APP_CLIENT_ID")
-  val installationId = sys.env("PROUT_GITHUB_APP_INSTALLATION_ID")
-  val privateKey = sys.env("PROUT_GITHUB_APP_PRIVATE_KEY")
+  override implicit val actorSystem: ActorSystem = components.actorSystem
 
-  val gitHubAppJWTs = new GitHubAppJWTs(appClientId, GitHubAppJWTs.parsePrivateKeyFrom(privateKey).get)
+  private val gitHubAppAuth: GitHubAppAuth = GitHubAppAuth.fromConfigMap(sys.env, "PROUT")
 
-  val githubAppAuth = new GithubAppAuth(gitHubAppJWTs, components.wsClient)
-
-  val githubToken = Await.result(githubAppAuth.getInstallationAccessToken(installationId), 3.seconds)
-
-  val githubCredentials: GitHubCredentials =
-    GitHubCredentials.forAccessKey(githubToken.token, Files.createTempDirectory("tmpDirPrefix")).get
-
-  val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
-
-  implicit lazy val github = new GitHub(githubCredentials)
-  implicit lazy val materializer = app.materializer
+  override val githubCredentialsProvider: GitHubCredentials.Provider =
+    gitHubAppAuth.accessSoleInstallation().futureValue
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
@@ -110,7 +98,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
     val delayer = new Delayer(app.actorSystem)
 
-    val bot: Bot = Await.result(Bot.forGithubApp(installationId, githubAppAuth), 3.seconds)
+    val bot: Bot = Await.result(Bot.forGithubApp(gitHubAppAuth), 3.seconds)
 
     val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
 

@@ -15,11 +15,9 @@ import scala.concurrent.duration._
 
 case class RepoAcceptList(allKnownRepos: Set[RepoId], publicRepos: Set[RepoId])
 
-class RepoAcceptListService(
-  actorSystem: ActorSystem
-) (implicit
+class RepoAcceptListService()(implicit
   github: GitHub,
-  mat: Materializer
+  actorSystem: ActorSystem
 ) extends LazyLogging {
 
   lazy val repoAcceptList = new AtomicReference[Future[RepoAcceptList]](getAllKnownRepos)

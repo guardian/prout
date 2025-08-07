@@ -1,9 +1,8 @@
 package lib.librato.model
 
 import java.time.Instant
-
 import io.lemonlabs.uri.Uri
-import play.api.libs.json.{JsNumber, JsString, Json, Writes}
+import play.api.libs.json.{JsNumber, JsString, Json, OWrites, Writes}
 
 case class Link(
   rel: String,
@@ -21,15 +20,15 @@ case class Annotation(
 )
 
 object Annotation {
-  implicit val writesUri = new Writes[Uri] {
+  implicit val writesUri: Writes[Uri] = new Writes[Uri] {
     def writes(uri: Uri) = JsString(uri.toString)
   }
 
-  implicit val writesLink = Json.writes[Link]
+  implicit val writesLink: OWrites[Link] = Json.writes[Link]
 
-  implicit val writesInstant = new Writes[Instant] {
+  implicit val writesInstant: Writes[Instant] = new Writes[Instant] {
     def writes(instant: Instant) = JsNumber(instant.getEpochSecond)
   }
 
-  implicit val writesAnnotation = Json.writes[Annotation]
+  implicit val writesAnnotation: OWrites[Annotation] = Json.writes[Annotation]
 }
