@@ -1,5 +1,4 @@
 import com.madgag.github.Implicits._
-import com.madgag.scalagithub.model.{Account, Org}
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId

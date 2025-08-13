@@ -29,8 +29,8 @@ class RepoAcceptListService()(implicit
   } yield treeT.map(_.tree.exists(_.path.endsWith(ProutConfigFileName))).getOrElse(false)
 
   private def getAllKnownRepos: Future[RepoAcceptList] = for { // check this to see if it always expends quota...
-    allRepos <- github.listRepos(sort="pushed", direction = "desc").take(6).all()
-    proutRepos <- Future.traverse(allRepos.filter(_.permissions.exists(_.push))) { repo =>
+    allRepos <- github.listReposAccessibleToTheApp.allItems()
+    proutRepos <- Future.traverse(allRepos.flatMap(repos => repos.repositories)){ repo =>
       hasProutConfigFile(repo).map(hasConfig => Option.when(hasConfig)(repo))
     }.map(_.flatten.toSet)
   } yield RepoAcceptList(proutRepos.map(_.repoId), proutRepos.filterNot(_.`private`).map(_.repoId))

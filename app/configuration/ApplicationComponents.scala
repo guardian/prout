@@ -41,8 +41,8 @@ class ApplicationComponents(context: ApplicationLoader.Context)
   implicit val github: GitHub = bot.github
 
   implicit val authClient: com.madgag.playgithub.auth.Client = com.madgag.playgithub.auth.Client(
-    id = configuration.get[String]("github.clientId"),
-    secret = configuration.get[String]("github.clientSecret")
+    id = configuration.get[String]("github.app.clientId"),
+    secret = configuration.get[String]("github.app.clientSecret")
   )
 
   val delayer: Delayer = wire[Delayer]
