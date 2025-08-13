@@ -1,7 +1,6 @@
 package controllers
 
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.{Repo, RepoId}
