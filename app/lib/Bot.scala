@@ -1,6 +1,7 @@
 package lib
 
 import com.madgag.github.apps.GitHubAppAuth
+import com.madgag.scalagithub.model.Account
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import play.api.Logging
 
@@ -28,10 +29,10 @@ object Bot extends Logging {
 
     (for {
       app <- githubAppAuth.getAuthenticatedApp()
-      gitHubCredsProvider <- githubAppAuth.accessSoleInstallation()
+      installationAccess <- githubAppAuth.accessSoleInstallation()
     } yield Bot(
       workingDir,
-      gitHubCredsProvider,
+      installationAccess.credentials,
       Identity(app.slug, app.html_url)
     )
     ).recover { case ex =>

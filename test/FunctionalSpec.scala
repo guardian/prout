@@ -1,6 +1,5 @@
 import com.madgag.github.Implicits._
-import com.madgag.playgithub.testkit.{OrgRepoLifecycle, RepoLifecycle, TestRepoCreation}
-import com.madgag.scalagithub.model.Org
+import com.madgag.scalagithub.model.{Account, Org}
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId
@@ -12,10 +11,6 @@ import scala.language.postfixOps
 class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
 
   val testRepoNamePrefix: String = "prout-test"
-
-  val testOrg = "prout-test-ci-org"
-
-  val repoLifecycle: RepoLifecycle = OrgRepoLifecycle(Org(testOrg, 0, "", "", "", None, None, None, ""))
 
   override def beforeAll(): Unit = {
     deleteTestRepos()
@@ -166,4 +161,5 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     "feature-1",
     userLabels = userLabels
   )
+
 }

@@ -38,7 +38,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
   private val gitHubAppAuth: GitHubAppAuth = GitHubAppAuth.fromConfigMap(sys.env, "PROUT")
 
-  override val githubCredentialsProvider: GitHubCredentials.Provider =
+  val testFixturesInstallationAccess: com.madgag.github.apps.InstallationAccess =
     gitHubAppAuth.accessSoleInstallation().futureValue
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
