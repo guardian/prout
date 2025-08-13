@@ -1,12 +1,11 @@
 package controllers
 
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.{Repo, RepoId}
 import com.typesafe.scalalogging.LazyLogging
 import lib.ConfigFinder.ProutConfigFileName
+import org.apache.pekko.actor.ActorSystem
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,7 +18,7 @@ class RepoAcceptListService(
   actorSystem: ActorSystem
 ) (implicit
   github: GitHub,
-  mat: Materializer
+  as: ActorSystem
 ) extends LazyLogging {
 
   lazy val repoAcceptList = new AtomicReference[Future[RepoAcceptList]](getAllKnownRepos)
@@ -35,7 +34,10 @@ class RepoAcceptListService(
     proutRepos <- Future.traverse(allRepos.filter(_.permissions.exists(_.push))) { repo =>
       hasProutConfigFile(repo).map(hasConfig => Option.when(hasConfig)(repo))
     }.map(_.flatten.toSet)
-  } yield RepoAcceptList(proutRepos.map(_.repoId), proutRepos.filterNot(_.`private`).map(_.repoId))
+  } yield {
+    logger.info("All prout repos:\n\n" + proutRepos.map(r => s"${r.id},${r.name}"))
+    RepoAcceptList(proutRepos.map(_.repoId), proutRepos.filterNot(_.`private`).map(_.repoId))
+  }
 
 
   def start(): Unit = {

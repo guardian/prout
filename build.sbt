@@ -6,8 +6,6 @@ scalaVersion := "2.13.16"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers ++= Resolver.sonatypeOssRepos("releases")
-
 buildInfoKeys := Seq[BuildInfoKey](
   name,
   "gitCommitId" -> Option(System.getenv("SOURCE_VERSION")).getOrElse("unknown")
@@ -20,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "7.0.2"
+val playGitHubVersion = "8.0.0-PREVIEW.add-support-for-getting-authenticated-github-app.2025-08-14T1126.653346d9"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"

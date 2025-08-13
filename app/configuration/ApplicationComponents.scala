@@ -1,26 +1,26 @@
 package configuration
 
-import com.madgag.scalagithub.model.User
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
+import com.madgag.scalagithub.GitHub
 import com.softwaremill.macwire._
-import controllers.{Application, _}
+import controllers._
 import lib.actions.Actions
 import lib.sentry.SentryApiClient
-import lib.{Bot, CheckpointSnapshoter, Delayer, Droid, PRSnapshot, PRUpdater, RepoSnapshot, RepoUpdater, ScanScheduler}
+import lib._
 import monitoring.SentryLogging
+import org.apache.pekko.actor.ActorSystem
 import play.api.routing.Router
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext, Logging}
 import router.Routes
 
 import java.nio.file.Path
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class ApplicationComponents(context: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters
     with AssetsComponents with Logging {
   val sentryLogging: SentryLogging = wire[SentryLogging]
   sentryLogging.init() // Is this the best place to start this?!
+
+  implicit val as: ActorSystem = actorSystem
 
   implicit val checkpointSnapshoter: CheckpointSnapshoter = CheckpointSnapshoter
 

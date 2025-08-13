@@ -1,16 +1,16 @@
 package lib
 
-import org.apache.pekko.stream.Materializer
-import com.madgag.github.Implicits.{RichFuture, RichSource}
+import com.madgag.github.Implicits._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateLabel
 import lib.labels.{CheckpointTestStatus, PullRequestCheckpointStatus}
+import org.apache.pekko.actor.ActorSystem
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class RepoUpdater(implicit
   g: GitHub,
-  m: Materializer,
+  as: ActorSystem,
   ec: ExecutionContext
 ) {
 

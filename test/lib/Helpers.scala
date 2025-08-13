@@ -1,10 +1,14 @@
 package lib
 
-import com.madgag.github.Implicits.RichSource
+import com.madgag.github.AccessToken
+import com.madgag.github.Implicits._
+import com.madgag.playgithub.testkit.TestRepoCreation
+import com.madgag.scalagithub.GitHubCredentials.Provider
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import lib.sentry.SentryApiClient
+import org.apache.pekko.actor.ActorSystem
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
@@ -21,7 +25,7 @@ import scala.concurrent.Future
 
 case class PRText(title: String, desc: String)
 
-trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside {
+trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside with TestRepoCreation {
 
   val logger = Logger(getClass)
   override def components: BuiltInComponents = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
@@ -29,18 +33,15 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     override lazy val router: Router = Router.empty
   }
 
+  implicit val actorSystem: ActorSystem = components.actorSystem
+
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(20, Seconds)), interval = scaled(Span(2, Seconds)))
 
-  val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
+  val githubToken: String = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
 
-  val githubCredentials: GitHubCredentials =
-    GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
-
-  val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
-
-  implicit lazy val github = new GitHub(githubCredentials)
-  implicit lazy val materializer = app.materializer
+  val testFixturesCredentials: GitHubCredentials.Provider = GitHubCredentials.Provider.fromStatic(AccessToken(githubToken))
+  lazy val testFixturesAccount: Account = github.getUser().futureValue
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 

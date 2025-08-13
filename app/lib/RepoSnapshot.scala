@@ -28,6 +28,7 @@ import io.lemonlabs.uri.Url
 import lib.Config.Checkpoint
 import lib.gitgithub.LabelMapping
 import lib.labels._
+import org.apache.pekko.actor.ActorSystem
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logging
@@ -50,7 +51,7 @@ object RepoSnapshot {
   class Factory(
     bot: Bot
   )(implicit
-    mat: Materializer,
+    as: ActorSystem,
     checkpointSnapshoter: CheckpointSnapshoter
   ) {
     implicit val github: GitHub = bot.github
@@ -112,15 +113,15 @@ object RepoSnapshot {
       }) andThen { case cprs => log(s"Merged Pull Requests fetched: ${cprs.map(_.map(_.pr.number).sorted.reverse)}") }
     }
 
-    private def fetchLatestCopyOfGitRepo()(implicit githubRepo: Repo): Future[Repository] = {
-      Future {
-        val repoId = githubRepo.repoId
-        RepoUtil.getGitRepo(
-          bot.workingDir.resolve(s"${repoId.owner}/${repoId.name}").toFile,
-          githubRepo.clone_url,
-          Some(bot.git))
-      } andThen { case r => log(s"Git Repo ref count: ${r.map(_.getRefDatabase.getRefs.size)}") }
-    }
+    private def fetchLatestCopyOfGitRepo()(implicit githubRepo: Repo): Future[Repository] = (for {
+      creds <- bot.gitHubCredsProvider()
+    } yield {
+      val repoId = githubRepo.repoId
+      RepoUtil.getGitRepo(
+        bot.workingDir.resolve(s"${repoId.owner}/${repoId.name}").toFile,
+        githubRepo.clone_url,
+        Some(creds.git))
+    }) andThen { case r => log(s"Git Repo ref count: ${r.map(_.getRefDatabase.getRefs.size)}") }
 
     private def fetchRepoHooks()(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
       log(s"No admin rights to check hooks")
