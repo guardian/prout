@@ -41,6 +41,9 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   val testFixturesInstallationAccess: com.madgag.github.apps.InstallationAccess =
     gitHubAppAuth.accessSoleInstallation().futureValue
 
+  val testFixturesAccount: Account = testFixturesInstallationAccess.installedOnAccount
+  val testFixturesCredentials: GitHubCredentials.Provider = testFixturesInstallationAccess.credentials
+
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
   def labelsOn(pr: PullRequest): Set[String] = pr.labels.list().all().futureValue.map(_.name).toSet
