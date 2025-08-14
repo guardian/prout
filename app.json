@@ -6,21 +6,21 @@
   "success_url": "/",
   "keywords": ["github", "pull request", "continuous", "deployment"],
   "env": {
-    "PROUT_GITHUB_ACCESS_TOKEN": {
-      "description": "A GitHub access token - the bot will run with this account. Required scope: repo. If you want Travis integration, then also read:org, user:email, repo_deployment, repo:status & write:repo_hook",
-      "required": true
-    },
     "APPLICATION_SECRET": {
       "description": "Random text to use as a crypto seed for signing session cookies. See https://www.playframework.com/documentation/2.4.x/ApplicationSecret",
       "required": true
     },
-    "GITHUB_APP_CLIENT_ID": {
-      "description": "Prout has some admin-only screens to help diagnose problems with setup. If you want to use them, you'll need to add Prout as a Developer application in your GitHub settings: https://github.com/settings/developers",
-      "required": false
+    "PROUT_GITHUB_APP_PRIVATE_KEY": {
+      "description": "Allows Prout to assume the identity of a GitHub App.  See https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/managing-private-keys-for-github-apps#generating-private-keys",
+      "required": true
     },
-    "GITHUB_APP_CLIENT_SECRET": {
-      "description": "The Client Secret credentials for GitHub OAuth V2.",
-      "required": false
+    "PROUT_GITHUB_APP_CLIENT_ID": {
+      "description": "The GitHub App client ID.",
+      "required": true
+    },
+    "PROUT_GITHUB_APP_CLIENT_SECRET": {
+      "description": "The Client Secret credentials for GitHub OAuth V2. Gives access to diagnostic views.",
+      "required": true
     }
   }
 }

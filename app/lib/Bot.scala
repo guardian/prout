@@ -1,37 +1,43 @@
 package lib
 
+import com.madgag.github.apps.GitHubAppAuth
+import com.madgag.scalagithub.model.Account
 import com.madgag.scalagithub.{GitHub, GitHubCredentials}
-import com.madgag.scalagithub.model.User
-import org.eclipse.jgit.transport.CredentialsProvider
 import play.api.Logging
 
 import java.nio.file.Path
-import scala.concurrent.{Await, ExecutionContext}
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+
+case class Identity(login: String, html_url: String) {
+  val atLogin = s"@$login"
+}
 
 case class Bot(
   workingDir: Path,
-  github: GitHub,
-  git: CredentialsProvider,
-  user: User
-)
+  gitHubCredsProvider: GitHubCredentials.Provider,
+  identity: Identity
+) {
+  val github = new GitHub(gitHubCredsProvider)
+}
 
 object Bot extends Logging {
-  def forAccessToken(accessToken: String)(implicit ec: ExecutionContext): Bot = {
+
+  def forGithubApp(
+    githubAppAuth: GitHubAppAuth
+  )(implicit ec: ExecutionContext): Future[Bot] = {
     val workingDir = Path.of("/tmp", "bot", "working-dir")
 
-    val credentials: GitHubCredentials =
-      GitHubCredentials.forAccessKey(accessToken, workingDir).get
-
-    val github: GitHub = new GitHub(credentials)
-    val user: User = Await.result(github.getUser().map(_.result), 3.seconds)
-    logger.info(s"Token gives GitHub user ${user.atLogin}")
-
-    Bot(
+    (for {
+      app <- githubAppAuth.getAuthenticatedApp()
+      installationAccess <- githubAppAuth.accessSoleInstallation()
+    } yield Bot(
       workingDir,
-      github,
-      credentials.git,
-      user
+      installationAccess.credentials,
+      Identity(app.slug, app.html_url)
     )
+    ).recover { case ex =>
+      logger.error("Failed to authenticate with GitHub app", ex)
+      throw ex
+    }
   }
 }

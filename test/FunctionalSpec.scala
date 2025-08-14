@@ -1,5 +1,4 @@
-import com.madgag.github.Implicits.RichSource
-import com.madgag.playgithub.testkit.{RepoLifecycle, TestRepoCreation, UserRepoLifecycle}
+import com.madgag.github.Implicits._
 import lib.RepoSnapshot.ClosedPRsMostlyRecentlyUpdated
 import lib._
 import org.eclipse.jgit.lib.ObjectId.zeroId
@@ -8,11 +7,9 @@ import org.scalatest.{BeforeAndAfterAll, Inside}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
-class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with TestRepoCreation {
+class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
 
   val testRepoNamePrefix: String = "prout-test"
-
-  val repoLifecycle: RepoLifecycle = UserRepoLifecycle
 
   override def beforeAll(): Unit = {
     deleteTestRepos()
@@ -163,4 +160,5 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll with Tes
     "feature-1",
     userLabels = userLabels
   )
+
 }

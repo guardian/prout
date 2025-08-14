@@ -1,10 +1,13 @@
 package lib
 
-import com.madgag.github.Implicits.RichSource
+import com.madgag.github.Implicits._
+import com.madgag.github.apps.GitHubAppAuth
+import com.madgag.playgithub.testkit.TestRepoCreation
+import com.madgag.scalagithub.GitHubCredentials
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
 import lib.sentry.SentryApiClient
+import org.apache.pekko.actor.ActorSystem
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
@@ -14,14 +17,13 @@ import org.scalatestplus.play.components.OneAppPerSuiteWithComponents
 import play.api.routing.Router
 import play.api.{BuiltInComponents, BuiltInComponentsFromContext, Logger, NoHttpFiltersComponents}
 
-import java.net.URL
-import java.nio.file.Files
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 case class PRText(title: String, desc: String)
 
-trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside {
+trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors with ScalaFutures with Eventually with Inside with TestRepoCreation {
 
   val logger = Logger(getClass)
   override def components: BuiltInComponents = new BuiltInComponentsFromContext(context) with NoHttpFiltersComponents {
@@ -29,18 +31,18 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     override lazy val router: Router = Router.empty
   }
 
-  implicit override val patienceConfig =
+  implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = scaled(Span(20, Seconds)), interval = scaled(Span(2, Seconds)))
 
-  val githubToken = sys.env("PROUT_GITHUB_ACCESS_TOKEN")
+  override implicit val actorSystem: ActorSystem = components.actorSystem
 
-  val githubCredentials: GitHubCredentials =
-    GitHubCredentials.forAccessKey(githubToken, Files.createTempDirectory("tmpDirPrefix")).get
+  private val gitHubAppAuth: GitHubAppAuth = GitHubAppAuth.fromConfigMap(sys.env, "PROUT")
 
-  val slackWebhookUrlOpt = sys.env.get("PROUT_TEST_SLACK_WEBHOOK").map(new URL(_))
+  val testFixturesInstallationAccess: com.madgag.github.apps.InstallationAccess =
+    gitHubAppAuth.accessSoleInstallation().futureValue
 
-  implicit lazy val github = new GitHub(githubCredentials)
-  implicit lazy val materializer = app.materializer
+  val testFixturesAccount: Account = testFixturesInstallationAccess.installedOnAccount
+  val testFixturesCredentials: GitHubCredentials.Provider = testFixturesInstallationAccess.credentials
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
@@ -99,7 +101,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
 
     val delayer = new Delayer(app.actorSystem)
 
-    val bot: Bot = Bot.forAccessToken(githubToken)
+    val bot: Bot = Await.result(Bot.forGithubApp(gitHubAppAuth), 3.seconds)
 
     val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
 

@@ -5,6 +5,7 @@ import com.madgag.git._
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.RepoId
 import lib.sentry.SentryApiClient
+import org.apache.pekko.actor.ActorSystem
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,7 +17,7 @@ class Droid(
   prUpdater: PRUpdater
 )(implicit
   g: GitHub,
-  mat: Materializer,
+  as: ActorSystem,
   sentryApiClientOpt: Option[SentryApiClient]
 ) {
 

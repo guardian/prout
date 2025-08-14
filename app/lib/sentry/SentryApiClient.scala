@@ -25,7 +25,7 @@ class SentryApiClient(token: String , val org: String) extends LazyLogging {
 
     val request = new Builder().url(s"$baseEndpoint/organizations/$org/releases/")
       .header("Authorization", s"Bearer $token")
-      .post(RequestBody.create(JsonMediaType, stringify(toJson(createReleaseCommand))))
+      .post(RequestBody.create(stringify(toJson(createReleaseCommand)), JsonMediaType))
       .build()
 
     val responseF = okHttpClient.execute(request)(resp => logger.info(resp.body().string()))

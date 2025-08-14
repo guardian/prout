@@ -53,7 +53,7 @@ object Config {
   }
 
   object Sentry {
-    implicit val readsSentry = Json.reads[Sentry]
+    implicit val readsSentry: Reads[Sentry] = Json.reads[Sentry]
   }
 
   object CheckpointMessages {
@@ -74,9 +74,9 @@ object Config {
     )
   }
 
-  implicit val readsCheckpointDetails = Json.reads[CheckpointDetails]
+  implicit val readsCheckpointDetails: Reads[CheckpointDetails] = Json.reads[CheckpointDetails]
 
-  implicit val readsConfig = Json.reads[ConfigFile]
+  implicit val readsConfig: Reads[ConfigFile] = Json.reads[ConfigFile]
 
   def readConfigFrom(configFileObjectId: ObjectId)(implicit repoThreadLocal: ThreadLocalObjectDatabaseResources): JsResult[ConfigFile] = {
     implicit val reader = repoThreadLocal.reader()
@@ -96,7 +96,7 @@ object Config {
   }
 
   object Checkpoint {
-    implicit def checkpointToDetails(c: Checkpoint) = c.details
+    implicit def checkpointToDetails(c: Checkpoint): CheckpointDetails = c.details
   }
 
   case class Checkpoint(name: String, details: CheckpointDetails) {

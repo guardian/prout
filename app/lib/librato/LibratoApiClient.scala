@@ -24,7 +24,7 @@ class LibratoApiClient(username: String, token: String) extends LazyLogging {
 
     val request = new Builder().url(s"$baseEndpoint/annotations/$name")
       .header("Authorization", Credentials.basic(username, token))
-      .post(RequestBody.create(JsonMediaType, stringify(toJson(annotation))))
+      .post(RequestBody.create(stringify(toJson(annotation)), JsonMediaType))
       .build()
 
     val responseF = okHttpClient.execute(request)(resp => logger.info(resp.body().string()))

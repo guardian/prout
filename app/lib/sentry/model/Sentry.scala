@@ -1,17 +1,14 @@
 package lib.sentry.model
 
 import java.time.Instant
-
 import io.lemonlabs.uri.Uri
 import org.eclipse.jgit.lib.ObjectId
-import play.api.libs.json.{JsString, Json, Writes}
+import play.api.libs.json.{JsString, Json, OWrites, Writes}
 import Sentry._
 import com.madgag.scalagithub.model.RepoId
 
 object Sentry {
-  implicit val writesObjectId = new Writes[ObjectId] {
-    def writes(oid: ObjectId) = JsString(oid.name)
-  }
+  implicit val writesObjectId: Writes[ObjectId] = (oid: ObjectId) => JsString(oid.name)
 
 }
 
@@ -30,7 +27,7 @@ case class Commit(
 )
 
 object Commit {
-  implicit val writesCommit = Json.writes[Commit]
+  implicit val writesCommit: OWrites[Commit] = Json.writes[Commit]
 }
 
 case class Ref(
@@ -40,10 +37,10 @@ case class Ref(
 )
 
 object Ref {
-  implicit val writesRepoId = new Writes[RepoId] {
+  implicit val writesRepoId: Writes[RepoId] = new Writes[RepoId] {
     def writes(repoId: RepoId) = JsString(repoId.fullName)
   }
-  implicit val writesRef = Json.writes[Ref]
+  implicit val writesRef: OWrites[Ref] = Json.writes[Ref]
 }
 
 /*
@@ -68,9 +65,9 @@ case class CreateRelease(
 )
 
 object CreateRelease {
-  implicit val writesUri = new Writes[Uri] {
+  implicit val writesUri: Writes[Uri] = new Writes[Uri] {
     def writes(uri: Uri) = JsString(uri.toString)
   }
 
-  implicit val writesCreateRelease = Json.writes[CreateRelease]
+  implicit val writesCreateRelease: OWrites[CreateRelease] = Json.writes[CreateRelease]
 }
