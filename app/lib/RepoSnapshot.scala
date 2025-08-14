@@ -67,7 +67,7 @@ object RepoSnapshot {
     }
 
     def isMergedToMain(pr: PullRequest)(implicit repo: Repo): Boolean =
-      pr.merged_at.isDefined && pr.base.ref == repo.default_branch
+      pr.merged_at.isDefined
 
     def snapshot(repoId: RepoId): Future[RepoSnapshot] = for {
       githubRepo <- github.getRepo(repoId)
@@ -98,14 +98,18 @@ object RepoSnapshot {
     def fetchMergedPullRequests()(implicit repo: Repo): Future[Seq[PRSnapshot]] = {
       val now = ZonedDateTime.now()
       val timeThresholdForScan = now.minus(WorthyOfScanWindow)
+      val criteriaForClosedPrsBasedOnTheDefaultBranch: Map[String, String] =
+        ClosedPRsMostlyRecentlyUpdated + ("base" -> repo.default_branch)
 
-      def isNewEnoughToBeWorthScanning(pr: PullRequest) = pr.merged_at.exists(_.isAfter(timeThresholdForScan))
+      def isMergedRecentlyEnoughToBeWorthScanning(pr: PullRequest) =
+        pr.merged_at.exists(_.isAfter(timeThresholdForScan))
 
       (for {
         litePullRequests: Seq[PullRequest] <-
-          repo.pullRequests.list(ClosedPRsMostlyRecentlyUpdated).take(2).all(): Future[Seq[PullRequest]]
-        pullRequests <-
-          Future.traverse(litePullRequests.filter(isMergedToMain).filter(isNewEnoughToBeWorthScanning).take(MaxPRsToScanPerRepo))(pr => prSnapshot(pr.number))
+          repo.pullRequests.list(criteriaForClosedPrsBasedOnTheDefaultBranch).take(2).all(): Future[Seq[PullRequest]]
+        recentlyMergedPrs = litePullRequests.filter(isMergedRecentlyEnoughToBeWorthScanning)
+        _ = log(s"ClosedPRsMostlyRecentlyUpdated=${litePullRequests.size} recentlyMergedPrs=${recentlyMergedPrs.size}")
+        pullRequests <- Future.traverse(recentlyMergedPrs.take(MaxPRsToScanPerRepo))(pr => prSnapshot(pr.number))
       } yield {
         log(s"PRs merged to master size=${pullRequests.size}")
         pullRequests

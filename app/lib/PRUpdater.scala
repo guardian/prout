@@ -1,15 +1,13 @@
 package lib
 
-import org.apache.pekko.stream.Materializer
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateComment
-import com.madgag.scalagithub.model.{PullRequest, Repo}
+import com.madgag.scalagithub.model.PullRequest
 import com.madgag.time.Implicits._
 import com.typesafe.scalalogging.LazyLogging
 import lib.Config.CheckpointMessages
 import lib.RepoSnapshot.WorthyOfCommentWindow
 import lib.Responsibility.responsibilityAndRecencyFor
-import lib.gitgithub.LabelMapping
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import lib.sentry.{PRSentryRelease, SentryApiClient}
 
@@ -21,7 +19,6 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
 
   def process(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(implicit
     g: GitHub,
-    m: Materializer,
     sentryApiClientOpt: Option[SentryApiClient]
   ): Future[Option[PullRequestCheckpointsStateChangeSummary]] = {
     logger.trace(s"handling ${prSnapshot.pr.prId.slug}")

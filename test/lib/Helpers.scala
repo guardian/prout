@@ -3,7 +3,7 @@ package lib
 import com.madgag.github.Implicits._
 import com.madgag.github.apps.GitHubAppAuth
 import com.madgag.playgithub.testkit.TestRepoCreation
-import com.madgag.scalagithub.GitHubCredentials
+import com.madgag.scalagithub.{AccountCredentials, GitHubCredentials}
 import com.madgag.scalagithub.commands.{CreatePullRequest, MergePullRequest}
 import com.madgag.scalagithub.model._
 import lib.sentry.SentryApiClient
@@ -41,8 +41,8 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   val testFixturesInstallationAccess: com.madgag.github.apps.InstallationAccess =
     gitHubAppAuth.accessSoleInstallation().futureValue
 
-  val testFixturesAccount: Account = testFixturesInstallationAccess.installedOnAccount
-  val testFixturesCredentials: GitHubCredentials.Provider = testFixturesInstallationAccess.credentials
+  val testFixtureAccountCredentials: AccountCredentials =
+    AccountCredentials(testFixturesInstallationAccess.installedOnAccount, testFixturesInstallationAccess.credentials)
 
   def labelsOnPR()(implicit repoPR: RepoPR): Set[String] = labelsOn(repoPR.pr)
 
@@ -61,16 +61,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
   case class RepoPR(pr: PullRequest) {
     val githubRepo = pr.baseRepo
 
-    def currentPR(): PullRequest = {
-      def fetchPR(): PullRequest = githubRepo.pullRequests.get(pr.number).futureValue
-
-      eventually {
-        val pr = fetchPR()
-        Thread.sleep(1000)
-        fetchPR() mustEqual pr
-        pr
-      }
-    }
+    def currentPR(): PullRequest = eventuallyConsistent { githubRepo.pullRequests.get(pr.number) }
 
     def listComments(): Seq[Comment] = pr.comments2.list().all().futureValue
 
@@ -116,17 +107,26 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     override val toString: String = pr.html_url
   }
 
+
   def scan[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR): Unit = {
     val commentsBeforeScan = repoPR.listComments()
-    whenReady(repoPR.scheduler.scan()) { s =>
-      eventually {
-        inside(repoPR) { case _ =>
-          val commentsAfterScan = repoPR.listComments()
-          commentsAfterScan must have size (commentsBeforeScan.size+(if (shouldAddComment) 1 else 0))
-          issueFun(repoPR.currentPR())
-        }
+    scanOnce(requireScanFindsAPr = commentsBeforeScan.isEmpty) // if we're starting out, scan enough times that we actually find the PR
+
+    eventually {
+      inside(repoPR) { case _ =>
+        val commentsAfterScan = repoPR.listComments()
+        commentsAfterScan must have size (commentsBeforeScan.size+(if (shouldAddComment) 1 else 0))
+        issueFun(repoPR.currentPR())
       }
     }
+  }
+
+  private def scanOnce(requireScanFindsAPr: Boolean)(implicit repoPR: RepoPR): Unit = if (requireScanFindsAPr) {
+    eventually {
+      whenReady(repoPR.scheduler.scan()) { _ must not be empty } // ensure that scan found a PR
+    }
+  } else {
+    repoPR.scheduler.scan().futureValue // just ensure that a scan has taken place - note that once fully deployed, scan will not return a PR
   }
 
   def waitUntil[T](shouldAddComment: Boolean)(issueFun: PullRequest => T)(implicit repoPR: RepoPR): Unit = {
@@ -157,7 +157,7 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     merging: String,
     prText: PRText = PRText("title", "desc"),
     userLabels: Set[String] = Set.empty
-  ) = {
+  ): RepoPR = {
     eventually {
       whenReady(repo.refs.get(s"heads/$merging")) { _.ref must endWith(merging) }
     }
