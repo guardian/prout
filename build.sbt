@@ -18,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "8.0.0"
+val playGitHubVersion = "9.0.0"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"
