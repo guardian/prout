@@ -63,7 +63,7 @@ case class PRCheckpointDetails(
     everythingByCheckpoint.values.groupBy(_.checkpointStatus).mapV(_.map(_.snapshot.checkpoint).toSet)
 
   val soonestPendingCheckpointOverdueTime: Option[java.time.Instant] = {
-    implicit val periodOrdering = Ordering.by[Period, Duration](_.toStandardDuration)
+    implicit val periodOrdering: Ordering[Period] = Ordering.by[Period, Duration](_.toStandardDuration)
 
     checkpointsByState.get(Pending).map(_.flatMap(_.details.overdueInstantFor(pr)).min)
   }
