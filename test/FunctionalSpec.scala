@@ -61,7 +61,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     }
 
     "not act on a pull request if it does not touch a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
+      implicit val repoPR: RepoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "bard-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -73,7 +73,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     }
 
     "act on a pull request if it touches a .prout.json configured folder" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "food-feature")
+      implicit val repoPR: RepoPR = mergePullRequestIn(createTestRepo("/multi-project.master-updated-before-feature-merged.git.zip"), "food-feature")
 
       repoPR setCheckpointTo zeroId
 
@@ -91,7 +91,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     }
 
     "report an overdue merge without being called" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
+      implicit val repoPR: RepoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointTo zeroId
 
@@ -114,7 +114,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     }
 
     "report a broken site as overdue" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
+      implicit val repoPR: RepoPR = mergePullRequestIn(createTestRepo("/impatient-top-level-config.git.zip"), "feature-1")
 
       repoPR setCheckpointFailureTo new Exception("This website went Boom!")
 
@@ -136,7 +136,7 @@ class FunctionalSpec extends Helpers with Inside with BeforeAndAfterAll {
     }
 
     "use custom messages in comments when set in the config" in {
-      implicit val repoPR = mergePullRequestIn(createTestRepo("/simple-with-messages.git.zip"), "feature-elephant")
+      implicit val repoPR: RepoPR = mergePullRequestIn(createTestRepo("/simple-with-messages.git.zip"), "feature-elephant")
 
       repoPR setCheckpointTo zeroId
 

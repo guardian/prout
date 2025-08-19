@@ -20,6 +20,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.madgag.scalagithub.model.RepoId
 import lib.{Bot, RepoSnapshot}
 import play.api.Logging
+import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
@@ -33,7 +34,7 @@ class Application(
   bot: Bot
 ) extends AbstractAppController(cc) with Logging {
 
-  def index = Action { implicit req =>
+  def index: Action[AnyContent] = Action { implicit req =>
     Ok(views.html.userPages.index())
   }
 

@@ -3,10 +3,11 @@ package lib.slack
 import cats.data.NonEmptySeq
 import com.madgag.scalagithub.model.{PullRequest, User}
 import io.lemonlabs.uri.Url
+import lib.*
 import lib.labels.Seen
-import lib._
 import play.api.Logging
 import play.api.libs.json.{JsValue, Json}
+import play.api.libs.ws.WSBodyWritables.*
 import play.api.libs.ws.WSClient
 
 import scala.concurrent.{ExecutionContext, Future}

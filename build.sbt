@@ -2,7 +2,7 @@ name := "prout"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.13.16"
+scalaVersion := "3.3.6"
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
@@ -18,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "9.0.0"
+val playGitHubVersion = "9.0.1"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"
@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
-  "com.madgag.scala-git" %% "scala-git-test" % "6.0.0" % Test,
+  "com.madgag.scala-git" %% "scala-git-test" % "7.0.3" % Test,
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test
 )
 
