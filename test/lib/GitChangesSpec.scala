@@ -1,10 +1,10 @@
 package lib
 
-import com.madgag.git._
+import com.madgag.git.*
 import lib.GitChanges.affectedFolders
-import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.RevCommit
-import org.scalatestplus.play._
+import org.eclipse.jgit.lib.{ObjectReader, Repository}
+import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
+import org.scalatestplus.play.*
 
 class GitChangesSpec extends PlaySpec {
 
@@ -12,7 +12,7 @@ class GitChangesSpec extends PlaySpec {
 
     "detect changes in top-level folder" in {
       implicit val localGitRepo: Repository = test.unpackRepo("/simple.git.zip")
-      implicit val (revWalk, reader) = localGitRepo.singleThreadedReaderTuple
+      implicit val (revWalk: RevWalk, reader: ObjectReader) = localGitRepo.singleThreadedReaderTuple
 
       def commitAt(revstr: String) = localGitRepo.resolve(revstr).asRevCommit
 
@@ -25,7 +25,7 @@ class GitChangesSpec extends PlaySpec {
 
     "detect changes in affected folders" in {
       implicit val localGitRepo: Repository = test.unpackRepo("/multi-folder.git.zip")
-      implicit val (revWalk, reader) = localGitRepo.singleThreadedReaderTuple
+      implicit val (revWalk: RevWalk, reader: ObjectReader) = localGitRepo.singleThreadedReaderTuple
 
       def commitAt(revstr: String) = localGitRepo.resolve(revstr).asRevCommit
 
@@ -41,7 +41,7 @@ class GitChangesSpec extends PlaySpec {
 
     "not confuse changes on master with changes on the feature branch" in {
       implicit val localGitRepo: Repository = test.unpackRepo("/multi-project.master-updated-before-feature-merged.git.zip")
-      implicit val (revWalk, reader) = localGitRepo.singleThreadedReaderTuple
+      implicit val (revWalk: RevWalk, reader: ObjectReader) = localGitRepo.singleThreadedReaderTuple
 
       def commitAt(revstr: String) = localGitRepo.resolve(revstr).asRevCommit
 

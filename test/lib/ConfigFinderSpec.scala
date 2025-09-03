@@ -11,7 +11,8 @@ class ConfigFinderSpec extends PlaySpec {
   def configFilesIn(repoPath: String): Set[String] = {
     val localGitRepo: Repository = test.unpackRepo(repoPath)
 
-    implicit val repoThreadLocal = localGitRepo.getObjectDatabase.threadLocalResources
+    implicit val repoThreadLocal: ThreadLocalObjectDatabaseResources = 
+      localGitRepo.getObjectDatabase.threadLocalResources
 
     val master = localGitRepo.resolve("master").asRevCommit(new RevWalk(repoThreadLocal.reader()))
 

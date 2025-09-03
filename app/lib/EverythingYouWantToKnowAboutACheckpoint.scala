@@ -12,7 +12,8 @@ object EverythingYouWantToKnowAboutACheckpoint extends Logging {
     val timeBetweenMergeAndSnapshot = java.time.Duration.between(pr.merged_at.get.toInstant, snapshot.time)
 
     def prCommitsSeenAndNotSeen(siteCommitId: ObjectId): PRCommitVisibility = {
-      implicit val repoThreadLocal = gitRepo.getObjectDatabase.threadLocalResources
+      implicit val repoThreadLocal: ThreadLocalObjectDatabaseResources =
+        gitRepo.getObjectDatabase.threadLocalResources
       implicit val w: RevWalk = new RevWalk(repoThreadLocal.reader())
       val siteCommit = siteCommitId.asRevCommit
 
