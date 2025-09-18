@@ -2,7 +2,7 @@ package lib
 
 import com.madgag.github.apps.GitHubAppAuth
 import com.madgag.scalagithub.model.Account
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
+import com.madgag.scalagithub.{AccountAccess, GitHub, GitHubCredentials}
 import play.api.Logging
 
 import java.nio.file.Path
@@ -14,10 +14,10 @@ case class Identity(login: String, html_url: String) {
 
 case class Bot(
   workingDir: Path,
-  gitHubCredsProvider: GitHubCredentials.Provider,
+  accountAccess: AccountAccess,
   identity: Identity
 ) {
-  val github = new GitHub(gitHubCredsProvider)
+  val github = accountAccess.gitHub
 }
 
 object Bot extends Logging {
@@ -32,7 +32,7 @@ object Bot extends Logging {
       installationAccess <- githubAppAuth.accessSoleInstallation()
     } yield Bot(
       workingDir,
-      installationAccess.credentials,
+      installationAccess.accountAccess(),
       Identity(app.slug, app.html_url)
     )
     ).recover { case ex =>

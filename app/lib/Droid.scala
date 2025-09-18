@@ -1,11 +1,15 @@
 package lib
 
-import org.apache.pekko.stream.Materializer
-import com.madgag.git._
+import cats.*
+import cats.data.*
+import cats.effect.IO
+import cats.syntax.all.*
+import com.madgag.git.*
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.model.RepoId
 import lib.sentry.SentryApiClient
 import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,9 +40,10 @@ class Droid(
     }
   }
 
-  def processMergedPullRequestsOn(repoSnapshot: RepoSnapshot): Future[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
+  def processMergedPullRequestsOn(repoSnapshot: RepoSnapshot): IO[Seq[PullRequestCheckpointsStateChangeSummary]] = for {
     _ <- repoUpdater.attemptToCreateMissingLabels(repoSnapshot.repoLevelDetails)
-    summaryOpts <- Future.traverse(repoSnapshot.mergedPullRequestSnapshots)(prSnapshot => prUpdater.process(prSnapshot, repoSnapshot))
+    summaryOpts <-
+      repoSnapshot.mergedPullRequestSnapshots.parUnorderedTraverse(prSnapshot => prUpdater.process(prSnapshot, repoSnapshot))
   } yield summaryOpts.flatten
 
 

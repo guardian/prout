@@ -16,12 +16,16 @@
 
 package controllers
 
+import cats._
+import cats.data._
+import cats.syntax.all._
+import cats.effect.IO
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import com.madgag.scalagithub.model.RepoId
-import lib._
+import lib.*
 import lib.actions.Parsers.parseGitHubHookJson
 import play.api.libs.json.{JsArray, JsNumber}
-import play.api.mvc._
+import play.api.mvc.*
 
 import scala.concurrent.Future
 
@@ -50,7 +54,7 @@ class Api(
 
   def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
 
-  def updateForRepo(repoId: RepoId): Future[Result] = {
+  def updateForRepo(repoId: RepoId): IO[Result] = {
     logger.debug(s"update requested for $repoId")
     for {
       acceptList <- repoAcceptListService.acceptList()
@@ -63,8 +67,8 @@ class Api(
     .maximumSize(500)
     .build(scanSchedulerFactory.createFor)
 
-  def updateFor(repoId: RepoId, acceptList: RepoAcceptList): Future[Result] = {
-    val scanGuardF = Future { // wrapped in a future to avoid timing attacks
+  def updateFor(repoId: RepoId, acceptList: RepoAcceptList): IO[Result] = {
+    val scanGuardF: IO[Seq[PullRequestCheckpointsStateChangeSummary]] = IO.delay { // wrapped in a future to avoid timing attacks
       val knownRepo = acceptList.allKnownRepos(repoId)
       logger.info(s"$repoId known=$knownRepo")
       require(knownRepo, s"${repoId.fullName} not on known-repo whitelist")
@@ -88,12 +92,11 @@ class Api(
     val mightBePrivate = !acceptList.publicRepos(repoId)
     if (mightBePrivate) {
       // Response must be immediate, with no private information (e.g. even acknowledging that repo exists)
-      Future.successful(NoContent)
+      IO.pure(NoContent)
     } else {
       // we can delay the response to return information about the repo config, and the updates generated
       for {
-        scanGuard <- scanGuardF
-        scan <- scanGuard
+        scan <- scanGuardF
       } yield Ok(JsArray(scan.map(summary => JsNumber(summary.prCheckpointDetails.pr.number))))
     }
   }

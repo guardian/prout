@@ -16,26 +16,30 @@
 
 package lib
 
-import com.madgag.git._
-import com.madgag.github.Implicits._
-import com.madgag.scala.collection.decorators._
+import cats.*
+import cats.data.*
+import cats.effect.IO
+import cats.syntax.all.*
+import com.madgag.git.*
+import com.madgag.github.Implicits.*
+import com.madgag.scala.collection.decorators.*
 import com.madgag.scalagithub.GitHub
-import com.madgag.scalagithub.GitHub._
+import com.madgag.scalagithub.GitHub.*
 import com.madgag.scalagithub.model.{PullRequest, Repo, RepoId}
-import com.madgag.time.Implicits._
+import com.madgag.time.Implicits.*
 import io.lemonlabs.uri.Url
 import lib.Config.Checkpoint
 import lib.gitgithub.LabelMapping
-import lib.labels._
+import lib.labels.*
 import org.apache.pekko.actor.ActorSystem
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import play.api.Logging
 
 import java.time.ZonedDateTime
+import scala.concurrent.*
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Success
 
 object RepoSnapshot {
@@ -74,7 +78,7 @@ object RepoSnapshot {
       repoSnapshot <- snapshot(githubRepo)
     } yield repoSnapshot
 
-    def snapshot(implicit githubRepo: Repo): Future[RepoSnapshot] = {
+    def snapshot(implicit githubRepo: Repo): IO[RepoSnapshot] = {
       val mergedPullRequestsF = logAround("fetch PRs")(fetchMergedPullRequests())
       val hooksF = logAround("fetch repo hooks")(fetchRepoHooks())
       val gitRepoF = logAround("fetch git repo")(fetchLatestCopyOfGitRepo())
@@ -89,10 +93,10 @@ object RepoSnapshot {
       )
     }
 
-    def prSnapshot(prNumber: Int)(implicit repo: Repo): Future[PRSnapshot] = for {
+    def prSnapshot(prNumber: Int)(implicit repo: Repo): IO[PRSnapshot] = for {
       prResponse <- repo.pullRequests.get(prNumber)
       pr = prResponse.result
-      labelsResponse <- pr.labels.list().all()
+      labelsResponse <- pr.labels.list().compile.toList
     } yield PRSnapshot(pr, labelsResponse)
 
     def fetchMergedPullRequests()(implicit repo: Repo): Future[Seq[PRSnapshot]] = {
@@ -105,11 +109,14 @@ object RepoSnapshot {
         pr.merged_at.exists(_.isAfter(timeThresholdForScan))
 
       (for {
-        litePullRequests: Seq[PullRequest] <-
-          repo.pullRequests.list(criteriaForClosedPrsBasedOnTheDefaultBranch).take(2).all(): Future[Seq[PullRequest]]
-        recentlyMergedPrs = litePullRequests.filter(isMergedRecentlyEnoughToBeWorthScanning)
-        _ = log(s"ClosedPRsMostlyRecentlyUpdated=${litePullRequests.size} recentlyMergedPrs=${recentlyMergedPrs.size}")
-        pullRequests <- Future.traverse(recentlyMergedPrs.take(MaxPRsToScanPerRepo))(pr => prSnapshot(pr.number))
+        pullRequests: Seq[PullRequest] <-
+          repo.pullRequests.list(criteriaForClosedPrsBasedOnTheDefaultBranch)
+            .takeWhile(_.updated_at >= timeThresholdForScan)
+            .filter(isMergedRecentlyEnoughToBeWorthScanning)
+            .take(MaxPRsToScanPerRepo)
+            .parEvalMapUnordered(4) {
+              pr => prSnapshot(pr.number)
+            }.compile.toList
       } yield {
         log(s"PRs merged to master size=${pullRequests.size}")
         pullRequests
@@ -117,7 +124,7 @@ object RepoSnapshot {
     }
 
     private def fetchLatestCopyOfGitRepo()(implicit githubRepo: Repo): Future[Repository] = (for {
-      creds <- bot.gitHubCredsProvider()
+      creds <- bot.accountAccess.credentials()
     } yield {
         val repoId = githubRepo.repoId
         RepoUtil.getGitRepo(
@@ -126,10 +133,11 @@ object RepoSnapshot {
           Some(creds.git))
     }) andThen { case r => log(s"Git Repo ref count: ${r.map(_.getRefDatabase.getRefs.size)}") }
 
-    private def fetchRepoHooks()(implicit githubRepo: Repo) = if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().map(_.flatMap(_.config.get("url").map(Url.parse))).all() else {
-      log(s"No admin rights to check hooks")
-      Future.successful(Seq.empty)
-    }
+    private def fetchRepoHooks()(using githubRepo: Repo) = 
+      if (githubRepo.permissions.exists(_.admin)) githubRepo.hooks.list().flatMap(_.config.get("url").map(Url.parse)).compile.toList else {
+        log(s"No admin rights to check hooks")
+        IO.pure(Seq.empty)
+      }
   }
 }
 
@@ -201,21 +209,21 @@ case class RepoSnapshot(
     checkpoint <- allAvailableCheckpoints
   } yield prLabel.labelFor(checkpoint.name)
 
-  def diagnostic(): Future[Diagnostic] = for {
+  def diagnostic(): IO[Diagnostic] = for {
     snapshots <- snapshotOfAllAvailableCheckpoints()
   } yield Diagnostic(snapshots, mergedPRs.map { pr =>
     PRCheckpointDetails(pr, snapshots.filter(s => activeCheckpointsByPullRequest(pr).contains(s.checkpoint)), repoLevelDetails.gitRepo)
   })
 
-  def snapshotOfAllAvailableCheckpoints(): Future[Set[CheckpointSnapshot]] =
-    Future.sequence(allAvailableCheckpoints.map(takeCheckpointSnapshot))
+  def snapshotOfAllAvailableCheckpoints(): IO[Set[CheckpointSnapshot]] =
+    allAvailableCheckpoints.parUnorderedTraverse(takeCheckpointSnapshot)
 
   val activeCheckpoints: Set[Checkpoint] = activeCheckpointsByPullRequest.values.flatten.toSet
 
-  lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, Future[CheckpointSnapshot]] =
+  lazy val snapshotsOfActiveCheckpointsF: Map[Checkpoint, IO[CheckpointSnapshot]] =
     activeCheckpoints.map { c => c -> takeCheckpointSnapshot(c) }.toMap
 
-  def takeCheckpointSnapshot(checkpoint: Checkpoint): Future[CheckpointSnapshot] = for (
+  def takeCheckpointSnapshot(checkpoint: Checkpoint): IO[CheckpointSnapshot] = for (
     possibleIdsTry <- checkpointSnapshoter.snapshot(checkpoint).trying
   ) yield {
     val objectIdTry = for (possibleIds <- possibleIdsTry) yield {
@@ -226,7 +234,8 @@ case class RepoSnapshot(
     CheckpointSnapshot(checkpoint, objectIdTry)
   }
 
-  lazy val activeSnapshotsF: Future[Set[CheckpointSnapshot]] =
+  lazy val activeSnapshotsF: IO[Set[CheckpointSnapshot]] =
+    
     Future.sequence(activeCheckpoints.map(snapshotsOfActiveCheckpointsF))
 
   def checkpointSnapshotsFor(pr: PullRequest, oldState: PRCheckpointState): Future[Set[CheckpointSnapshot]] =

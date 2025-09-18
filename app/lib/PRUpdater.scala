@@ -20,17 +20,17 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
   def process(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(implicit
     g: GitHub,
     sentryApiClientOpt: Option[SentryApiClient]
-  ): Future[Option[PullRequestCheckpointsStateChangeSummary]] = {
+  ): IO[Option[PullRequestCheckpointsStateChangeSummary]] = {
     logger.trace(s"handling ${prSnapshot.pr.prId.slug}")
     for {
       snapshot <- getSummaryOfCheckpointChangesGiven(prSnapshot, repoSnapshot)
     } yield snapshot
   }
 
-  private def getSummaryOfCheckpointChangesGiven(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(implicit
+  private def getSummaryOfCheckpointChangesGiven(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(using
     gitHub: GitHub,
     sentryApiClientOpt: Option[SentryApiClient]
-  ): Future[Option[PullRequestCheckpointsStateChangeSummary]] = {
+  ): IO[Option[PullRequestCheckpointsStateChangeSummary]] = {
     val pr = prSnapshot.pr
     val (oldStateLabelsSeq, userLabels) = prSnapshot.labels.map(_.name).partition(repoSnapshot.allPossibleCheckpointPRLabels)
     val oldLabels = oldStateLabelsSeq.toSet

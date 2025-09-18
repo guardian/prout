@@ -32,7 +32,7 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 trait CheckpointSnapshoter {
-  def snapshot(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]]
+  def snapshot(checkpoint: Checkpoint): IO[Iterator[AbbreviatedObjectId]]
 }
 
 object CheckpointSnapshoter extends CheckpointSnapshoter {
@@ -44,7 +44,7 @@ object CheckpointSnapshoter extends CheckpointSnapshoter {
 
   val hexRegex: Regex = """\b\p{XDigit}{40}\b""".r
 
-  def snapshot(checkpoint: Checkpoint): Future[Iterator[AbbreviatedObjectId]] = {
+  def snapshot(checkpoint: Checkpoint): IO[Iterator[AbbreviatedObjectId]] = {
 
     val clientForCheckpoint = if (checkpoint.sslVerification) client else insecureClient
 

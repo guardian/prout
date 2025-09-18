@@ -1,6 +1,7 @@
 package lib
 
-import com.madgag.github.Implicits._
+import cats.effect.IO
+import com.madgag.github.Implicits.*
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateLabel
 import lib.labels.{CheckpointTestStatus, PullRequestCheckpointStatus}
@@ -14,10 +15,10 @@ class RepoUpdater(implicit
   ec: ExecutionContext
 ) {
 
-  def attemptToCreateMissingLabels(repoLevelDetails: RepoLevelDetails): Future[_] = {
+  def attemptToCreateMissingLabels(repoLevelDetails: RepoLevelDetails): IO[_] = {
     for {
-      existingLabels <- repoLevelDetails.repo.labels.list().all()
-      createdLabels <- Future.traverse(missingLabelsGiven(repoLevelDetails, existingLabels.map(_.name).toSet)) {
+      existingLabels <- repoLevelDetails.repo.labels.list().compile.toList
+      createdLabels <- IO.parTraverse(missingLabelsGiven(repoLevelDetails, existingLabels.map(_.name).toSet).toList) {
         missingLabel => repoLevelDetails.repo.labels.create(missingLabel)
       }
     } yield createdLabels

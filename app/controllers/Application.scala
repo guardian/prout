@@ -23,6 +23,7 @@ import play.api.Logging
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
+import cats.effect.unsafe.implicits.global
 
 class Application(
   repoAcceptListService: RepoAcceptListService,
@@ -39,14 +40,15 @@ class Application(
   }
 
   def configDiagnostic(repoId: RepoId) = repoAuthenticated(repoId).async { implicit req =>
-    for {
+    (for {
       repoFetchedByProut <- bot.github.getRepo(repoId)
-      proutPresenceQuickCheck <- repoAcceptListService.hasProutConfigFile(repoFetchedByProut)
-      repoSnapshot <- repoSnapshotFactory.snapshot(repoFetchedByProut.repoId)
+      repo = repoFetchedByProut.result
+      proutPresenceQuickCheck <- repoAcceptListService.hasProutConfigFile(repo)
+      repoSnapshot <- repoSnapshotFactory.snapshot(repo)
       diagnostic <- repoSnapshot.diagnostic()
     } yield {
       Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic, sentryApiClientOpt))
-    }
+    }).unsafeToFuture()
   }
 
 }
