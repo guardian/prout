@@ -44,7 +44,7 @@ class Application(
       repoFetchedByProut <- bot.github.getRepo(repoId)
       repo = repoFetchedByProut.result
       proutPresenceQuickCheck <- repoAcceptListService.hasProutConfigFile(repo)
-      repoSnapshot <- repoSnapshotFactory.snapshot(repo)
+      repoSnapshot <- repoSnapshotFactory.snapshotRepo(using repo)
       diagnostic <- repoSnapshot.diagnostic()
     } yield {
       Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic, sentryApiClientOpt))

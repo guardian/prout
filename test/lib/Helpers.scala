@@ -90,8 +90,6 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     implicit val checkpointSnapshoter: CheckpointSnapshoter = _ => checkpointCommitFuture
     implicit val sentryApiClient: Option[SentryApiClient] = None
 
-    val delayer = new Delayer(app.actorSystem)
-
     val bot: Bot = Await.result(Bot.forGithubApp(gitHubAppAuth), 3.seconds)
 
     val repoSnapshotFactory: RepoSnapshot.Factory = new RepoSnapshot.Factory(bot)
@@ -99,10 +97,10 @@ trait Helpers extends PlaySpec with OneAppPerSuiteWithComponents with Inspectors
     val droid: Droid = new Droid(
       repoSnapshotFactory,
       new RepoUpdater(),
-      new PRUpdater(delayer)
+      new PRUpdater()
     )
 
-    val scheduler = new ScanScheduler(githubRepo.repoId, droid, actorSystem = app.actorSystem, delayer)
+    val scheduler = new ScanScheduler(githubRepo.repoId, droid, actorSystem = app.actorSystem)
 
     override val toString: String = pr.html_url
   }

@@ -16,10 +16,11 @@
 
 package controllers
 
-import cats._
-import cats.data._
-import cats.syntax.all._
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import com.github.blemale.scaffeine.{LoadingCache, Scaffeine}
 import com.madgag.scalagithub.model.RepoId
 import lib.*
@@ -32,7 +33,6 @@ import scala.concurrent.Future
 class Api(
   scanSchedulerFactory: ScanScheduler.Factory,
   repoAcceptListService: RepoAcceptListService,
-  delayer: Delayer,
   cc: ControllerAppComponents
 ) extends AbstractAppController(cc) {
 
@@ -44,12 +44,12 @@ class Api(
 
     logger.info(s"githubHook event=${eventOpt.getOrElse("unknown")} repo=${repoIdOpt.map(_.fullName)} githubDeliveryGuid=$githubDeliveryGuid xRequestId=$xRequestId")
 
-    repoIdOpt.fold(Future.successful(Ok("pong")))(updateForRepo)
+    repoIdOpt.fold(IO.pure(Ok("pong")))(updateForRepo).unsafeToFuture()
   }
 
   def updateRepo(repoId: RepoId) = Action.async { implicit request =>
     logger.info(s"updateRepo repo=${repoId.fullName} xRequestId=$xRequestId")
-    updateForRepo(repoId)
+    updateForRepo(repoId).unsafeToFuture()
   }
 
   def xRequestId(implicit request: RequestHeader): Option[String] = request.headers.get("X-Request-ID")
@@ -92,7 +92,9 @@ class Api(
     val mightBePrivate = !acceptList.publicRepos(repoId)
     if (mightBePrivate) {
       // Response must be immediate, with no private information (e.g. even acknowledging that repo exists)
-      IO.pure(NoContent)
+      for {
+        _ <- scanGuardF.start // TODO or a higher-level construct? https://typelevel.org/cats-effect/docs/typeclasses/spawn#:~:text=will%20run%20it.-,The%20start%20function,-takes%20an%20effect
+      } yield NoContent
     } else {
       // we can delay the response to return information about the repo config, and the updates generated
       for {

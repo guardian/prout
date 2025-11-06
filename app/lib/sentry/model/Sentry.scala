@@ -1,11 +1,12 @@
 package lib.sentry.model
 
-import java.time.Instant
-import io.lemonlabs.uri.Uri
+import com.madgag.scalagithub.model.RepoId
+import lib.sentry.model.Sentry.*
 import org.eclipse.jgit.lib.ObjectId
 import play.api.libs.json.{JsString, Json, OWrites, Writes}
-import Sentry._
-import com.madgag.scalagithub.model.RepoId
+import sttp.model.*
+
+import java.time.Instant
 
 object Sentry {
   implicit val writesObjectId: Writes[ObjectId] = (oid: ObjectId) => JsString(oid.name)

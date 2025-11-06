@@ -18,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "9.0.2-SNAPSHOT"
+val playGitHubVersion = "10.0.0"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"
@@ -54,7 +54,6 @@ libraryDependencies ++= Seq(
   // Transient dependency of raven-logback 8.0.3. No newer version of raven-logback available.
   "ch.qos.logback" % "logback-classic" % "1.5.18",
   "com.github.nscala-time" %% "nscala-time" % "3.0.0",
-  "com.indoorvivants" %% "scala-uri" % "4.2.0",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,

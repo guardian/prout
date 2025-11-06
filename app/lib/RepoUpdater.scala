@@ -16,13 +16,14 @@ class RepoUpdater(implicit
 ) {
 
   def attemptToCreateMissingLabels(repoLevelDetails: RepoLevelDetails): IO[_] = {
+    val labels = repoLevelDetails.repo.labels
     for {
-      existingLabels <- repoLevelDetails.repo.labels.list().compile.toList
+      existingLabels <- labels.list().compile.toList
       createdLabels <- IO.parTraverse(missingLabelsGiven(repoLevelDetails, existingLabels.map(_.name).toSet).toList) {
-        missingLabel => repoLevelDetails.repo.labels.create(missingLabel)
+        missingLabel => labels.create(missingLabel).attempt
       }
     } yield createdLabels
-  }.trying
+  }
 
   def missingLabelsGiven(repoLevelDetails: RepoLevelDetails, existingLabelNames: Set[String]): Set[CreateLabel] = for {
     prcs <- PullRequestCheckpointStatus.all ++ CheckpointTestStatus.all

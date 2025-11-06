@@ -1,41 +1,46 @@
 package lib
 
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
+import cats.Traverse
+import cats.effect.{IO, Temporal}
 import com.madgag.scalagithub.GitHub
 import com.madgag.scalagithub.commands.CreateComment
 import com.madgag.scalagithub.model.PullRequest
-import com.madgag.time.Implicits._
+import com.madgag.time.Implicits.*
 import com.typesafe.scalalogging.LazyLogging
 import lib.Config.CheckpointMessages
+import lib.PRUpdater.itemsOfAdviceFor
 import lib.RepoSnapshot.WorthyOfCommentWindow
 import lib.Responsibility.responsibilityAndRecencyFor
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import lib.sentry.{PRSentryRelease, SentryApiClient}
 
 import java.time.Instant
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class PRUpdater(delayer: Delayer) extends LazyLogging {
+class PRUpdater extends LazyLogging {
 
   def process(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(implicit
     g: GitHub,
     sentryApiClientOpt: Option[SentryApiClient]
-  ): IO[Option[PullRequestCheckpointsStateChangeSummary]] = {
+  ): OptionT[IO,PullRequestCheckpointsStateChangeSummary] = {
     logger.trace(s"handling ${prSnapshot.pr.prId.slug}")
-    for {
-      snapshot <- getSummaryOfCheckpointChangesGiven(prSnapshot, repoSnapshot)
-    } yield snapshot
+    getSummaryOfCheckpointChangesGiven(prSnapshot, repoSnapshot)
   }
 
   private def getSummaryOfCheckpointChangesGiven(prSnapshot: PRSnapshot, repoSnapshot: RepoSnapshot)(using
     gitHub: GitHub,
     sentryApiClientOpt: Option[SentryApiClient]
-  ): IO[Option[PullRequestCheckpointsStateChangeSummary]] = {
+  ): OptionT[IO, PullRequestCheckpointsStateChangeSummary] = {
     val pr = prSnapshot.pr
     val (oldStateLabelsSeq, userLabels) = prSnapshot.labels.map(_.name).partition(repoSnapshot.allPossibleCheckpointPRLabels)
     val oldLabels = oldStateLabelsSeq.toSet
     val existingPersistedState: PRCheckpointState = repoSnapshot.labelToStateMapping.stateFrom(oldLabels)
-    if (!ignoreItemsWithExistingState(existingPersistedState)) {
+    OptionT.unlessF(existingPersistedState.hasStateForCheckpointsWhichHaveAllBeenSeen) {
       for (currentSnapshot <- findCheckpointStateChange(existingPersistedState, pr, repoSnapshot)) yield {
         val newPersistableState = currentSnapshot.newPersistableState
         val stateChanged = newPersistableState != existingPersistedState
@@ -46,22 +51,16 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
           logger.info(s"#${pr.prId.slug} state-change: $existingPersistedState -> $newPersistableState")
           val newLabels: Set[String] = repoSnapshot.labelToStateMapping.labelsFor(newPersistableState)
           assert(oldLabels != newLabels, s"Labels should differ for differing states. labels=$oldLabels oldState=$existingPersistedState newState=$newPersistableState")
-          pr.labels.replace(userLabels ++ newLabels)
-          delayer.doAfterSmallDelay {
-            actionTaker(currentSnapshot, repoSnapshot)
-          }
+          pr.labels.replace(userLabels ++ newLabels).andWait(1500.milli)
+            >> actionTaker(currentSnapshot, repoSnapshot)
         }
-        Some(currentSnapshot)
+        currentSnapshot
       }
-    } else Future.successful(None)
+    }
   }
 
 
-
-  def ignoreItemsWithExistingState(existingState: PRCheckpointState): Boolean =
-    existingState.hasStateForCheckpointsWhichHaveAllBeenSeen
-
-  def findCheckpointStateChange(oldState: PRCheckpointState, pr: PullRequest, repoSnapshot: RepoSnapshot): Future[PullRequestCheckpointsStateChangeSummary] =
+    def findCheckpointStateChange(oldState: PRCheckpointState, pr: PullRequest, repoSnapshot: RepoSnapshot): IO[PullRequestCheckpointsStateChangeSummary] =
     for (cs <- repoSnapshot.checkpointSnapshotsFor(pr, oldState)) yield {
       val details = PRCheckpointDetails(pr, cs, repoSnapshot.repoLevelDetails.gitRepo)
       PullRequestCheckpointsStateChangeSummary(details, oldState)
@@ -73,7 +72,7 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
   )(implicit
     g: GitHub,
     sentryApiClientOpt: Option[SentryApiClient]
-  ): Unit = {
+  ): IO[Unit] = {
     val pr = checkpointsChangeSummary.prCheckpointDetails.pr
     val now = Instant.now()
 
@@ -96,27 +95,17 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
 
     val mergeToNow = java.time.Duration.between(pr.merged_at.get.toInstant, now)
     val previouslyTouchedByProut = checkpointsChangeSummary.oldState.statusByCheckpoint.nonEmpty
-    if (previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
+    
+    IO.whenA(previouslyTouchedByProut || mergeToNow < WorthyOfCommentWindow) {
       logger.trace(s"changedSnapshotsByState : ${checkpointsChangeSummary.changedByState}")
 
-      def commentOn(status: PullRequestCheckpointStatus, additionalAdvice: Option[String] = None) = {
-
+      def commentOn(status: PullRequestCheckpointStatus, additionalAdvice: Option[String] = None): IO[Unit] = {
         lazy val fileFinder = repoSnapshot.repoLevelDetails.createFileFinder()
-
-        for (changedSnapshots <- checkpointsChangeSummary.changedByState.get(status)) {
-
-          val checkpoints = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
-
-          val customAdvices = for {
-            s <- changedSnapshots
-            messages <- s.snapshot.checkpoint.details.messages
-            path <- messages.filePathforStatus(status)
-            message <- fileFinder.read(path)
-          } yield message
-          val advices = if(customAdvices.nonEmpty) customAdvices else CheckpointMessages.defaults.get(status).toSet
-          val advice = (advices ++ additionalAdvice).mkString("\n\n")
-
-          pr.comments2.create(CreateComment(s"${status.name} on $checkpoints (${responsibilityAndRecencyFor(pr)}) $advice"))
+        
+        checkpointsChangeSummary.changedByState.get(status).traverse_ { changedSnapshots =>
+          val checkpointsMarkdown = changedSnapshots.map(_.snapshot.checkpoint.nameMarkdown).mkString(", ")
+          val advice = (itemsOfAdviceFor(status, fileFinder, changedSnapshots) ++ additionalAdvice).mkString("\n\n")
+          pr.comments2.create(CreateComment(s"${status.name} on $checkpointsMarkdown (${responsibilityAndRecencyFor(pr)}) $advice"))
         }
       }
 
@@ -129,9 +118,19 @@ class PRUpdater(delayer: Delayer) extends LazyLogging {
         sentryRelease <- sentryReleaseOpt()
       } yield sentryRelease.detailsMarkdown(sentry.org)
 
-      commentOn(Seen, sentryDetails)
-      commentOn(Overdue)
+      Seq(commentOn(Seen, sentryDetails), commentOn(Overdue)).parSequence_
     }
   }
 }
 
+object PRUpdater {
+  def itemsOfAdviceFor(status: PullRequestCheckpointStatus, fileFinder: FileFinder, changedSnapshots: Set[EverythingYouWantToKnowAboutACheckpoint]) = {
+    val customAdvices: Set[String] = for {
+      s <- changedSnapshots
+      messages <- s.snapshot.checkpoint.details.messages
+      path <- messages.filePathforStatus(status)
+      message <- fileFinder.read(path)
+    } yield message
+    if (customAdvices.nonEmpty) customAdvices else CheckpointMessages.defaults.get(status).toSet
+  }
+}
