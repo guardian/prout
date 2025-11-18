@@ -45,7 +45,7 @@ libraryDependencies ++= jacksonDatabindOverrides ++ jacksonOverrides ++ akkaSeri
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.6.6" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.softwaremill.macwire" %% "macros" % "2.6.7" % Provided, // slight finesse: 'provided' as only used for compile
   "com.madgag" %% "scala-collection-plus" % "1.0.0",
   "org.typelevel" %% "cats-core" % "2.13.0",
   "com.github.blemale" %% "scaffeine" % "5.3.0",
