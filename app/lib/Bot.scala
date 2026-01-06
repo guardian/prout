@@ -1,8 +1,10 @@
 package lib
 
+import cats.effect.IO
+import cats.effect.unsafe.IORuntime
 import com.madgag.github.apps.GitHubAppAuth
-import com.madgag.scalagithub.model.Account
-import com.madgag.scalagithub.{GitHub, GitHubCredentials}
+import com.madgag.scalagithub.model.{Account, GitHubApp}
+import com.madgag.scalagithub.{AccountAccess, ClientWithAccess, GitHub, GitHubAppAccess, GitHubCredentials}
 import play.api.Logging
 
 import java.nio.file.Path
@@ -14,30 +16,18 @@ case class Identity(login: String, html_url: String) {
 
 case class Bot(
   workingDir: Path,
-  gitHubCredsProvider: GitHubCredentials.Provider,
-  identity: Identity
+  clientWithAccess: ClientWithAccess[GitHubAppAccess]
 ) {
-  val github = new GitHub(gitHubCredsProvider)
+  val github: GitHub = clientWithAccess.gitHub
+
+  private val principal: GitHubApp = clientWithAccess.accountAccess.principal
+  val identity: Identity = Identity(principal.slug, principal.html_url)
 }
 
 object Bot extends Logging {
 
-  def forGithubApp(
-    githubAppAuth: GitHubAppAuth
-  )(implicit ec: ExecutionContext): Future[Bot] = {
+  def forGithubApp(clientWithAccess: ClientWithAccess[GitHubAppAccess]): Bot = {
     val workingDir = Path.of("/tmp", "bot", "working-dir")
-
-    (for {
-      app <- githubAppAuth.getAuthenticatedApp()
-      installationAccess <- githubAppAuth.accessSoleInstallation()
-    } yield Bot(
-      workingDir,
-      installationAccess.credentials,
-      Identity(app.slug, app.html_url)
-    )
-    ).recover { case ex =>
-      logger.error("Failed to authenticate with GitHub app", ex)
-      throw ex
-    }
+    Bot(workingDir, clientWithAccess)
   }
 }

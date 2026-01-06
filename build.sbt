@@ -18,7 +18,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin)
 Test / testOptions +=
   Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}")
 
-val playGitHubVersion = "9.0.1"
+val playGitHubVersion = "10.0.0"
 
 val jacksonVersion         = "2.19.2"
 val jacksonDatabindVersion = "2.19.2"
@@ -45,7 +45,7 @@ libraryDependencies ++= jacksonDatabindOverrides ++ jacksonOverrides ++ akkaSeri
 libraryDependencies ++= Seq(
   filters,
   ws,
-  "com.softwaremill.macwire" %% "macros" % "2.6.6" % Provided, // slight finesse: 'provided' as only used for compile
+  "com.softwaremill.macwire" %% "macros" % "2.6.7" % Provided, // slight finesse: 'provided' as only used for compile
   "com.madgag" %% "scala-collection-plus" % "1.0.0",
   "org.typelevel" %% "cats-core" % "2.13.0",
   "com.github.blemale" %% "scaffeine" % "5.3.0",
@@ -54,8 +54,7 @@ libraryDependencies ++= Seq(
   // Transient dependency of raven-logback 8.0.3. No newer version of raven-logback available.
   "ch.qos.logback" % "logback-classic" % "1.5.18",
   "com.github.nscala-time" %% "nscala-time" % "3.0.0",
-  "com.indoorvivants" %% "scala-uri" % "4.2.0",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "7.0.3" % Test,
