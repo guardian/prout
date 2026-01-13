@@ -55,7 +55,7 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.5.18",
   "com.github.nscala-time" %% "nscala-time" % "3.0.0",
   "com.indoorvivants" %% "scala-uri" % "4.2.0",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6",
   "com.madgag.play-git-hub" %% "core" % playGitHubVersion,
   "com.madgag.play-git-hub" %% "testkit" % playGitHubVersion % Test,
   "com.madgag.scala-git" %% "scala-git-test" % "7.0.3" % Test,
