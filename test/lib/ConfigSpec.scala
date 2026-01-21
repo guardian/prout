@@ -1,12 +1,12 @@
 package lib
 
-import io.lemonlabs.uri.Uri
 import lib.Config.{CheckpointDetails, CheckpointMessages}
 import lib.labels.{Overdue, Seen}
 import org.joda.time.Period.minutes
 import org.scalatest.{Inside, OptionValues}
-import org.scalatestplus.play._
-import play.api.libs.json._
+import org.scalatestplus.play.*
+import play.api.libs.json.*
+import sttp.model.*
 
 class ConfigSpec extends PlaySpec with OptionValues with Inside {
 
@@ -14,7 +14,7 @@ class ConfigSpec extends PlaySpec with OptionValues with Inside {
     "parse normal Checkpoint config" in {
       val details = checkpointDetailsFrom("/sample.checkpoint.json")
 
-      details mustEqual JsSuccess(CheckpointDetails(Uri.parse("https://membership.theguardian.com/"), minutes(14)))
+      details mustEqual JsSuccess(CheckpointDetails(Uri.unsafeParse("https://membership.theguardian.com/"), minutes(14)))
       details.get.sslVerification mustBe true
      }
 
@@ -23,7 +23,7 @@ class ConfigSpec extends PlaySpec with OptionValues with Inside {
 
       details mustEqual JsSuccess(
         CheckpointDetails(
-          url = Uri.parse("https://www.theguardian.com"),
+          url = Uri.unsafeParse("https://www.theguardian.com"),
           overdue = minutes(20),
           messages = Some(CheckpointMessages(Seen -> "prout/seen.md", Overdue -> "prout/overdue.md"))
         )
@@ -35,7 +35,7 @@ class ConfigSpec extends PlaySpec with OptionValues with Inside {
 
       details mustEqual JsSuccess(
         CheckpointDetails(
-          url = Uri.parse("https://www.theguardian.com"),
+          url = Uri.unsafeParse("https://www.theguardian.com"),
           overdue = minutes(15),
           messages = Some(CheckpointMessages(Seen -> "prout/seen.md"))
         )

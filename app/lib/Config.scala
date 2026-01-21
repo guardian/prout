@@ -1,20 +1,19 @@
 package lib
 
 import java.time.Instant
-
-import com.madgag.git._
+import com.madgag.git.*
 import com.madgag.scalagithub.model.PullRequest
-import com.madgag.time.Implicits._
-import io.lemonlabs.uri.Uri
+import com.madgag.time.Implicits.*
 import lib.Config.{Checkpoint, CheckpointDetails, Sentry}
 import lib.labels.{Overdue, PullRequestCheckpointStatus, Seen}
 import org.eclipse.jgit.lib.ObjectId
 import org.joda
 import org.joda.time.Period
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{Json, _}
-import play.api.libs.functional.syntax._
-import com.madgag.scala.collection.decorators._
+import play.api.libs.json.{Json, *}
+import play.api.libs.functional.syntax.*
+import com.madgag.scala.collection.decorators.*
+import sttp.model.Uri
 
 case class ConfigFile(checkpoints: Map[String, CheckpointDetails],
   sentry: Option[Sentry] = None) {
@@ -44,7 +43,7 @@ object Config {
 
   implicit val readsPeriod: Reads[Period] = readsParseableString(input => Period.parse("PT"+input))
 
-  implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.parse(input))
+  implicit val readsUri: Reads[Uri] = readsParseableString(input => Uri.unsafeParse(input))
 
   case class Sentry(projects: Seq[String])
 
