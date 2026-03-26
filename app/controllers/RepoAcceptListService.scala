@@ -29,6 +29,7 @@ class RepoAcceptListService()(implicit
 
   private def getAllKnownRepos: Future[RepoAcceptList] = for { // check this to see if it always expends quota...
     allRepos <- github.listReposAccessibleToTheApp().allItems()
+    _ = logger.info(s"allReposAccessibleToTheApp (${allRepos.head.total_count}): ${allRepos.flatMap(_.repositories.map(_.repoId.fullName)).mkString(",")}")
     proutRepos <- Future.traverse(allRepos.flatMap(repos => repos.repositories)){ repo =>
       hasProutConfigFile(repo).map(hasConfig => Option.when(hasConfig)(repo))
     }.map(_.flatten.toSet)
