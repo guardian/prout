@@ -20,12 +20,11 @@ Test / testOptions +=
 
 val playGitHubVersion = "9.0.1"
 
-val jacksonVersion         = "2.19.2"
-val jacksonDatabindVersion = "2.19.2"
+val jacksonVersion         = "2.21.2"
+val jacksonDatabindVersion = "2.21.2"
 
 val jacksonOverrides = Seq(
   "com.fasterxml.jackson.core"     % "jackson-core",
-  "com.fasterxml.jackson.core"     % "jackson-annotations",
   "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8",
   "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310"
 ).map(_ % jacksonVersion)
