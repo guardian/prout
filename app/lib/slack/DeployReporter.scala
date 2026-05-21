@@ -2,13 +2,13 @@ package lib.slack
 
 import cats.data.NonEmptySeq
 import com.madgag.scalagithub.model.{PullRequest, User}
-import io.lemonlabs.uri.Url
 import lib.*
 import lib.labels.Seen
 import play.api.Logging
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.WSBodyWritables.*
 import play.api.libs.ws.WSClient
+import sttp.model.Uri
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,10 +27,10 @@ class DeployReporter(
     report(checkpointsChangeSummary, slackHooks)
   }.getOrElse(Future.successful(()))
 
-  private def slackHooksFrom(repoLevelDetails: RepoLevelDetails): Option[NonEmptySeq[Url]] =
-    NonEmptySeq.fromSeq(repoLevelDetails.hooks.filter(_.hostOption.exists(_.value == "hooks.slack.com")))
+  private def slackHooksFrom(repoLevelDetails: RepoLevelDetails): Option[NonEmptySeq[Uri]] =
+    NonEmptySeq.fromSeq(repoLevelDetails.hooks.filter(_.host.exists(_ == "hooks.slack.com")))
 
-  private def report(checkpointChangeSummary: PullRequestCheckpointsStateChangeSummary, slackHooks: NonEmptySeq[Url]): Option[Future[Unit]] = {
+  private def report(checkpointChangeSummary: PullRequestCheckpointsStateChangeSummary, slackHooks: NonEmptySeq[Uri]): Option[Future[Unit]] = {
     val pr = checkpointChangeSummary.prCheckpointDetails.pr
     for (changedSnapshots <- checkpointChangeSummary.changedByState.get(Seen)) yield {
       val json = messageJsonFor(pr, changedSnapshots)

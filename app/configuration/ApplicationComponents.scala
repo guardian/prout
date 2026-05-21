@@ -1,10 +1,12 @@
 package configuration
 
+import cats.effect.Resource
+import cats.effect.unsafe.implicits.global
 import com.madgag.github.apps.{GitHubAppAuth, GitHubAppJWTs}
-import com.madgag.scalagithub.GitHub
-import com.softwaremill.macwire._
-import controllers._
-import lib._
+import com.madgag.scalagithub.{ClientWithAccess, GitHub, GitHubAppAccess}
+import com.softwaremill.macwire.*
+import controllers.*
+import lib.*
 import lib.actions.Actions
 import lib.sentry.SentryApiClient
 import monitoring.SentryLogging
@@ -15,10 +17,10 @@ import router.Routes
 
 import java.nio.file.Path
 import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class ApplicationComponents(context: ApplicationLoader.Context)
-  extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters
+  extends BuiltInComponentsFromContext(context) with ReasonableHttpFilters with CatsEffectComponents
     with AssetsComponents with Logging {
   val sentryLogging: SentryLogging = wire[SentryLogging]
   sentryLogging.init() // Is this the best place to start this?!
@@ -34,18 +36,20 @@ class ApplicationComponents(context: ApplicationLoader.Context)
     GitHubAppJWTs.parsePrivateKeyFrom(configuration.get[String]("github.app.privateKey")).get
   )
 
-  val githubAppAuth = new GitHubAppAuth(gitHubAppJWTs)
+  val githubFactory = allocateResource(GitHub.Factory())
+  
+  val clientWithAccess: ClientWithAccess[GitHubAppAccess] = 
+    githubFactory.accessSoleAppInstallation(gitHubAppJWTs).unsafeRunSync()
 
-  implicit val bot: Bot = Await.result(Bot.forGithubApp(githubAppAuth), 3.seconds)
+  implicit val bot: Bot = Bot.forGithubApp(clientWithAccess)
 
-  implicit val github: GitHub = bot.github
+  // implicit val github: GitHub = bot.github
 
   implicit val authClient: com.madgag.playgithub.auth.Client = com.madgag.playgithub.auth.Client(
     id = configuration.get[String]("github.app.clientId"),
     secret = configuration.get[String]("github.app.clientSecret")
   )
 
-  val delayer: Delayer = wire[Delayer]
   val repoSnapshotFactory: RepoSnapshot.Factory = wire[RepoSnapshot.Factory]
 
   implicit val sentryApiClient: Option[SentryApiClient] = SentryApiClient.instanceOptFrom(configuration)
