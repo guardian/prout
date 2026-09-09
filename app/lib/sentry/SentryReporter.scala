@@ -2,7 +2,7 @@ package lib.sentry
 
 import com.madgag.git._
 import com.madgag.scalagithub.model.PullRequest
-import io.lemonlabs.uri.Uri
+import sttp.model.*
 import lib.sentry.model.CreateRelease
 import lib.{PullRequestCheckpointsStateChangeSummary, RepoLevelDetails, RepoSnapshot, UpdateReporter}
 import org.eclipse.jgit.revwalk.RevWalk
@@ -31,7 +31,7 @@ class SentryReporter(
         sentry.createRelease(CreateRelease(
           sentryRelease.version,
           Some(sentryRelease.version),
-          Some(Uri.parse(pr.html_url)),
+          Some(Uri.unsafeParse(pr.html_url)),
           sentryRelease.projects,
           refs=Seq(ref)
         ))

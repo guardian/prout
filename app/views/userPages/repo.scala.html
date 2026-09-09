@@ -55,7 +55,7 @@
                                     <b id="checkpoint-@checkpoint.name">@checkpoint.name</b> - <a href="@checkpoint.details.url">@checkpoint.details.url</a>
                                     @for(snapshot <- diagnostic.snapshotsByCheckpoint.get(checkpoint))  {
                                         @snapshot.commitIdTry match {
-                                            case Success(idOpt) => {
+                                            case Right(idOpt) => {
                                                 @idOpt match {
                                                     case Some(commitId) => {
                                                         Commit Id found : @showCommit(commitId)
@@ -65,7 +65,7 @@
                                                     }
                                                 }
                                             }
-                                            case Failure(error) => {
+                                            case Left(error) => {
                                                 ❌ Could not read from this url, got @error
                                             }
                                         }
