@@ -30,16 +30,28 @@ in Production (a slightly stronger statement than simply saying it's been deploy
 
 Follow the 4-step program:
 
-1. [Give prout-bot write-access](#give-prout-bot-write-access) to your repo (so it can set labels on your pull request)
+1. [Give Prout access](#give-prout-access) to your repo (so it can set labels on your pull request)
 2. [Add one or more `.prout.json` config files to your project](#add-config-file)
 3. [Add callbacks to prout](#add-callbacks) - ie a GitHub webhook and ideally also a post-deploy hook
 4. [Expose the commit id](#expose-the-commit-id) of your build on your deployed site
 
-## Give [prout-bot](https://github.com/prout-bot) write-access
+## Give Prout access
 
-![Giving prout write-access by going to Settings -> Collaborators and team -> Add teams and typing in 'prout'](./artwork/prout-team-write.gif)
+Prout authenticates as a [GitHub App](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
+in order to:
 
-Admin access to the repository is required to give prout-bot write-access. Please contact your team's Engineering Manager for this.
+* Update PRs with comments and labels
+* Receive webhook calls from GitHub to let Prout know that PR states have changed
+
+**Guardian developers:** Our GitHub App for Prout is [gu-prout](https://github.com/apps/gu-prout) - click
+`Configure` to grant access to your specific repo:
+
+![Grant GitHub App access](./artwork/grant-github-app-access.png)
+
+Since [August 2025](https://github.com/guardian/prout/pull/141),
+Prout no longer uses a [GitHub **user**](https://docs.github.com/en/get-started/learning-about-github/types-of-github-accounts#user-accounts)
+account - you should remove any access granted to the old [@prout-bot](https://github.com/prout-bot)
+user account.
 
 ## Add config file
 
@@ -65,22 +77,15 @@ that response, Prout will be able to work out whether or not the PR has been dep
 Add Prout-hitting callbacks to GitHub and (optionally) post-deploy hooks to your deployment systems
 so that Prout can immediately check your site.
 
-### GitHub
-
-Add a [GitHub webhook](https://developer.github.com/webhooks/creating/#setting-up-a-webhook)
-with these settings:
-
-* Payload URL : `https://prout-bot.herokuapp.com/api/hooks/github`
-* Content type : `application/json`
-
-The hook should be set to activate on `Pull Request` events.
-
-![Adding a GitHub web hook by navigating to Settings -> Webhooks -> Add webhook](./artwork/prout-web-hook.gif)
-
-Note that this can be done _once_ at the [Organization Webhook](https://docs.github.com/en/rest/orgs/webhooks) level, which removes the need for doing it on each individual repo. Prout will check that any repository has a `.prout.json` config file present before attempting to take any action on it.
 ### Post-deploy hooks
 
-Whatever deployment tool you use (RiffRaff, Heroku, etc) just set it to hit Prout
+If desired, you can configure your deploy system to use a post-deploy webhook to notify Prout that deployment
+has finished.
+
+This is not _required_ (as Prout will be polling to the checkpoint url _anyway_) but may mean that
+Prout can be a _little_ quicker to report that a PR has been deployed.
+
+Whatever deployment tool you use (RiffRaff, Heroku, etc), you can set it to hit Prout
 as a post-deploy hook (for your repo on _github.com/[owner]/[repo]_):
 
 ```
