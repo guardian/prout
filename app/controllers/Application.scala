@@ -16,7 +16,6 @@
 
 package controllers
 
-import org.apache.pekko.actor.ActorSystem
 import com.madgag.scalagithub.model.RepoId
 import lib.{Bot, RepoSnapshot}
 import play.api.Logging
@@ -41,11 +40,20 @@ class Application(
   def configDiagnostic(repoId: RepoId) = repoAuthenticated(repoId).async { implicit req =>
     for {
       repoFetchedByProut <- bot.github.getRepo(repoId)
+      repoAcceptList <- repoAcceptListService.acceptList()
       proutPresenceQuickCheck <- repoAcceptListService.hasProutConfigFile(repoFetchedByProut)
       repoSnapshot <- repoSnapshotFactory.snapshot(repoFetchedByProut.repoId)
       diagnostic <- repoSnapshot.diagnostic()
     } yield {
-      Ok(views.html.userPages.repo(proutPresenceQuickCheck, repoSnapshot, diagnostic, sentryApiClientOpt))
+      val githubAppHasPermissionForRepo = repoAcceptList.allKnownRepos.contains(repoId)
+
+      Ok(views.html.userPages.repo(
+        githubAppHasPermissionForRepo,
+        proutPresenceQuickCheck,
+        repoSnapshot,
+        diagnostic,
+        sentryApiClientOpt
+      ))
     }
   }
 
