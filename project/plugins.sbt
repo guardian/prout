@@ -1,4 +1,4 @@
-addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.10")
+addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.12")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
@@ -11,3 +11,5 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
    Once the build has succeeded, there is no further risk (ie of a runtime exception due to clashing versions of `scala-xml`).
  */
 libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
+
+addDependencyTreePlugin
