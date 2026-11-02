@@ -1,0 +1,6 @@
+name: "prout"
+
+modules:
+  - mise
+  - scala
+  - github-copilot
