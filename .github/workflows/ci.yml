@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - uses: guardian/setup-scala@v1
+        uses: actions/checkout@v7
+      - uses: guardian/setup-scala@v2
       - name: Build and Test
         env:
           PROUT_GITHUB_APP_CLIENT_ID: ${{ secrets.PROUT_TEST_GITHUB_APP_CLIENT_ID }}
